@@ -1,0 +1,6 @@
+{
+  "name": "AIOnlineBusiness",
+  "description": "Premium world-class landing page for AIOnlineBusiness, a modern online AI education platform offering practical income-generating AI skills, automated workflows, and business strategy guides for entrepreneurs and professionals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
