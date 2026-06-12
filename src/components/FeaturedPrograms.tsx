@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { featuredCourses } from "../data";
-import { Search, Clock, Users, BookOpen, Star, Sparkles, Filter, ShieldCheck, ArrowRight } from "lucide-react";
+import { Search, Clock, Users, Star, Sparkles, ShieldCheck, ArrowRight, Filter } from "lucide-react";
 
 export default function FeaturedPrograms() {
   const [selectedLevel, setSelectedLevel] = useState<"All" | "Beginner" | "Intermediate" | "Advanced">("All");
@@ -14,136 +14,149 @@ export default function FeaturedPrograms() {
   const filteredCourses = featuredCourses.filter(course => {
     const matchesLevel = selectedLevel === "All" || course.level === selectedLevel;
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          course.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          course.skillsAcquired.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()));
+                          course.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesLevel && matchesSearch;
   });
+
+  // Limit featured programs to MAXIMUM of 6 cards as explicitly requested
+  const displayCourses = filteredCourses.slice(0, 6);
 
   const levelColorMap = {
     Beginner: "bg-green-50 text-emerald-700 border-emerald-100",
     Intermediate: "bg-blue-50 text-[#2D7FF9] border-blue-100",
-    Advanced: "bg-red-50 text-red-600 border-red-100"
+    Advanced: "bg-rose-50 text-rose-600 border-rose-100"
   };
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      const topOffset = element.offsetTop - 80;
+      const topOffset = element.offsetTop - 85;
       window.scrollTo({ top: topOffset, behavior: "smooth" });
     }
   };
 
-  return (
-    <section id="featured-programs" className="py-20 md:py-28 bg-white border-t border-b border-gray-100 relative">
-      {/* Background visual graphics */}
-      <div className="absolute top-[40%] left-[-100px] w-[450px] h-[450px] rounded-full bg-[#2D7FF9]/3 blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-[10%] right-[-150px] w-[500px] h-[500px] rounded-full bg-[#FCF50F]/3 blur-[120px] pointer-events-none" />
+  // Safe layout text strict trimmer to guarantee NO description is longer than 20 words
+  const trimDescription = (desc: string) => {
+    const words = desc.split(" ");
+    if (words.length <= 18) return desc;
+    return words.slice(0, 17).join(" ") + "...";
+  };
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+  return (
+    <section id="featured-programs" className="py-20 bg-white border-b border-gray-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Headings */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-12 border-b border-gray-100">
+        {/* SECTION 5: TITLE */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-10 border-b border-gray-100">
           <div className="text-left space-y-4">
-            <div className="inline-flex items-center gap-1.5 bg-[#011673]/5 text-[#011673] px-3.5 py-1.5 rounded-full text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-[#2D7FF9]" />
-              <span>curated academic CATALOGUE</span>
+            <div className="inline-flex items-center gap-1.5 bg-[#2D7FF9]/10 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>ELITE LMS CATALOGUE</span>
             </div>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-[#101828]">
-              Unveiling Our Featured Programs
+            {/* Heading under 10 words limit */}
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-[#08142B]">
+              Accelerate Operations with Top-Tier Featured Programs
             </h2>
-            <p className="text-base text-gray-500 max-w-2xl leading-relaxed font-normal">
-              Acquire in-demand skills in AI strategy, workflow automation, and no-code builders. Hover to explore tools and graduation credentials.
-            </p>
           </div>
 
-          {/* Quick trust metrics panel */}
-          <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-4 text-left font-sans shadow-sm shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-[#12B76A]/10 text-[#12B76A] flex items-center justify-center">
+          <div className="p-4 bg-gray-50 border border-gray-150 rounded-2xl flex items-center gap-3 text-left shadow-sm shrink-0 md:max-w-xs">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-mono text-gray-400 uppercase tracking-wider">Accredited</p>
-              <p className="text-sm font-bold text-[#101828]">All 8 modules verify on LinkedIn</p>
+              <p className="text-[10px] font-mono text-gray-400 uppercase tracking-wider font-bold">100% Accredited</p>
+              {/* Under 20 words for card / text labels */}
+              <p className="text-xs text-gray-500 font-medium">Verify credentials on corporate portfolios instantly.</p>
             </div>
           </div>
         </div>
 
-        {/* Dynamic Filtering Panel */}
+        {/* Dynamic Filtering */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-8">
-          {/* Level tabs with premium outline styling */}
           <div className="flex flex-wrap gap-2">
             {(["All", "Beginner", "Intermediate", "Advanced"] as const).map((level) => (
               <button
                 key={level}
                 onClick={() => setSelectedLevel(level)}
-                className={`px-4 py-2 text-xs font-medium rounded-xl transition-all border cursor-pointer select-none ${
+                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all border cursor-pointer select-none min-h-[40px] ${
                   selectedLevel === level
-                    ? "bg-[#011673] text-white border-[#011673] shadow-sm"
-                    : "bg-white text-gray-550 border-gray-200 hover:border-gray-300"
+                    ? "bg-[#2D7FF9] text-white border-[#2D7FF9] shadow-sm"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
                 }`}
               >
-                {level} {level !== "All" ? "Level" : "Programs"}
+                {level} {level !== "All" ? "Level" : "Paths"}
               </button>
             ))}
           </div>
 
-          {/* Search bar */}
+          {/* Search bar inside view */}
           <div className="relative max-w-xs w-full">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-              <Search className="w-4 h-4" />
-            </div>
             <input
               type="text"
-              placeholder="Search specific topics or skills..."
+              placeholder="Search specific topics..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-50/50 hover:bg-gray-50 border border-gray-200 focus:border-[#2D7FF9] rounded-xl pl-10 pr-4 py-2.5 text-xs text-gray-800 transition-colors focus:outline-none focus:ring-0"
+              className="w-full bg-gray-50/50 hover:bg-gray-50 border border-gray-200 focus:border-[#2D7FF9] rounded-xl pl-4 pr-10 py-2.5 text-xs text-gray-800 transition-colors focus:outline-none focus:ring-0 min-h-[44px]"
             />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
+              <Search className="w-4 h-4" />
+            </div>
           </div>
         </div>
 
-        {/* Courses Responsive Cards Grid */}
-        {filteredCourses.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
-            {filteredCourses.map((course) => (
+        {/* LMS Grid (Max 6 elements) */}
+        {displayCourses.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-4">
+            {displayCourses.map((course) => (
               <div
                 key={course.id}
-                className="group bg-white border border-gray-150 hover:border-gray-350 rounded-3xl overflow-hidden transition-all duration-300 hover:shadow-premium-xl flex flex-col justify-between text-left"
+                className="group bg-white border border-gray-150 hover:border-gray-300 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-premium flex flex-col justify-between text-left"
               >
-                {/* Image Section */}
-                <div className="relative overflow-hidden aspect-[4/3] bg-gray-50">
+                {/* Thumb Space */}
+                <div className="relative overflow-hidden aspect-[16/10] bg-gray-50">
                   <img
                     src={course.thumbnail}
                     alt={course.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
                     referrerPolicy="no-referrer"
                   />
                   <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
-                    <span className="bg-white/95 backdrop-blur-sm text-[9px] font-mono font-bold tracking-wider px-2 py-1 rounded-md text-[#011673] uppercase shadow-sm">
+                    <span className="bg-[#08142B] text-white text-[9px] font-mono font-bold tracking-wider px-2 py-0.5 rounded shadow">
                       {course.category}
                     </span>
-                    <span className={`text-[9px] font-mono font-bold tracking-wider px-2 py-1 rounded-md border shadow-sm ${levelColorMap[course.level]}`}>
+                    <span className={`text-[9px] font-mono font-bold tracking-wider px-2 py-0.5 rounded border shadow ${levelColorMap[course.level]}`}>
                       {course.level}
                     </span>
                   </div>
                 </div>
 
-                {/* Content Section */}
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                {/* Body Space */}
+                <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
                   <div className="space-y-2">
-                    <h3 className="font-display font-bold text-lg text-[#101828] group-hover:text-[#011673] transition-colors leading-snug">
+                    {/* LMS metadata line */}
+                    <div className="flex items-center justify-between text-[11px] text-gray-400 font-bold">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                        {course.duration}
+                      </span>
+                      <span className="flex items-center gap-1 bg-[#FCF50F]/20 text-[#08142B] px-1.5 py-0.5 rounded font-mono">
+                        <Star className="w-3 h-3 fill-current" />
+                        4.9 Rating
+                      </span>
+                    </div>
+
+                    <h3 className="font-display font-bold text-lg text-[#08142B] tracking-tight group-hover:text-[#2D7FF9] transition-colors leading-tight">
                       {course.title}
                     </h3>
-                    <p className="text-[12px] text-gray-500 leading-relaxed line-clamp-3">
-                      {course.tagline}
+                    
+                    {/* strict description <= 20 words */}
+                    <p className="text-xs text-slate-500 leading-relaxed min-h-[36px]">
+                      {trimDescription(course.tagline)}
                     </p>
                   </div>
 
                   {/* Skills lists block */}
                   <div className="space-y-1.5 pt-1">
-                    <p className="text-[9px] font-mono font-bold tracking-wider text-gray-400 uppercase">
-                      SKILLS YOU WILL MASTER:
-                    </p>
                     <div className="flex flex-wrap gap-1">
                       {course.skillsAcquired.slice(0, 3).map((skill, i) => (
                         <span
@@ -153,54 +166,34 @@ export default function FeaturedPrograms() {
                           {skill}
                         </span>
                       ))}
-                      {course.skillsAcquired.length > 3 && (
-                        <span className="px-2 py-0.5 rounded-md bg-gray-50 text-[10px] text-gray-400 font-mono">
-                          +{course.skillsAcquired.length - 3} more
-                        </span>
-                      )}
                     </div>
                   </div>
 
-                  {/* Instructor / Cohort reference */}
-                  <div className="flex items-center gap-2.5 pt-3 border-t border-gray-100">
-                    <img
-                      src={course.instructorAvatar}
-                      alt={course.instructor}
-                      className="w-7 h-7 rounded-full object-cover border border-white max-w-full"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="text-left font-sans">
-                      <p className="text-[11px] font-semibold text-gray-800 leading-none">
-                        {course.instructor}
-                      </p>
-                      <p className="text-[9px] text-gray-400 leading-none mt-0.5">
-                        Lead Instructor
-                      </p>
+                  {/* Instructor portrait & active graduates outcome */}
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-50 text-xs text-gray-500 font-medium font-sans">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={course.instructorAvatar}
+                        alt={course.instructor}
+                        className="w-7 h-7 rounded-full object-cover border border-white"
+                        referrerPolicy="no-referrer"
+                      />
+                      <span className="text-[11px] font-bold text-gray-700">{course.instructor}</span>
                     </div>
-                  </div>
-
-                  {/* Pricing / Enrollment Footer */}
-                  <div className="pt-2 flex items-center justify-between text-xs font-medium text-gray-500 font-sans">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-gray-400" />
-                      {course.duration}
-                    </span>
-                    <span className="text-gray-200">|</span>
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                      <Users className="w-3.5 h-3.5" />
                       {course.studentCount} Alumni
                     </span>
                   </div>
                 </div>
 
-                {/* Bottom Enroll Actions */}
-                <div className="px-5 pb-5 pt-0">
+                <div className="px-6 pb-6 pt-0">
                   <button
                     onClick={() => scrollToSection("pricing")}
-                    className="w-full bg-gray-50 hover:bg-[#011673] text-[#011673] hover:text-white py-2.5 rounded-xl text-xs font-semibold transiton-all duration-300 flex items-center justify-center gap-1.5 group select-none cursor-pointer"
+                    className="w-full bg-gray-50 hover:bg-[#2D7FF9] text-[#08142B] hover:text-white py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 group select-none cursor-pointer min-h-[48px]"
                   >
                     <span>Request Details</span>
-                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
                   </button>
                 </div>
 
@@ -208,13 +201,12 @@ export default function FeaturedPrograms() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-20 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
+          <div className="text-center py-20 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
             <Filter className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-gray-800">No programs match your search</h3>
-            <p className="text-xs text-gray-400 mt-1">Try relaxing your search terms or shifting levels.</p>
+            <h3 className="text-base font-bold text-gray-800">No programs found</h3>
             <button
               onClick={() => { setSelectedLevel("All"); setSearchQuery(""); }}
-              className="mt-4 px-4 py-2 bg-white text-xs border border-gray-200 rounded-xl"
+              className="mt-4 px-4 py-2 bg-white text-xs border border-gray-250 rounded-xl"
             >
               Reset Filters
             </button>

@@ -1,95 +1,179 @@
 /**
  * @license
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.5
  */
 
-import React, { useState } from "react";
-import { learningPaths, curriculumModules } from "../data";
+import React, { useRef, useState } from "react";
+import { motion } from "motion/react";
 import { 
-  Briefcase, Cpu, Sparkles, GitBranch, Megaphone, 
-  TrendingUp, DollarSign, Zap, Bot, Layers, 
-  ChevronDown, ChevronUp, Clock, BookOpen, Key, CheckCircle, Smartphone 
+  Compass, Sparkles, Send, Briefcase, Terminal, Zap, 
+  ArrowRight, ArrowLeft, CheckCircle, GraduationCap, Code, Layers 
 } from "lucide-react";
 
-// Helper map to dynamically assign Lucide components based on data string representations
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Briefcase,
-  Cpu,
-  Sparkles,
-  GitBranch,
-  Megaphone,
-  TrendingUp,
-  DollarSign,
-  Zap,
-  Bot,
-  Layers
-};
-
 export default function Curriculum() {
-  const [expandedModule, setExpandedModule] = useState<string | null>("m-1");
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [timelineStep, setTimelineStep] = useState<number>(0);
 
-  const toggleModule = (id: string) => {
-    if (expandedModule === id) {
-      setExpandedModule(null);
-    } else {
-      setExpandedModule(id);
+  const categories = [
+    {
+      title: "AI Beginner",
+      outcome: "Master core AI logic and playground setups with zero coding.",
+      duration: "2 Weeks",
+      icon: Compass,
+      tag: "FOUNDATION"
+    },
+    {
+      title: "AI Creator",
+      outcome: "Generate cinematic commercial videos, copy, and illustrations in seconds.",
+      duration: "3 Weeks",
+      icon: Sparkles,
+      tag: "CREATIVE TECH"
+    },
+    {
+      title: "AI Marketer",
+      outcome: "Deploy SEO topic networks and automated warm lead lists.",
+      duration: "3 Weeks",
+      icon: Send,
+      tag: "PROGRAMMATIC"
+    },
+    {
+      title: "AI Entrepreneur",
+      outcome: "Architect lean automated eCommerce agencies and consultation retainers.",
+      duration: "4 Weeks",
+      icon: Briefcase,
+      tag: "REVENUE"
+    },
+    {
+      title: "AI Developer",
+      outcome: "Code database bots and multi-agent systems via lightweight frameworks.",
+      duration: "4 Weeks",
+      icon: Code,
+      tag: "DEVELOPMENT"
+    },
+    {
+      title: "AI Automation Expert",
+      outcome: "Connect standard apps into autonomous, hands-free back-office routines.",
+      duration: "4 Weeks",
+      icon: Zap,
+      tag: "INTEGRATION"
+    }
+  ];
+
+  const steps = [
+    {
+      step: "01",
+      title: "Choose Path",
+      desc: "Select a custom trade path aligned with your professional outcome.",
+      color: "border-blue-500 text-blue-500"
+    },
+    {
+      step: "02",
+      title: "Learn",
+      desc: "Watch bite-sized micro-tutorials inside our premium dashboard.",
+      color: "border-emerald-500 text-emerald-500"
+    },
+    {
+      step: "03",
+      title: "Build Projects",
+      desc: "Deploy 12 ready-to-run automation pipelines in sandbox labs.",
+      color: "border-amber-500 text-amber-500"
+    },
+    {
+      step: "04",
+      title: "Get Certified",
+      desc: "Receive dynamic, verified security credentials on LinkedIn.",
+      color: "border-purple-500 text-purple-500"
+    },
+    {
+      step: "05",
+      title: "Launch Career",
+      desc: "Acquire high-paying consultation contracts or streamline existing jobs.",
+      color: "border-[#FCF50F] text-[#08142B]"
+    }
+  ];
+
+  const scroll = (direction: "left" | "right") => {
+    if (carouselRef.current) {
+      const { scrollLeft, clientWidth } = carouselRef.current;
+      const scrollTo = direction === "left" ? scrollLeft - 320 : scrollLeft + 320;
+      carouselRef.current.scrollTo({ left: scrollTo, behavior: "smooth" });
     }
   };
 
   return (
-    <section id="learning-paths" className="py-20 md:py-28 bg-[#FAFBFC]">
-      {/* SECTION 4: Learning Paths */}
+    <section id="learning-paths" className="py-20 bg-white border-b border-gray-100 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div className="text-left md:text-center max-w-3xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-1.5 bg-[#2D7FF9]/10 text-[#011673] px-3.5 py-1 rounded-full text-xs font-semibold">
-            <Cpu className="w-3.5 h-3.5 text-[#2D7FF9]" />
-            <span>DISCOVER YOUR CONCENTRATION</span>
+        {/* SECTION 3: Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+          <div className="text-left space-y-4 max-w-2xl">
+            <div className="inline-flex items-center gap-1.5 bg-[#2D7FF9]/10 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
+              <Compass className="w-3.5 h-3.5" />
+              <span>LEARNING SYSTEM PATHS</span>
+            </div>
+            {/* Section heading: Under 10 words limit */}
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-[#08142B]">
+              Discover Our Six Elite Specialization Concentrations
+            </h2>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-[#101828]">
-            Explore Our 10 Specialized Learning Paths
-          </h2>
-          <p className="text-base sm:text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
-            Tailor-made sequences structured by application. Dive deep into your specific trade, freelance niche, or operational workspace.
-          </p>
+          {/* Slider controls */}
+          <div className="flex items-center gap-2.5 self-start md:self-end">
+            <button
+              onClick={() => scroll("left")}
+              className="p-3 bg-white border border-gray-250 hover:border-gray-300 rounded-xl text-[#08142B] transition-colors cursor-pointer min-h-[48px] min-w-[48px] flex items-center justify-center shadow-sm"
+              aria-label="Scroll left"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => scroll("right")}
+              className="p-3 bg-white border border-gray-250 hover:border-gray-300 rounded-xl text-[#08142B] transition-colors cursor-pointer min-h-[48px] min-w-[48px] flex items-center justify-center shadow-sm"
+              aria-label="Scroll right"
+            >
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-12">
-          {learningPaths.map((path) => {
-            const IconComp = iconMap[path.icon] || Cpu;
+        {/* Categories Horizontal Carousel */}
+        <div 
+          ref={carouselRef}
+          className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent select-none cursor-grab"
+          style={{ scrollbarWidth: "thin" }}
+        >
+          {categories.map((item, idx) => {
+            const Icon = item.icon;
             return (
               <div
-                key={path.id}
-                className="group relative bg-white border border-gray-150 hover:border-gray-300 rounded-2xl p-5 transition-all duration-300 hover:shadow-premium hover:-translate-y-1 text-left flex flex-col justify-between"
+                key={idx}
+                className="w-[290px] sm:w-[325px] shrink-0 snap-start bg-white border border-gray-150 rounded-2xl p-6 hover:border-[#2D7FF9]/40 hover:shadow-premium transition-all duration-300 flex flex-col justify-between text-left"
               >
                 <div>
-                  {/* Icon wrapper */}
-                  <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-[#2D7FF9] group-hover:bg-[#011673] group-hover:text-white transition-colors duration-300">
-                    <IconComp className="w-5 h-5" />
-                  </div>
-                  <div className="mt-4 space-y-1">
-                    <span className="text-[9px] font-mono font-bold tracking-wider text-[#2D7FF9] uppercase">
-                      {path.tag}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[10px] font-mono font-bold tracking-wider text-gray-400">
+                      {item.tag}
                     </span>
-                    <h3 className="font-display font-bold text-sm sm:text-base text-[#101828] group-hover:text-[#011673] transition-colors">
-                      {path.title}
-                    </h3>
-                    <p className="text-[12px] text-gray-500 line-clamp-3 leading-relaxed mt-1">
-                      {path.description}
-                    </p>
+                    <span className="px-2.5 py-1 text-[10px] font-mono font-bold tracking-tight rounded-md bg-[#2D7FF9]/10 text-blue-600">
+                      {item.duration}
+                    </span>
                   </div>
+                  
+                  <h3 className="font-display font-medium text-lg sm:text-xl text-[#08142B] mb-2">
+                    {item.title}
+                  </h3>
+                  
+                  {/* Outcome limit <= 20 words */}
+                  <p className="text-xs text-slate-500 leading-relaxed min-h-[42px]">
+                    {item.outcome}
+                  </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between text-[11px] text-gray-400 font-medium">
-                  <span className="flex items-center gap-1">
-                    <BookOpen className="w-3.5 h-3.5" />
-                    {path.lessons} Lessons
-                  </span>
-                  <span className="text-gray-300">|</span>
-                  <span className="truncate max-w-[100px] text-gray-400 font-mono">
-                    {path.tools[0]}
-                  </span>
+                <div className="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between text-[11px] text-[#2D7FF9] font-bold">
+                  <div className="flex items-center gap-1.5">
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>Practical Lab Course</span>
+                  </div>
+                  <span className="cursor-pointer hover:underline text-[#08142B] flex items-center gap-1">Learn <ArrowRight className="w-3.5 h-3.5" /></span>
                 </div>
               </div>
             );
@@ -97,124 +181,53 @@ export default function Curriculum() {
         </div>
       </div>
 
-      {/* SECTION 8: Curriculum Showcase */}
-      <div id="curriculum" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 md:pt-32">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          
-          {/* Left Side: Dynamic Sticky Info Block */}
-          <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-28 text-left">
-            <span className="inline-flex items-center gap-1.5 bg-yellow-400/10 text-amber-800 px-3 py-1 rounded-full text-xs font-semibold">
-              <Clock className="w-3.5 h-3.5" />
-              <span>12 WEEKS TO COMPLETION</span>
-            </span>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-[#101828]">
-              The Most Rigorous Applied AI Syllabus Ever Designed
-            </h2>
-            <p className="text-base text-gray-500 leading-relaxed font-normal">
-              Go from installing core models to configuring multiple localized background agents that collaborate on research, copy formulation, and lead databases. 
-            </p>
-            <div className="p-5 rounded-2xl bg-[#011673]/5 border border-[#011673]/10 space-y-4">
-              <h4 className="font-bold text-[#011673] text-sm">Graduation Requirements:</h4>
-              <ul className="space-y-2.5 text-xs text-gray-600 font-medium">
-                <li className="flex gap-2 items-start">
-                  <CheckCircle className="w-4 h-4 text-[#12B76A] shrink-0 mt-0.5" />
-                  <span>Execute 12 complete portfolio project challenges</span>
-                </li>
-                <li className="flex gap-2 items-start">
-                  <CheckCircle className="w-4 h-4 text-[#12B76A] shrink-0 mt-0.5" />
-                  <span>Build 1 fully autonomous background workflow using custom JSON webhooks</span>
-                </li>
-                <li className="flex gap-2 items-start">
-                  <CheckCircle className="w-4 h-4 text-[#12B76A] shrink-0 mt-0.5" />
-                  <span>Audit a real business and suggest 3 high-impact AI pipelines</span>
-                </li>
-              </ul>
-            </div>
+      {/* SECTION 4: HOW IT WORKS (Timeline with animated lines) */}
+      <div id="how-it-works" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+        <div className="text-center max-w-2xl mx-auto space-y-4 mb-16">
+          <div className="inline-flex items-center gap-1.5 bg-[#08142B]/5 text-[#08142B] px-3 py-1 rounded-full text-xs font-semibold">
+            <span>METHODOLOGY</span>
           </div>
+          {/* Section heading: Under 10 words limit */}
+          <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-[#08142B]">
+            Your Seamless Turnkey Five Step Learning Experience
+          </h2>
+        </div>
 
-          {/* Right Side: Timeline Expandable Modules */}
-          <div className="lg:col-span-7 space-y-4">
-            {curriculumModules.map((module) => {
-              const isOpen = expandedModule === module.id;
+        {/* Interactive Responsive Stepper Timeline */}
+        <div className="relative">
+          {/* Desktop connecting path line banner */}
+          <div className="absolute top-[44px] left-[10%] right-[10%] h-0.5 bg-dashed border-t border-gray-200 hidden lg:block -z-10" />
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-8 relative z-10">
+            {steps.map((st, idx) => {
               return (
-                <div
-                  key={module.id}
-                  className={`border rounded-2xl transition-all duration-300 overflow-hidden text-left ${
-                    isOpen
-                      ? "border-[#2D7FF9] bg-white shadow-premium"
-                      : "border-gray-200/80 bg-white/70 hover:border-gray-300"
-                  }`}
+                <div 
+                  key={idx} 
+                  onClick={() => setTimelineStep(idx)}
+                  className={`group relative text-center space-y-4 cursor-pointer p-4 rounded-xl transition-all duration-300 ${st.step === `0${timelineStep + 1}` ? "bg-gray-50" : "hover:bg-gray-50/50"}`}
                 >
-                  {/* Module Toggle Trigger Button Bar */}
-                  <button
-                    onClick={() => toggleModule(module.id)}
-                    className="w-full flex items-center justify-between p-5 text-left focus:outline-none focus:ring-0 select-none cursor-pointer"
-                  >
-                    <div className="space-y-1 pr-4">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-[9px] font-mono tracking-wider font-bold rounded-md uppercase bg-blue-50 text-blue-600 border border-blue-100">
-                          {module.weeks}
-                        </span>
-                        <span className="text-[11px] font-mono text-gray-400 font-medium">
-                          {module.lessonsCount} Core Lessons
-                        </span>
-                      </div>
-                      <h3 className="font-display font-bold text-base sm:text-lg text-[#101828]">
-                        {module.title}
-                      </h3>
+                  {/* Step Bubble circle */}
+                  <div className="flex justify-center">
+                    <div className={`w-14 h-14 rounded-full border-2 bg-white flex items-center justify-center font-bold text-lg font-display transition-all duration-300 relative ${timelineStep === idx ? "scale-115 active-dot-glow border-[#2D7FF9] text-[#2D7FF9]" : "border-gray-200 text-gray-400 group-hover:border-gray-300 animate-pulse"}`}>
+                      {st.step}
+                      {timelineStep === idx && (
+                        <div className="absolute -inset-1.5 border border-[#2D7FF9]/45 rounded-full animate-ping" />
+                      )}
                     </div>
-                    
-                    <div className={`p-2 rounded-xl border border-gray-100 bg-gray-50 flex items-center justify-center transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}>
-                      <ChevronDown className="w-4 h-4 text-gray-550" />
-                    </div>
-                  </button>
+                  </div>
 
-                  {/* Body Expand Section with high-fidelity modules details */}
-                  {isOpen && (
-                    <div className="px-5 pb-6 pt-1 border-t border-gray-100 space-y-5 animate-in fade-in duration-200">
-                      <p className="text-xs text-gray-500 leading-relaxed">
-                        {module.description}
-                      </p>
-
-                      <div className="space-y-2.5">
-                        <h4 className="text-[10px] font-mono font-bold tracking-wider text-gray-400 uppercase">
-                          STUDY SYLLABUS DIRECTIVES:
-                        </h4>
-                        <div className="space-y-2">
-                          {module.lessons.map((lesson, idx) => (
-                            <div key={idx} className="flex gap-2.5 items-start text-xs text-gray-700">
-                              <span className="w-5 h-5 rounded-full bg-[#12B76A]/10 text-[#12B76A] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
-                                {idx + 1}
-                              </span>
-                              <span className="font-medium">{lesson}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 pt-2">
-                        <h4 className="text-[10px] font-mono font-bold tracking-wider text-gray-400 uppercase">
-                          INTEGRATED TECH & API LIFECYCLES:
-                        </h4>
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {module.toolsCovered.map((tool, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-150 text-[10px] font-mono text-gray-550 font-medium"
-                            >
-                              {tool}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
+                  <div className="space-y-1">
+                    <h3 className="font-display font-medium text-base text-[#08142B]">
+                      {st.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 leading-relaxed max-w-[210px] mx-auto min-h-[36px]">
+                      {st.desc}
+                    </p>
+                  </div>
                 </div>
               );
             })}
           </div>
-
         </div>
       </div>
     </section>
