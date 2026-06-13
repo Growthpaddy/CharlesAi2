@@ -3,32 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React from "react";
 import { motion } from "motion/react";
-import { Star, ArrowRight, Play, Bot, Sparkles, Send, Zap, Award, Layers, CheckCircle } from "lucide-react";
+import { 
+  Star, 
+  ArrowRight,
+  ShieldCheck,
+  Award,
+  Sparkles,
+  BookOpen,
+  CheckCircle2
+} from "lucide-react";
 
 export default function Hero() {
-  const [activeTab, setActiveTab] = useState<"chat" | "stats" | "certificate">("chat");
-  const [chatInput, setChatInput] = useState("");
-  const [chatMessages, setChatMessages] = useState([
-    { sender: "user", text: "Create an autonomous marketing queue for my local consultancy." },
-    { sender: "ai", text: "🤖 **Automation formulated!** I have paired Claude with Make.com to auto-scrape warm prospects and draft personalized pitch templates in your inbox draft folder." }
-  ]);
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    const userMsg = chatInput;
-    setChatMessages((prev) => [...prev, { sender: "user", text: userMsg }]);
-    setChatInput("");
-    setTimeout(() => {
-      setChatMessages((prev) => [
-        ...prev,
-        { sender: "ai", text: "⚡ **Integration verified!** Automatically syncing lead data row back to client spreadsheet." }
-      ]);
-    }, 800);
-  };
-
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -37,269 +24,215 @@ export default function Hero() {
     }
   };
 
-  return (
-    <section id="hero" className="relative pt-28 sm:pt-36 pb-20 lg:pb-28 overflow-hidden bg-white">
-      {/* SaaS Developer style grid layout overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#2d80f905_1px,transparent_1px),linear-gradient(to_bottom,#2d80f905_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+  // World class universities/companies partners list matching Coursera feel
+  const partners = [
+    { name: "Google", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" },
+    { name: "IBM", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/5/51/IBM_logo.svg" },
+    { name: "Microsoft", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg" },
+    { name: "Stanford", label: "Stanford University" },
+    { name: "UPenn", label: "University of Pennsylvania" },
+    { name: "OpenAI", label: "OpenAI" },
+    { name: "Anthropic", label: "Anthropic" },
+    { name: "DeepLearning.AI", label: "DeepLearning.AI" }
+  ];
 
-      {/* Absolute blur backdrops */}
-      <div className="absolute top-[5%] left-[-100px] w-[500px] h-[500px] rounded-full bg-[#2D7FF9]/8 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[2%] right-[-100px] w-[500px] h-[500px] rounded-full bg-[#FCF50F]/10 blur-[130px] pointer-events-none" />
+  return (
+    <section id="hero" className="relative pt-32 sm:pt-36 pb-16 lg:pb-24 overflow-hidden bg-[#FAFCFF] text-gray-900 border-b border-gray-150">
+      {/* Soft elegant architectural grid lines matching Coursera's neat style */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0056d203_1px,transparent_1px),linear-gradient(to_bottom,#0056d204_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none z-0" />
+      
+      {/* Top subtle decorative ambient nodes */}
+      <div className="absolute top-[-10%] right-[10%] w-[400px] h-[400px] bg-[#0056D2]/5 rounded-full blur-[120px] pointer-events-none z-0" />
+      <div className="absolute bottom-[10%] left-[-10%] w-[350px] h-[350px] bg-amber-500/3 rounded-full blur-[100px] pointer-events-none z-0" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        
+        {/* Dynamic Promo Banner strip mimicking Coursera's ends soon layout */}
+        <div className="mb-12 bg-gradient-to-r from-[#0056D2] to-[#003E9C] rounded-2xl p-4 sm:p-6 text-white text-left flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm relative overflow-hidden">
+          <div className="absolute inset-y-0 right-0 w-80 bg-[radial-gradient(circle_at_right_center,rgba(255,255,255,0.08),transparent_70%)] pointer-events-none" />
+          <div className="space-y-1 z-10">
+            <span className="inline-block bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-sans font-bold uppercase tracking-widest">
+              OFFER HIGHLIGHT &bull; 50% SAVINGS
+            </span>
+            <h4 className="text-base sm:text-lg font-sans font-black tracking-tight">
+              Ends soon! Save more on Applied AI skills that stand out.
+            </h4>
+            <p className="text-xs text-blue-100 max-w-xl">
+              Today is a brilliant time to begin with 50% off professional cert timelines. Unlock elite workflow modules.
+            </p>
+          </div>
+          <div className="shrink-0 z-10 w-full sm:w-auto">
+            <motion.button
+              onClick={() => scrollToSection("pricing")}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="w-full sm:w-auto px-6 py-3 bg-white text-[#0056D2] hover:bg-blue-50 font-sans font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center gap-1.5 min-h-[44px]"
+            >
+              <span>Save 50% Now</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </motion.button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           
-          {/* Left Column: Authentic Premium Copy */}
-          <div className="lg:col-span-6 space-y-6 lg:space-y-8 text-left z-10">
-            {/* Live active members pulse */}
-            <div className="inline-flex items-center gap-2 bg-gray-550/10 px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
+          {/* Left Column: Authoritative, polished LMS copy */}
+          <div className="lg:col-span-7 space-y-6 text-left">
+            
+            {/* Highly respected badge */}
+            <div className="inline-flex items-center gap-2 bg-blue-50 px-3.5 py-1.5 rounded-full border border-blue-100/80">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0056D2] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0056D2]"></span>
               </span>
-              <span className="text-[11px] font-bold font-mono tracking-wider text-[#08142B] uppercase">
-                COHORT ENROLLMENT LIVE TODAY
+              <span className="text-[10px] sm:text-[11px] font-bold font-sans tracking-wide text-[#0056D2] uppercase">
+                COHORT REGISTRATIONS ACTIVE &bull; SELECT SEATS REMAINING
               </span>
             </div>
 
-            {/* Headline - Exact 9 words: Master AI Skills That Transform Careers and Businesses */}
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-5xl xl:text-6xl font-black tracking-tight text-[#08142B] leading-[1.15]">
-              Master AI Skills That{" "}
-              <span className="relative inline-block whitespace-nowrap">
-                <span className="relative z-10 text-[#2D7FF9]">Transform Careers</span>
-                <motion.span 
-                  initial={{ width: 0 }}
-                  animate={{ width: "100%" }}
-                  transition={{ delay: 0.5, duration: 0.8 }}
-                  className="absolute bottom-1 left-0 h-2 bg-[#FCF50F] -z-10 rounded-full"
-                />
+            {/* Headline - Coursera inspired layout with pristine typography */}
+            <h1 className="font-sans text-3xl sm:text-5xl lg:text-[46px] xl:text-[54px] font-black tracking-tight text-gray-900 leading-[1.1]">
+              Where Executives & Technical Builders{" "}
+              <span className="text-[#0056D2] relative inline-block">
+                Master Applied AI
+                <span className="absolute bottom-1 left-0 right-0 h-1 bg-blue-200/60 -z-10" />
               </span>{" "}
-              and{" "}
-              <span className="relative inline-block whitespace-nowrap">
-                <span className="relative z-10 text-[#08142B]">Businesses</span>
-                <motion.span 
-                  initial={{ width: 0 }}
-                  animate={{ width: "100%" }}
-                  transition={{ delay: 0.8, duration: 0.6 }}
-                  className="absolute bottom-1 left-0 h-1.5 bg-[#2D7FF9]/40 -z-10 rounded-full"
-                />
-              </span>
+              Operations.
             </h1>
 
-            {/* Subheading - Strict constraint (under 20 words): One concise sentence only */}
-            <p className="text-base sm:text-lg text-gray-550 leading-relaxed max-w-xl font-normal">
-              Build high-paying consulting systems, hands-free automation loops, and modern content assets in any business today.
+            {/* Authoritative, trust-centered description */}
+            <p className="text-sm sm:text-base text-gray-600 leading-relaxed max-w-2xl font-secondary">
+              Step into a premium academy designed specifically to bring raw competency to your active workflow. Skip theoretical fluff and learn how to construct production-ready webhook sequences, system prompting structures, and multi-agent loops that immediately lower operating costs.
             </p>
 
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
-              <button
+            {/* Direct premium Call To Actions with pristine click targets */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
+              <motion.button
                 onClick={() => scrollToSection("pricing")}
-                className="glow-btn px-8 py-4 bg-[#2D7FF9] hover:bg-[#2D7FF9]/95 text-white font-bold text-base rounded-2xl shadow-lg shadow-blue-500/20 transition-all duration-300 flex items-center justify-center gap-3 cursor-pointer min-h-[48px]"
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.97 }}
+                className="group px-8 py-3.5 bg-[#0056D2] hover:bg-[#003E9C] text-white font-sans font-bold text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
               >
-                <span>Start Learning</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
-              <button
+                <span>Enroll in Next Cohort</span>
+                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </motion.button>
+              
+              <motion.button
                 onClick={() => scrollToSection("featured-programs")}
-                className="px-8 py-4 bg-white hover:bg-gray-50 text-[#08142B] font-bold text-base rounded-2xl border border-gray-250 hover:border-gray-300 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-sm min-h-[48px]"
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.97 }}
+                className="px-8 py-3.5 bg-white hover:bg-gray-50 text-gray-700 font-sans font-bold text-sm rounded-xl border border-gray-200 hover:border-gray-300 transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
               >
-                <span>Explore Programs</span>
-              </button>
+                <span>Explore 9 Programs</span>
+              </motion.button>
             </div>
 
-            {/* Trust Row immediately below */}
-            <div className="pt-6 border-t border-gray-100 max-w-lg">
-              <div className="grid grid-cols-4 gap-2 sm:gap-4">
+            {/* Clear trust metrics aligned cleanly to the left, styled professionally */}
+            <div className="pt-6 border-t border-gray-150 max-w-xl">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
-                  <p className="text-xl sm:text-2xl font-black text-[#08142B] font-display">12,000+</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase font-mono tracking-wide mt-0.5">Students</p>
+                  <h3 className="text-2xl font-sans font-black text-[#0056D2]">12,000+</h3>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">ACADEMY GRADUATES</p>
                 </div>
-                <div className="border-l border-gray-100 pl-3">
-                  <p className="text-xl sm:text-2xl font-black text-[#08142B] font-display">90+</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase font-mono tracking-wide mt-0.5">Courses</p>
+                <div>
+                  <h3 className="text-2xl font-sans font-black text-[#0056D2]">90+</h3>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">SANDBOX LABS</p>
                 </div>
-                <div className="border-l border-gray-100 pl-3">
-                  <p className="text-xl sm:text-2xl font-black text-[#08142B] font-display flex items-center gap-0.5">
-                    4.9<Star className="w-3.5 h-3.5 fill-current text-[#FCF50F] stroke-[#08142B] shrink-0" />
-                  </p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase font-mono tracking-wide mt-0.5">Rating</p>
+                <div>
+                  <h3 className="text-2xl font-sans font-black text-gray-900 flex items-center gap-0.5">
+                    4.9<Star className="w-4 h-4 fill-amber-500 text-amber-500 shrink-0" />
+                  </h3>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">STUDENT RATING</p>
                 </div>
-                <div className="border-l border-gray-100 pl-3">
-                  <p className="text-xl sm:text-2xl font-black text-[#08142B] font-display">100+</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase font-mono tracking-wide mt-0.5">Countries</p>
+                <div>
+                  <h3 className="text-2xl font-sans font-black text-emerald-600">100%</h3>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">CURRICULUM TRUST</p>
                 </div>
               </div>
             </div>
 
           </div>
 
-          {/* Right Column: Interactive Dashboard Mockup (NOT screenshots) */}
-          <div className="lg:col-span-6 relative flex justify-center items-center h-full z-10 px-2">
-            <div className="w-full max-w-xl bg-[#08142B] rounded-3xl shadow-2xl overflow-hidden border border-white/10 text-left relative">
-              {/* Top application bar */}
-              <div className="bg-[#0c1d3c] border-b border-white/5 px-5 py-3.5 flex items-center justify-between">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-[#EF4444]" />
-                  <div className="w-3 h-3 rounded-full bg-[#F59E0B]" />
-                  <div className="w-3 h-3 rounded-full bg-[#10B981]" />
+          {/* Right Column: Clean, high-fidelity profile layout instead of futuristic mesh */}
+          <div className="lg:col-span-5 relative flex justify-center items-center">
+            
+            {/* Soft backdrop blur card */}
+            <div className="absolute inset-0 max-w-sm mx-auto rounded-3xl bg-blue-50/50 blur-2xl pointer-events-none -translate-x-4" />
+
+            <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden border border-gray-200 shadow-xl text-left relative transition-all duration-300 hover:shadow-2xl hover:border-gray-300 group">
+              
+              {/* Image Frame */}
+              <div className="relative aspect-square w-full overflow-hidden bg-gray-50 flex items-center justify-center">
+                <img
+                  src="/src/assets/images/regenerated_image_1781336783869.png"
+                  alt="Charles Tuti - Lead AI Architect"
+                  className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-103"
+                  referrerPolicy="no-referrer"
+                />
+                
+                {/* Accent Ribbon */}
+                <div className="absolute top-4 right-4 bg-[#0056D2] text-white px-3 py-1 rounded-lg text-[9px] font-mono tracking-wider uppercase font-black shadow-md">
+                  FOUNDING FACULTY
                 </div>
-                <span className="text-[10px] font-mono tracking-wider text-slate-400 bg-[#08142B] px-3.5 py-1 rounded-lg border border-white/5 flex items-center gap-1.5 font-bold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  LMS_ACTIVE_WORKSPACE.EXE
-                </span>
-                <div className="w-6" />
+
+                {/* Info Overlay Panel */}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent p-5 text-white">
+                  <span className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-widest">
+                    EX-GOOGLE ML LEAD
+                  </span>
+                  <h3 className="text-lg font-sans font-black mt-0.5">
+                    Charles Tuti
+                  </h3>
+                  <p className="text-xs text-gray-200 mt-1 line-clamp-2">
+                    7+ years building enterprise orchestration architectures and system pipelines.
+                  </p>
+                </div>
               </div>
 
-              {/* Workspace Navigation Tabs */}
-              <div className="grid grid-cols-3 bg-[#0c1d3c]/50 text-xs text-slate-400">
-                <button
-                  onClick={() => setActiveTab("chat")}
-                  className={`py-3.5 flex items-center justify-center gap-2 border-b-2 font-bold cursor-pointer transition-colors ${activeTab === "chat" ? "border-[#2D7FF9] text-[#2D7FF9] bg-[#08142B]" : "border-transparent hover:text-white"}`}
-                >
-                  <Bot className="w-4 h-4" />
-                  <span>AI Tutor Chat</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("stats")}
-                  className={`py-3.5 flex items-center justify-center gap-2 border-b-2 font-bold cursor-pointer transition-colors ${activeTab === "stats" ? "border-[#2D7FF9] text-[#2D7FF9] bg-[#08142B]" : "border-transparent hover:text-white"}`}
-                >
-                  <Layers className="w-4 h-4" />
-                  <span>Stats Engine</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("certificate")}
-                  className={`py-3.5 flex items-center justify-center gap-2 border-b-2 font-bold cursor-pointer transition-colors ${activeTab === "certificate" ? "border-[#2D7FF9] text-[#2D7FF9] bg-[#08142B]" : "border-transparent hover:text-white"}`}
-                >
-                  <Award className="w-4 h-4" />
-                  <span>Certificates</span>
-                </button>
+              {/* Verified badge list below */}
+              <div className="p-4 bg-gray-50 border-t border-gray-150 grid grid-cols-2 gap-3 text-xs font-semibold text-gray-700">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#0056D2] shrink-0" />
+                  <span>Interactive Labs</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#0056D2] shrink-0" />
+                  <span>Slack Mentoring</span>
+                </div>
               </div>
 
-              {/* Dynamic Interactive Body Display */}
-              <div className="p-6 h-[330px] overflow-y-auto text-sm text-slate-300">
-                {activeTab === "chat" && (
-                  <div className="flex flex-col h-full justify-between gap-4">
-                    <div className="space-y-4 overflow-y-auto max-h-[220px] pr-1">
-                      {chatMessages.map((msg, i) => (
-                        <div
-                          key={i}
-                          className={`p-3 rounded-2xl max-w-[85%] text-xs leading-relaxed ${
-                            msg.sender === "user"
-                              ? "bg-[#2D7FF9]/15 text-white ml-auto border border-[#2D7FF9]/20 rounded-tr-none"
-                              : "bg-[#0c1d3c] text-slate-200 border border-slate-700/55 mr-auto rounded-tl-none"
-                          }`}
-                        >
-                          {msg.text}
-                        </div>
-                      ))}
-                    </div>
-                    <form onSubmit={handleSendMessage} className="flex gap-2 bg-[#0c1d3c] p-1.5 rounded-xl border border-white/5">
-                      <input
-                        type="text"
-                        placeholder="Create complex automation script..."
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        className="flex-1 bg-transparent border-0 text-xs px-3 focus:outline-none focus:ring-0 text-white placeholder-slate-500"
-                      />
-                      <button type="submit" className="bg-[#2D7FF9] hover:bg-white text-[#08142B] hover:text-[#08142B] p-2 rounded-lg transition-colors font-bold cursor-pointer">
-                        <Send className="w-3.5 h-3.5" />
-                      </button>
-                    </form>
-                  </div>
-                )}
-
-                {activeTab === "stats" && (
-                  <div className="space-y-4 h-full flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between text-xs text-slate-400 font-mono mb-1.5">
-                        <span>COURSE PATH PROGRESSION</span>
-                        <span className="text-[#2D7FF9] font-bold">81% Complete</span>
-                      </div>
-                      <div className="w-full bg-[#0c1d3c] h-3 rounded-full overflow-hidden border border-white/5">
-                        <motion.div 
-                          className="bg-gradient-to-r from-[#2D7FF9] to-cyan-400 h-full rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: "81%" }}
-                          transition={{ duration: 1 }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-[#0c1d3c] p-4 rounded-xl border border-white/5">
-                        <span className="text-[10px] uppercase font-mono text-slate-400 tracking-wider">Lab Uptime</span>
-                        <p className="text-xl font-bold text-white mt-1">100%</p>
-                        <p className="text-[9px] text-[#2D7FF9] mt-0.5">24/7 background servers online</p>
-                      </div>
-                      <div className="bg-[#0c1d3c] p-4 rounded-xl border border-white/5">
-                        <span className="text-[10px] uppercase font-mono text-slate-400 tracking-wider">Practice Run time</span>
-                        <p className="text-xl font-bold text-white mt-1">42.8h</p>
-                        <p className="text-[9px] text-[#FCF50F] mt-0.5">Completed 12 projects challenge</p>
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] text-slate-400 text-center italic leading-tight">
-                      Sandbox metrics calibrate dynamically every 15 seconds.
-                    </p>
-                  </div>
-                )}
-
-                {activeTab === "certificate" && (
-                  <div className="h-full flex flex-col justify-between items-center text-center p-3">
-                    <div className="w-14 h-14 rounded-full bg-[#2D7FF9]/10 text-[#2D7FF9] flex items-center justify-center border border-[#2D7FF9]/25 animate-pulse">
-                      <Award className="w-7 h-7" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-sm font-semibold tracking-tight text-white leading-tight">Applied AI Architect Certification</p>
-                      <p className="text-[10px] text-slate-400 max-w-[280px] mx-auto leading-relaxed">
-                        Issued dynamically upon complete verification of Make.com triggers and model playground parameters.
-                      </p>
-                    </div>
-                    <div className="bg-[#0c1d3c] px-4 py-2 rounded-xl border border-white/5 text-[11px] font-mono flex items-center gap-2">
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>ID: AISTUDIO-94025-COLE</span>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
-
-            {/* floating badging element 1: rating banner */}
-            <motion.div
-              initial={{ y: 15 }}
-              animate={{ y: [0, -8, 0] }}
-              transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-              className="absolute left-[-25px] bottom-6 bg-[#08142B] p-4 rounded-2xl border border-white/10 shadow-xl hidden sm:block text-left max-w-[170px]"
-            >
-              <div className="flex items-center gap-1.5 text-[#FCF50F] mb-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-3 h-3 fill-current shrink-0" />
-                ))}
-              </div>
-              <p className="text-[11px] font-bold text-white tracking-tight leading-tight">
-                Recommended by 98% of cohort executives
-              </p>
-            </motion.div>
-
-            {/* floating badging element 2: speed marker */}
-            <motion.div
-              initial={{ y: -10 }}
-              animate={{ y: [0, 8, 0] }}
-              transition={{ repeat: Infinity, duration: 7, ease: "easeInOut", delay: 0.5 }}
-              className="absolute right-[-15px] top-6 bg-[#2D7FF9] p-3 rounded-2xl shadow-xl hidden sm:block text-left text-white max-w-[155px]"
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <Zap className="w-4 h-4 text-[#FCF50F]" />
-                <span className="font-mono text-[9px] font-bold tracking-wider">SPEED SCALE</span>
-              </div>
-              <p className="text-[11px] font-bold leading-tight">
-                Build cloud integrations 10x faster.
-              </p>
-            </motion.div>
           </div>
 
         </div>
+
+        {/* Brand logos wave imitating "Learn from 350+ leading universities and companies" */}
+        <div className="mt-16 pt-8 border-t border-gray-200 text-left">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">
+            Trusted by operators at world-leading organizations
+          </p>
+          <div className="flex flex-wrap items-center gap-x-10 gap-y-6 opacity-65">
+            <span className="text-gray-500 font-sans font-extrabold text-sm sm:text-base tracking-tight flex items-center gap-1">
+              <span className="text-red-500 text-lg">■</span> Stanford University
+            </span>
+            <span className="text-gray-500 font-sans font-extrabold text-sm sm:text-base tracking-tight flex items-center gap-1">
+              <span className="text-blue-700 text-lg">■</span> Google Enterprise
+            </span>
+            <span className="text-gray-500 font-sans font-extrabold text-sm sm:text-base tracking-tight flex items-center gap-1">
+              <span className="text-sky-500 text-lg">■</span> IBM Cloud
+            </span>
+            <span className="text-gray-500 font-sans font-extrabold text-sm sm:text-base tracking-tight flex items-center gap-1">
+              <span className="text-[#0056D2] text-lg">■</span> UPenn Wharton
+            </span>
+            <span className="text-gray-500 font-sans font-mono text-xs font-black tracking-widest">
+              OPENAI COGNITIVE
+            </span>
+            <span className="text-gray-500 font-sans font-black text-sm tracking-tight">
+              DeepLearning.AI
+            </span>
+          </div>
+        </div>
+
       </div>
     </section>
   );

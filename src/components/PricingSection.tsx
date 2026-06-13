@@ -209,6 +209,25 @@ export default function PricingSection() {
           ))}
         </div>
 
+        {/* Risk-Free Operational Guarantee */}
+        <div className="mt-20 p-8 sm:p-10 bg-[#08142B]/5 border border-[#2D7FF9]/15 rounded-3xl text-left flex flex-col md:flex-row items-center gap-8 max-w-5xl mx-auto relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#FCF50F]/5 blur-2xl rounded-full pointer-events-none" />
+          
+          <div className="w-16 h-16 rounded-2xl bg-white border border-blue-200 flex items-center justify-center text-[#2D7FF9] shrink-0 shadow-sm">
+            <ShieldCheck className="w-10 h-10" />
+          </div>
+
+          <div className="space-y-2 flex-grow">
+            <span className="text-[10px] font-mono font-black text-[#2D7FF9] uppercase tracking-widest block">Operational Pledge</span>
+            <h3 className="font-display font-black text-lg sm:text-xl text-[#08142B]">
+              14-Day Risk-Free Operational Guarantee
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-500 leading-relaxed font-semibold">
+              Try the entire program risk-free for 14 days. If you don’t build and deploy at least 3 active pipelines inside our sandbox labs, or if you don’t feel 10x more capable of engineering client solutions, we’ll trigger a full 100% refund immediately. No questions, no blockages.
+            </p>
+          </div>
+        </div>
+
         {/* High-Value Bonuses List */}
         <div className="pt-24">
           <div className="text-left md:text-center max-w-2xl mx-auto space-y-4 mb-12">

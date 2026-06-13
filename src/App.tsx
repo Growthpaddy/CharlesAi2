@@ -19,6 +19,17 @@ import PricingSection from "./components/PricingSection";
 import CommunityAndFAQs from "./components/CommunityAndFAQs";
 import AboutPage from "./components/AboutPage";
 import Footer from "./components/Footer";
+import HomePaths from "./components/HomePaths";
+import HomeHowItWorks from "./components/HomeHowItWorks";
+import HomeExperience from "./components/HomeExperience";
+import HomeResults from "./components/HomeResults";
+import HomeCurriculum from "./components/HomeCurriculum";
+import HomeFAQ from "./components/HomeFAQ";
+import HomeInstructor from "./components/HomeInstructor";
+import HomeCTA from "./components/HomeCTA";
+import ScrollReveal from "./components/ScrollReveal";
+import AITechStack from "./components/AITechStack";
+import FloatingParticlesWrapper from "./components/FloatingParticlesWrapper";
 import { NavigationProvider, useNavigation, ViewType } from "./context/NavigationContext";
 
 export default function App() {
@@ -38,13 +49,66 @@ function AppContent() {
   };
 
   return (
-    <div id="app-root" className="min-h-screen bg-[#FAFBFC] text-[#08142B] font-sans antialiased relative selection:bg-[#2D7FF9]/25 selection:text-[#011673] flex flex-col justify-between">
+    <div id="app-root" className="min-h-screen bg-[#FAFBFC] text-[#0B1B3D] font-sans antialiased relative selection:bg-[#0056D2]/25 selection:text-[#0B1B3D] flex flex-col justify-between">
       {/* Sticky top-level Glass navigation */}
       <Header />
 
       {/* Main visual layouts stack dynamically routed */}
       <main className="flex-grow">
         {currentView === "home" && (
+          <div className="relative animate-in fade-in duration-350">
+            <FloatingParticlesWrapper />
+            {/* 1. Hero Section */}
+            <Hero />
+
+            {/* 2. 4-Feature Horizontal Strip */}
+            <ScrollReveal>
+              <WhyUs />
+            </ScrollReveal>
+
+            {/* AI Tech Stack section */}
+            <ScrollReveal>
+              <AITechStack />
+            </ScrollReveal>
+
+            {/* 3. Curated Learning Paths Horizontal Row */}
+            <ScrollReveal>
+              <HomePaths />
+            </ScrollReveal>
+
+            {/* 4. Steps 1-5 Stepper Methodology */}
+            <ScrollReveal>
+              <HomeHowItWorks />
+            </ScrollReveal>
+
+            {/* 6. Interactive Sandbox ipad Mockup */}
+            <ScrollReveal>
+              <HomeExperience />
+            </ScrollReveal>
+
+            {/* 9. Elite Cohort Curriculum accordions dropdown */}
+            <ScrollReveal>
+              <HomeCurriculum />
+            </ScrollReveal>
+
+            {/* 10. Sandra Cole ex-Google ML lead spotlight */}
+            <ScrollReveal>
+              <HomeInstructor />
+            </ScrollReveal>
+
+            {/* 11. FAQ Accordion section & Admissions scheduling */}
+            <ScrollReveal>
+              <HomeFAQ />
+            </ScrollReveal>
+
+            {/* 12. Complete direct pricing investment cards */}
+            <ScrollReveal>
+              <PricingSection />
+            </ScrollReveal>
+          </div>
+        )}
+
+        {currentView === "old_home_deprecated" && (
           <div className="animate-in fade-in slide-in-from-bottom-3 duration-300">
             {/* 1. Brand Intro Hero Banner & Workspace mockup */}
             <Hero />
@@ -219,14 +283,14 @@ function AppContent() {
             <Testimonials />
 
             {/* Combined dynamic bottom banner section for home conversion */}
-            <section className="py-20 bg-gradient-to-br from-[#08142B] to-[#0d2249] text-white overflow-hidden relative text-center">
-              <div className="absolute inset-0 bg-[#2D7FF9]/15 blur-[120px] pointer-events-none" />
+            <section className="py-20 bg-gradient-to-br from-[#030914] to-[#0A162B] text-white overflow-hidden relative text-center">
+              <div className="absolute inset-0 bg-[#0056D2]/15 blur-[120px] pointer-events-none" />
               <div className="max-w-4xl mx-auto px-4 relative z-10 space-y-6">
-                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold tracking-widest uppercase bg-[#2D7FF9]/20 text-blue-300 px-3 py-1 rounded-full">
-                  <Sparkles className="w-3.5 h-3.5 text-[#FCF50F]" /> Applied Competence Priority
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-widest uppercase bg-[#0056D2]/20 text-blue-300 px-3.5 py-1.5 rounded-full border border-blue-500/20">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Applied Competence Priority
                 </span>
                 {/* Under 10 words heading limit */}
-                <h3 className="font-display text-3xl sm:text-4xl font-extrabold leading-tight">
+                <h3 className="font-sans text-3xl sm:text-4xl font-extrabold leading-tight">
                   Stop Buzzword Chasing. Start Engineering Automations.
                 </h3>
                 <p className="text-slate-300 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
@@ -235,7 +299,7 @@ function AppContent() {
                 <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center items-center">
                   <button 
                     onClick={() => handlePageChange("pricing")}
-                    className="bg-[#FCF50F] hover:bg-white text-zinc-950 font-bold px-8 py-3.5 rounded-xl transition-all text-xs cursor-pointer min-h-[48px]"
+                    className="bg-[#0056D2] hover:bg-[#003E9C] text-white font-bold px-8 py-3.5 rounded-xl transition-all text-xs cursor-pointer min-h-[48px]"
                   >
                     View Pricing Options
                   </button>
@@ -264,8 +328,14 @@ function AppContent() {
         )}
 
         {currentView === "success" && (
-          <div className="pt-28 sm:pt-32 pb-16 animate-in fade-in duration-300">
+          <div className="pt-28 sm:pt-32 pb-16 space-y-16 animate-in fade-in duration-300">
             <SuccessSection />
+            <ScrollReveal>
+              <HomeResults />
+            </ScrollReveal>
+            <ScrollReveal>
+              <Testimonials />
+            </ScrollReveal>
           </div>
         )}
 

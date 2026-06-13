@@ -6,6 +6,7 @@
 import React, { useState } from "react";
 import { featuredCourses } from "../data";
 import { Search, Clock, Users, Star, Sparkles, ShieldCheck, ArrowRight, Filter } from "lucide-react";
+import { motion } from "motion/react";
 
 export default function FeaturedPrograms() {
   const [selectedLevel, setSelectedLevel] = useState<"All" | "Beginner" | "Intermediate" | "Advanced">("All");
@@ -49,13 +50,13 @@ export default function FeaturedPrograms() {
         {/* SECTION 5: TITLE */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-10 border-b border-gray-100">
           <div className="text-left space-y-4">
-            <div className="inline-flex items-center gap-1.5 bg-[#2D7FF9]/10 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
+            <div className="inline-flex items-center gap-1.5 bg-[#2D7FF9]/10 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
               <span>ELITE LMS CATALOGUE</span>
             </div>
             {/* Heading under 10 words limit */}
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-[#08142B]">
-              Accelerate Operations with Top-Tier Featured Programs
+            <h2 className="font-display text-2xl sm:text-4xl font-extrabold tracking-tight text-[#08142B]">
+              Featured Programs
             </h2>
           </div>
 
@@ -75,17 +76,18 @@ export default function FeaturedPrograms() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-8">
           <div className="flex flex-wrap gap-2">
             {(["All", "Beginner", "Intermediate", "Advanced"] as const).map((level) => (
-              <button
+              <motion.button
                 key={level}
                 onClick={() => setSelectedLevel(level)}
-                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all border cursor-pointer select-none min-h-[40px] ${
+                whileTap={{ scale: 0.96 }}
+                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all border cursor-pointer select-none min-h-[44px] sm:min-h-[40px] flex items-center justify-center ${
                   selectedLevel === level
                     ? "bg-[#2D7FF9] text-white border-[#2D7FF9] shadow-sm"
                     : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
                 }`}
               >
                 {level} {level !== "All" ? "Level" : "Paths"}
-              </button>
+              </motion.button>
             ))}
           </div>
 
@@ -107,10 +109,25 @@ export default function FeaturedPrograms() {
         {/* LMS Grid (Max 6 elements) */}
         {displayCourses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-4">
-            {displayCourses.map((course) => (
-              <div
+            {displayCourses.map((course, idx) => (
+              <motion.div
                 key={course.id}
-                className="group bg-white border border-gray-150 hover:border-gray-300 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-premium flex flex-col justify-between text-left"
+                animate={{
+                  y: [0, -4, 0]
+                }}
+                transition={{
+                  duration: 6,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: idx * 0.4
+                }}
+                whileHover={{
+                  y: -10,
+                  scale: 1.015,
+                  transition: { type: "spring", stiffness: 400, damping: 25 }
+                }}
+                whileTap={{ scale: 0.98 }}
+                className="group bg-white border border-gray-150 hover:border-gray-300 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-premium flex flex-col justify-between text-left cursor-pointer"
               >
                 {/* Thumb Space */}
                 <div className="relative overflow-hidden aspect-[16/10] bg-gray-50">
@@ -188,16 +205,20 @@ export default function FeaturedPrograms() {
                 </div>
 
                 <div className="px-6 pb-6 pt-0">
-                  <button
-                    onClick={() => scrollToSection("pricing")}
+                  <motion.button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      scrollToSection("pricing");
+                    }}
+                    whileTap={{ scale: 0.96 }}
                     className="w-full bg-gray-50 hover:bg-[#2D7FF9] text-[#08142B] hover:text-white py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 group select-none cursor-pointer min-h-[48px]"
                   >
                     <span>Request Details</span>
                     <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </button>
+                  </motion.button>
                 </div>
 
-              </div>
+              </motion.div>
             ))}
           </div>
         ) : (

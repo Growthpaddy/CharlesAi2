@@ -22,39 +22,39 @@ export default function Testimonials() {
   const students = [
     {
       id: "student-1",
-      name: "Marcus Adenbayo",
-      role: "Founding Partner",
-      company: "Aven Automation",
-      avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=300&h=300",
-      before: "Spent 40 hours weekly on lead entry.",
-      after: "Saves 35 hours weekly with Claude.",
-      outcome: "+310% Agency Growth",
-      quote: "The blueprints helped me configure autonomous research workflows in days. I saved hours instantly.",
-      videoThumb: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600&h=400"
+      name: "Nadia Rahman",
+      role: "SEO Growth Director",
+      company: "Apex Media",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300&h=300",
+      before: "Spent 30 hours weekly writing copy.",
+      after: "Generates target pages in 5 minutes with AI.",
+      outcome: "+240% Engagement Rate",
+      quote: "The prompt systems completely streamlined our editorial scheduling. Our output increased 4x while saving thousands.",
+      videoThumb: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=600&h=400"
     },
     {
       id: "student-2",
-      name: "Nia Mitchell",
-      role: "Brand Director",
-      company: "Vibrant Studio",
-      avatar: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=300&h=300",
-      before: "Paid $3k monthly to video editors.",
-      after: "Renders series in minutes using Runway.",
-      outcome: "Saved $36,000 Annually",
-      quote: "We scaled our micro-content production 3x while cutting production overhead margins by 85%.",
-      videoThumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=600&h=400"
+      name: "Ethan Brooks",
+      role: "Sales Operations",
+      company: "Nexus Growth",
+      avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=300&h=300",
+      before: "Handled sales cold emails manually.",
+      after: "Crawls leads and personalizes pitches with bots.",
+      outcome: "+180% Booking Rate",
+      quote: "Implementing structured Apollo scraping with webhook triggers automated our full sales funnel.",
+      videoThumb: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600&h=400"
     },
     {
       id: "student-3",
-      name: "Tariq Jackson",
-      role: "eCom Founder",
-      company: "Zuri Luxury Goods",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300&h=300",
-      before: "Handled hundreds of support tickets manually.",
-      after: "Resolves refunds instantly via custom agent.",
-      outcome: "-45% Support Overhead",
-      quote: "Embedding an inventory chatbot that triggers real-time refunds completely streamlined store support.",
-      videoThumb: "https://images.unsplash.com/photo-1531747118685-ca8fa6e08806?auto=format&fit=crop&q=80&w=600&h=400"
+      name: "Lina Gomez",
+      role: "Support Team Lead",
+      company: "Zuri Commerce",
+      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300&h=300",
+      before: "Spent $5k monthly on support reps.",
+      after: "Resolves refunds and tickets via LLM teams.",
+      outcome: "-60% Support Overhead",
+      quote: "Our custom customer support assistant handles over 80% of routine tickets smoothly without any team blockages.",
+      videoThumb: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=600&h=400"
     }
   ];
 
