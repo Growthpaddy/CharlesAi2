@@ -29,7 +29,7 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileSearchVisible, setMobileSearchVisible] = useState(false);
-  const { navigateTo } = useNavigation();
+  const { navigateTo, setLoginOpen } = useNavigation();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -522,7 +522,7 @@ export default function Header() {
               
               {/* Minimalist Log In Link Button */}
               <button
-                onClick={() => scrollToSection("pricing")}
+                onClick={() => setLoginOpen(true)}
                 className="hidden md:block text-xs font-sans font-bold text-[#0056D2] hover:text-[#003E9C] hover:bg-blue-50/50 py-2.5 px-3 rounded-lg transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider"
               >
                 Log In
@@ -694,7 +694,7 @@ export default function Header() {
               {/* Bottom CTA Group in Mobile Sidebar */}
               <div className="pt-6 border-t border-gray-100 flex flex-col gap-3">
                 <button
-                  onClick={() => scrollToSection("pricing")}
+                  onClick={() => { setLoginOpen(true); setMobileMenuOpen(false); }}
                   className="w-full py-3.5 text-center text-xs font-sans font-bold text-[#0056D2] bg-blue-50 rounded-xl min-h-[48px] uppercase tracking-wider"
                 >
                   Log In Account

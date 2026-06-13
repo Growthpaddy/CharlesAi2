@@ -1,178 +1,230 @@
 /**
  * @license
- * SPDX-License-Identifier: Apache-2.5
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
-import { Sparkles, Twitter, Linkedin, Github, Send, CheckCircle2 } from "lucide-react";
-import { motion } from "motion/react";
+import React from "react";
+import { Sparkles, Apple, Play } from "lucide-react";
 import { useNavigation, ViewType } from "../context/NavigationContext";
 
 export default function Footer() {
   const { navigateTo } = useNavigation();
-  const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Helper to change page instantly and scroll up
   const handleNav = (view: ViewType) => {
     navigateTo(view);
     window.scrollTo({ top: 0, behavior: "instant" });
   };
 
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !email.includes("@")) return;
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubscribed(true);
-      setEmail("");
-    }, 1000);
-  };
+  const columnsRow1 = [
+    {
+      title: "Skills",
+      items: [
+        { label: "Accounting", view: "paths" as ViewType },
+        { label: "Artificial Intelligence (AI)", view: "paths" as ViewType },
+        { label: "Cybersecurity", view: "paths" as ViewType },
+        { label: "Data Analytics", view: "paths" as ViewType },
+        { label: "Digital Marketing", view: "paths" as ViewType },
+        { label: "Human Resources (HR)", view: "paths" as ViewType },
+        { label: "Microsoft Excel", view: "paths" as ViewType },
+        { label: "Project Management", view: "paths" as ViewType },
+        { label: "Python", view: "paths" as ViewType },
+        { label: "SQL", view: "paths" as ViewType }
+      ]
+    },
+    {
+      title: "Professional Certificates",
+      items: [
+        { label: "Google AI Certificate", view: "programs" as ViewType },
+        { label: "Google Cybersecurity Certificate", view: "programs" as ViewType },
+        { label: "Google Data Analytics Certificate", view: "programs" as ViewType },
+        { label: "Google IT Support Certificate", view: "programs" as ViewType },
+        { label: "Google Project Management Certificate", view: "programs" as ViewType },
+        { label: "Google UX Design Certificate", view: "programs" as ViewType },
+        { label: "IBM AI Engineering Certificate", view: "programs" as ViewType },
+        { label: "IBM AI Product Manager Certificate", view: "programs" as ViewType },
+        { label: "IBM Data Science Certificate", view: "programs" as ViewType },
+        { label: "Intuit Academy Bookkeeping Certificate", view: "programs" as ViewType }
+      ]
+    },
+    {
+      title: "Courses & Specializations",
+      items: [
+        { label: "AI Essentials Specialization", view: "programs" as ViewType },
+        { label: "AI For Business Specialization", view: "programs" as ViewType },
+        { label: "AI For Everyone Course", view: "programs" as ViewType },
+        { label: "AI in Healthcare Specialization", view: "programs" as ViewType },
+        { label: "Deep Learning Specialization", view: "programs" as ViewType },
+        { label: "Excel Skills for Business Specialization", view: "programs" as ViewType },
+        { label: "Financial Markets Course", view: "programs" as ViewType },
+        { label: "Machine Learning Specialization", view: "programs" as ViewType },
+        { label: "Prompt Engineering for ChatGPT Course", view: "programs" as ViewType },
+        { label: "Python for Everybody Specialization", view: "programs" as ViewType }
+      ]
+    },
+    {
+      title: "Career Resources",
+      items: [
+        { label: "Career Aptitude Test", view: "success" as ViewType },
+        { label: "CAPM Certification Requirements", view: "success" as ViewType },
+        { label: "CompTIA A+ Certification Requirements", view: "success" as ViewType },
+        { label: "CompTIA Security+ Certification Requirements", view: "success" as ViewType },
+        { label: "Essential IT Certifications", view: "success" as ViewType },
+        { label: "High-Income Skills to Learn", view: "success" as ViewType },
+        { label: "How to Learn Artificial Intelligence", view: "success" as ViewType },
+        { label: "PMP Certification Requirements", view: "success" as ViewType },
+        { label: "Popular Cybersecurity Certifications", view: "success" as ViewType },
+        { label: "Share your Coursera learning story", view: "resources" as ViewType }
+      ]
+    }
+  ];
+
+  const columnsRow2 = [
+    {
+      title: "aiinstitute",
+      items: [
+        { label: "About", view: "about" as ViewType },
+        { label: "What We Offer", view: "programs" as ViewType },
+        { label: "Leadership", view: "about" as ViewType },
+        { label: "Careers", view: "about" as ViewType },
+        { label: "Catalog", view: "programs" as ViewType }
+      ]
+    },
+    {
+      title: "Community",
+      items: [
+        { label: "Learners", view: "resources" as ViewType },
+        { label: "Partners", view: "about" as ViewType },
+        { label: "Beta Testers", view: "resources" as ViewType },
+        { label: "Blog", view: "resources" as ViewType },
+        { label: "The Coursera Podcast", view: "resources" as ViewType }
+      ]
+    },
+    {
+      title: "More",
+      items: [
+        { label: "Press", view: "resources" as ViewType },
+        { label: "Investors", view: "about" as ViewType },
+        { label: "Terms", view: "about" as ViewType },
+        { label: "Privacy", view: "about" as ViewType },
+        { label: "Help", view: "resources" as ViewType }
+      ]
+    }
+  ];
 
   return (
-    <footer className="bg-[#070A14] text-slate-400 py-20 border-t border-white/[0.04] relative overflow-hidden">
-      
-      {/* Decorative subtle background nodes */}
-      <div className="absolute top-0 right-1/4 w-80 h-80 bg-[#2D7FF9]/4 rounded-full blur-[100px] pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+    <footer id="global-footer" className="bg-[#F5F7FA] border-t border-gray-200/80 pt-16 pb-12 text-slate-800 relative z-20 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Modern Email Subscriber Segment Spanning Top of Footer */}
-        <div className="mb-16 pb-12 border-b border-white/[0.04] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 text-left">
-          <div className="max-w-md space-y-2">
-            <span className="inline-flex items-center gap-1 bg-[#2D7FF9]/15 text-[#2D7FF9] px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-widest border border-blue-500/10">
-              STAY AHEAD OF AUTOMATION
-            </span>
-            <h3 className="text-xl sm:text-2xl font-sans font-black text-white tracking-tight">
-              Subscribe to elite AI briefings
-            </h3>
-            <p className="text-xs text-slate-400 leading-relaxed font-secondary">
-              Receive raw, weekly prompt blueprints, webhook sequences, and multi-agent code templates used by leading operators.
-            </p>
-          </div>
-
-          <div className="w-full max-w-md shrink-0">
-            {subscribed ? (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-3 text-emerald-400"
-              >
-                <CheckCircle2 className="w-5 h-5 shrink-0" />
-                <span className="text-xs font-sans font-bold">Successfully subscribed! Welcome to the weekly briefing pipeline.</span>
-              </motion.div>
-            ) : (
-              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="email"
-                  required
-                  placeholder="Enter your professional email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#2D7FF9] focus:border-[#2D7FF9] transition-all"
-                />
-                <motion.button
-                  type="submit"
-                  disabled={isSubmitting}
-                  whileTap={{ scale: 0.96 }}
-                  className="h-12 px-6 bg-[#2D7FF9] hover:bg-blue-600 text-white font-sans font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shrink-0 select-none cursor-pointer transition-colors"
-                >
-                  {isSubmitting ? (
-                    <span>Configuring...</span>
-                  ) : (
-                    <>
-                      <span>Brief Me</span>
-                      <Send className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </motion.button>
-              </form>
-            )}
-          </div>
+        {/* ROW 1: 4 COLUMN MASSIVE SKILLS & CREDENTIALS INDEX */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-10 pb-12 border-b border-gray-250">
+          {columnsRow1.map((col, idx) => (
+            <div key={idx} className="space-y-4 text-left">
+              <h4 className="font-sans font-bold text-sm sm:text-base text-[#0B1B3D] tracking-tight">
+                {col.title}
+              </h4>
+              <ul className="space-y-2.5 text-[11.5px] sm:text-xs text-gray-500 font-medium">
+                {col.items.map((item, i) => (
+                  <li key={i}>
+                    <button
+                      onClick={() => handleNav(item.view)}
+                      className="hover:text-[#0056D2] hover:underline transition-colors text-left font-sans cursor-pointer focus:outline-none"
+                    >
+                      {item.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 pb-12 border-b border-white/[0.04] text-left">
-          {/* Branding */}
-          <div className="md:col-span-4 space-y-4">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNav("home")}>
-              <div className="w-8 h-8 rounded-lg bg-[#2D7FF9] flex items-center justify-center text-white font-bold relative">
-                <Sparkles className="w-4.5 h-4.5 text-[#FCF50F]" />
-              </div>
-              <span className="font-display font-bold text-base tracking-tight text-white animate-in">
-                AIOnline<span className="text-[#2D7FF9]">Business</span>
-              </span>
+        {/* ROW 2: OTHER LINKS AND APP DOWNLOAD BADGES */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-x-8 gap-y-10 pt-12 pb-10 border-b border-gray-250">
+          {columnsRow2.map((col, idx) => (
+            <div key={idx} className="lg:col-span-3 text-left space-y-4">
+              <h4 className="font-sans font-bold text-sm sm:text-base text-[#0B1B3D] tracking-tight">
+                {col.title === "aiinstitute" ? (
+                  <span className="font-black text-sm tracking-tight text-[#0056D2]">
+                    ai<span className="text-[#0B1B3D] font-normal leading-none font-medium ml-0.5">institute</span>
+                  </span>
+                ) : (
+                  col.title
+                )}
+              </h4>
+              <ul className="space-y-2 text-[11.5px] sm:text-xs text-gray-500 font-medium">
+                {col.items.map((item, i) => (
+                  <li key={i}>
+                    <button
+                      onClick={() => handleNav(item.view)}
+                      className="hover:text-[#0056D2] hover:underline transition-colors text-left font-sans cursor-pointer focus:outline-none"
+                    >
+                      {item.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed font-normal max-w-xs">
-              The premier applied AI learning academy helping entrepreneurs and leaders develop real automation routines and skills.
-            </p>
+          ))}
+
+          {/* APP STORE DOWNLOAD BADGES COLUMN (Matches screenshot) */}
+          <div className="lg:col-span-3 text-left space-y-4 flex flex-col justify-start">
+            <h4 className="font-sans font-bold text-xs uppercase tracking-wider text-gray-400">
+              Mobile Learning
+            </h4>
             
-            {/* social buttons link */}
-            <div className="flex gap-3 pt-2">
-              <a href="#" className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white transition-colors" aria-label="Twitter">
-                <Twitter className="w-4 h-4" />
+            <div className="space-y-3 max-w-[170px]">
+              {/* App Store Badge */}
+              <a 
+                href="#appstore" 
+                onClick={(e) => { e.preventDefault(); alert("App Store download requested. Interactive ios App synchronizing..."); }}
+                className="flex items-center gap-2 bg-[#000000] text-white p-2 sm:p-2.5 rounded-lg border border-white/10 hover:bg-[#1a1a1a] transition-all"
+              >
+                <Apple className="w-6 h-6 shrink-0 fill-white text-white" />
+                <div className="text-left font-sans">
+                  <p className="text-[7.5px] uppercase tracking-wider leading-none font-bold text-gray-300">Download on the</p>
+                  <p className="text-xs font-black tracking-tight leading-tight mt-0.5">App Store</p>
+                </div>
               </a>
-              <a href="#" className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white transition-colors" aria-label="LinkedIn">
-                <Linkedin className="w-4 h-4" />
-              </a>
-              <a href="#" className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white transition-colors" aria-label="GitHub">
-                <Github className="w-4 h-4" />
+
+              {/* Google Play Badge */}
+              <a 
+                href="#playstore" 
+                onClick={(e) => { e.preventDefault(); alert("Google Play download requested. Direct Android sandbox APK compiling..."); }}
+                className="flex items-center gap-2 bg-[#000000] text-white p-2 sm:p-2.5 rounded-lg border border-white/10 hover:bg-[#1a1a1a] transition-all"
+              >
+                <Play className="w-6 h-6 shrink-0 fill-white text-[#fff] relative left-0.5" />
+                <div className="text-left font-sans">
+                  <p className="text-[7.5px] uppercase tracking-wider leading-none font-bold text-gray-300">GET IT ON</p>
+                  <p className="text-xs font-black tracking-tight leading-tight mt-0.5">Google Play</p>
+                </div>
               </a>
             </div>
           </div>
-
-          {/* Column 1: Programs */}
-          <div className="md:col-span-2 space-y-3">
-            <h4 className="font-mono text-[9px] uppercase tracking-wider font-bold text-white">Programs</h4>
-            <ul className="space-y-2 text-xs">
-              <li><button onClick={() => handleNav("programs")} className="hover:text-white cursor-pointer select-none text-left">AI Business Mastery</button></li>
-              <li><button onClick={() => handleNav("programs")} className="hover:text-white cursor-pointer select-none text-left">ChatGPT Mastery</button></li>
-              <li><button onClick={() => handleNav("programs")} className="hover:text-white cursor-pointer select-none text-left">AI Content Creation</button></li>
-              <li><button onClick={() => handleNav("programs")} className="hover:text-white cursor-pointer select-none text-left">Developer Automation</button></li>
-            </ul>
-          </div>
-
-          {/* Column 2: Resources */}
-          <div className="md:col-span-2 space-y-3">
-            <h4 className="font-mono text-[9px] uppercase tracking-wider font-bold text-white">Resources</h4>
-            <ul className="space-y-2 text-xs">
-              <li><button onClick={() => handleNav("resources")} className="hover:text-white cursor-pointer select-none text-left">Prompt Libraries</button></li>
-              <li><button onClick={() => handleNav("resources")} className="hover:text-white cursor-pointer select-none text-left font-sans">Automation Blueprints</button></li>
-              <li><button onClick={() => handleNav("resources")} className="hover:text-white cursor-pointer select-none text-left">Weekly Webinars</button></li>
-              <li><button onClick={() => handleNav("success")} className="hover:text-white cursor-pointer select-none text-left">Case Studies</button></li>
-            </ul>
-          </div>
-
-          {/* Column 3: Company */}
-          <div className="md:col-span-2 space-y-3">
-            <h4 className="font-mono text-[9px] uppercase tracking-wider font-bold text-white">Company</h4>
-            <ul className="space-y-2 text-xs">
-              <li><button onClick={() => handleNav("about")} className="hover:text-white cursor-pointer select-none text-left">Why Us</button></li>
-              <li><button onClick={() => handleNav("success")} className="hover:text-white cursor-pointer select-none text-left">Student Success</button></li>
-              <li><button onClick={() => handleNav("resources")} className="hover:text-white cursor-pointer select-none text-left">Alumni Forum</button></li>
-              <li><button onClick={() => handleNav("about")} className="hover:text-white cursor-pointer select-none text-left">Contact Sales</button></li>
-            </ul>
-          </div>
-
-          {/* Column 4: Support */}
-          <div className="md:col-span-2 space-y-3">
-            <h4 className="font-mono text-[9px] uppercase tracking-wider font-bold text-white">Support</h4>
-            <ul className="space-y-2 text-xs text-slate-400">
-              <li><span className="text-slate-500 block">Admissions:</span> info@aionlinebusiness.com</li>
-              <li><span className="text-slate-500 block">Partnership:</span> partners@academy.com</li>
-            </ul>
-          </div>
-
         </div>
 
-        {/* Legal copyrights banner */}
-        <div className="pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 font-mono uppercase tracking-widest text-center sm:text-left">
-          <span>© {new Date().getFullYear()} AIOnlineBusiness. All rights reserved.</span>
-          <div className="flex gap-4">
-            <span className="hover:text-white cursor-pointer" onClick={() => handleNav("about")}>Privacy Policy</span>
+        {/* BOTTOM METADATA BAR WITH PARTNER ACCREDITATIONS & LEGAL */}
+        <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-[11px] text-gray-400 font-medium font-sans">
+          
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2">
+            <span>© {new Date().getFullYear()} aiinstitute Learning Hub.</span>
             <span>•</span>
-            <span className="hover:text-white cursor-pointer" onClick={() => handleNav("about")}>Terms of Service</span>
+            <span>Sponsored by direct academic advisors.</span>
+            <span>•</span>
+            <button onClick={() => handleNav("about")} className="hover:text-[#0056D2] hover:underline cursor-pointer focus:outline-none">Terms</button>
+            <span>•</span>
+            <button onClick={() => handleNav("about")} className="hover:text-[#0056D2] hover:underline cursor-pointer focus:outline-none">Privacy</button>
+            <span>•</span>
+            <button onClick={() => handleNav("resources")} className="hover:text-[#0056D2] hover:underline cursor-pointer focus:outline-none">Help Portal</button>
           </div>
+
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded bg-gray-200 border border-gray-300 flex items-center justify-center text-[10px] text-gray-500 font-bold" title="Institutional Trust Badge">
+              ✓
+            </div>
+            <span className="text-[10px] text-gray-400 font-sans tracking-wide uppercase font-bold">Verified Learning System</span>
+          </div>
+
         </div>
 
       </div>

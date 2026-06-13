@@ -30,6 +30,7 @@ import HomeCTA from "./components/HomeCTA";
 import ScrollReveal from "./components/ScrollReveal";
 import AITechStack from "./components/AITechStack";
 import FloatingParticlesWrapper from "./components/FloatingParticlesWrapper";
+import LoginPortalModal from "./components/LoginPortalModal";
 import { NavigationProvider, useNavigation, ViewType } from "./context/NavigationContext";
 
 export default function App() {
@@ -99,11 +100,6 @@ function AppContent() {
             {/* 11. FAQ Accordion section & Admissions scheduling */}
             <ScrollReveal>
               <HomeFAQ />
-            </ScrollReveal>
-
-            {/* 12. Complete direct pricing investment cards */}
-            <ScrollReveal>
-              <PricingSection />
             </ScrollReveal>
           </div>
         )}
@@ -360,6 +356,9 @@ function AppContent() {
 
       {/* Global persistent premium Footer at the very bottom */}
       <Footer />
+      
+      {/* Interactive Secure Student Gate Overlay */}
+      <LoginPortalModal />
     </div>
   );
 }

@@ -10,12 +10,15 @@ export type ViewType = "home" | "programs" | "paths" | "success" | "resources" |
 interface NavigationContextType {
   currentView: ViewType;
   navigateTo: (view: ViewType) => void;
+  isLoginOpen: boolean;
+  setLoginOpen: (open: boolean) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   const [currentView, setCurrentView] = useState<ViewType>("home");
+  const [isLoginOpen, setLoginOpen] = useState(false);
 
   // Handle browser back/forward buttons using hash router
   useEffect(() => {
@@ -43,7 +46,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <NavigationContext.Provider value={{ currentView, navigateTo }}>
+    <NavigationContext.Provider value={{ currentView, navigateTo, isLoginOpen, setLoginOpen }}>
       {children}
     </NavigationContext.Provider>
   );
