@@ -14,6 +14,8 @@ import {
   BookOpen,
   CheckCircle2
 } from "lucide-react";
+// @ts-ignore
+import leadFacultyImage from "../assets/images/regenerated_image_1781336783869.png";
 
 export default function Hero() {
   const scrollToSection = (id: string) => {
@@ -164,7 +166,7 @@ export default function Hero() {
               {/* Image Frame */}
               <div className="relative aspect-square w-full overflow-hidden bg-gray-50 flex items-center justify-center">
                 <img
-                  src="/src/assets/images/regenerated_image_1781336783869.png"
+                  src={leadFacultyImage}
                   alt="Charles Tuti - Lead AI Architect"
                   className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-103"
                   referrerPolicy="no-referrer"
