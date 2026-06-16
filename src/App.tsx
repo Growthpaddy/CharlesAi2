@@ -19,6 +19,7 @@ import PricingSection from "./components/PricingSection";
 import CommunityAndFAQs from "./components/CommunityAndFAQs";
 import AboutPage from "./components/AboutPage";
 import Footer from "./components/Footer";
+import HomeView from "./components/HomeView";
 import HomePaths from "./components/HomePaths";
 import HomeHowItWorks from "./components/HomeHowItWorks";
 import HomeExperience from "./components/HomeExperience";
@@ -31,9 +32,17 @@ import ScrollReveal from "./components/ScrollReveal";
 import AITechStack from "./components/AITechStack";
 import FloatingParticlesWrapper from "./components/FloatingParticlesWrapper";
 import LoginPortalModal from "./components/LoginPortalModal";
+import ServicesPage from "./components/ServicesPage";
+import ContactPage from "./components/ContactPage";
+import StudentDashboard from "./components/StudentDashboard";
 import { NavigationProvider, useNavigation, ViewType } from "./context/NavigationContext";
+import { initDB } from "./lib/db";
 
 export default function App() {
+  React.useEffect(() => {
+    initDB();
+  }, []);
+
   return (
     <NavigationProvider>
       <AppContent />
@@ -58,49 +67,7 @@ function AppContent() {
       <main className="flex-grow">
         {currentView === "home" && (
           <div className="relative animate-in fade-in duration-350">
-            <FloatingParticlesWrapper />
-            {/* 1. Hero Section */}
-            <Hero />
-
-            {/* 2. 4-Feature Horizontal Strip */}
-            <ScrollReveal>
-              <WhyUs />
-            </ScrollReveal>
-
-            {/* AI Tech Stack section */}
-            <ScrollReveal>
-              <AITechStack />
-            </ScrollReveal>
-
-            {/* 3. Curated Learning Paths Horizontal Row */}
-            <ScrollReveal>
-              <HomePaths />
-            </ScrollReveal>
-
-            {/* 4. Steps 1-5 Stepper Methodology */}
-            <ScrollReveal>
-              <HomeHowItWorks />
-            </ScrollReveal>
-
-            {/* 6. Interactive Sandbox ipad Mockup */}
-            <ScrollReveal>
-              <HomeExperience />
-            </ScrollReveal>
-
-            {/* 9. Elite Cohort Curriculum accordions dropdown */}
-            <ScrollReveal>
-              <HomeCurriculum />
-            </ScrollReveal>
-
-            {/* 10. Sandra Cole ex-Google ML lead spotlight */}
-            <ScrollReveal>
-              <HomeInstructor />
-            </ScrollReveal>
-
-            {/* 11. FAQ Accordion section & Admissions scheduling */}
-            <ScrollReveal>
-              <HomeFAQ />
-            </ScrollReveal>
+            <HomeView />
           </div>
         )}
 
@@ -350,6 +317,24 @@ function AppContent() {
         {currentView === "pricing" && (
           <div className="pt-28 sm:pt-32 pb-16 animate-in fade-in duration-300">
             <PricingSection />
+          </div>
+        )}
+
+        {currentView === "services" && (
+          <div className="pt-28 sm:pt-32 pb-16 animate-in fade-in duration-300">
+            <ServicesPage />
+          </div>
+        )}
+
+        {currentView === "contact" && (
+          <div className="pt-28 sm:pt-32 pb-16 animate-in fade-in duration-300">
+            <ContactPage />
+          </div>
+        )}
+
+        {currentView === "dashboard" && (
+          <div className="animate-in fade-in duration-300">
+            <StudentDashboard />
           </div>
         )}
       </main>

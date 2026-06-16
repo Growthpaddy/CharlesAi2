@@ -441,12 +441,30 @@ export default function Header() {
                 </AnimatePresence>
               </div>
 
-              {/* PERFECTLY REPLICABLE DEGREES & PATHEWAY DIRECT TEXT LINK */}
+              {/* PREMIUM OFFICIAL PAGES DIRECT LINKS */}
               <button
                 onClick={() => navigateTo("paths")}
-                className="hidden lg:block text-xs font-sans font-medium text-[#0B1B3D] hover:text-[#0056D2] tracking-wide transition-colors whitespace-nowrap cursor-pointer hover:underline underline-offset-4"
+                className="hidden lg:block text-xs font-sans font-bold text-[#0B1B3D] hover:text-[#0056D2] tracking-wide transition-colors whitespace-nowrap cursor-pointer hover:underline underline-offset-4"
               >
-                Degrees & Paths
+                Syllabus
+              </button>
+              <button
+                onClick={() => navigateTo("services")}
+                className="hidden lg:block text-xs font-sans font-bold text-[#0B1B3D] hover:text-[#0056D2] tracking-wide transition-colors whitespace-nowrap cursor-pointer hover:underline underline-offset-4"
+              >
+                Our Services
+              </button>
+              <button
+                onClick={() => navigateTo("contact")}
+                className="hidden lg:block text-xs font-sans font-bold text-[#0B1B3D] hover:text-[#0056D2] tracking-wide transition-colors whitespace-nowrap cursor-pointer hover:underline underline-offset-4"
+              >
+                Contact Desk
+              </button>
+              <button
+                onClick={() => navigateTo("dashboard")}
+                className="hidden lg:block text-xs font-sans font-bold text-[#0056D2] hover:text-[#2D7FF9] bg-blue-50/70 border border-blue-200/50 py-1.5 px-3 rounded-lg transition-all whitespace-nowrap cursor-pointer hover:shadow-xs"
+              >
+                ⚡ Study Console
               </button>
             </div>
 
@@ -692,15 +710,33 @@ export default function Header() {
               </div>
 
               {/* Bottom CTA Group in Mobile Sidebar */}
-              <div className="pt-6 border-t border-gray-100 flex flex-col gap-3">
+              <div className="pt-6 border-t border-gray-150 flex flex-col gap-2.5">
+                <button
+                  onClick={() => { navigateTo("services"); setMobileMenuOpen(false); }}
+                  className="w-full py-3 text-center text-xs font-sans font-bold text-[#0B1B3D] border border-gray-200 hover:bg-slate-50 rounded-xl min-h-[44px] uppercase tracking-wider"
+                >
+                  Our Services
+                </button>
+                <button
+                  onClick={() => { navigateTo("contact"); setMobileMenuOpen(false); }}
+                  className="w-full py-3 text-center text-xs font-sans font-bold text-[#0B1B3D] border border-gray-200 hover:bg-slate-50 rounded-xl min-h-[44px] uppercase tracking-wider"
+                >
+                  Contact Desk
+                </button>
+                <button
+                  onClick={() => { navigateTo("dashboard"); setMobileMenuOpen(false); }}
+                  className="w-full py-3 text-center text-xs font-sans font-bold text-[#0056D2] bg-blue-50 border border-blue-105 rounded-xl min-h-[44px] uppercase tracking-wider"
+                >
+                  ⚡ Student Study Console
+                </button>
                 <button
                   onClick={() => { setLoginOpen(true); setMobileMenuOpen(false); }}
-                  className="w-full py-3.5 text-center text-xs font-sans font-bold text-[#0056D2] bg-blue-50 rounded-xl min-h-[48px] uppercase tracking-wider"
+                  className="w-full py-3 text-center text-xs font-sans font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl min-h-[44px] uppercase tracking-wider mt-2.5"
                 >
                   Log In Account
                 </button>
                 <button
-                  onClick={() => scrollToSection("pricing")}
+                  onClick={() => { navigateTo("pricing"); setMobileMenuOpen(false); }}
                   className="w-full py-3.5 bg-[#0056D2] text-white text-center text-xs font-sans font-bold rounded-xl flex items-center justify-center gap-2 min-h-[48px] shadow-lg shadow-blue-500/10 uppercase tracking-widest"
                 >
                   <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />

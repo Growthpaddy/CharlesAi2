@@ -38,6 +38,8 @@ export interface Course {
   instructor: string;
   instructorAvatar: string;
   skillsAcquired: string[];
+  overview?: string;
+  outcomes?: string[];
 }
 
 export interface CurriculumModule {
