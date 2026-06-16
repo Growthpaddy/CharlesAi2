@@ -102,7 +102,7 @@ export default function FeaturedPrograms() {
               className="inline-flex items-center gap-2 text-xs font-bold text-[#0056D2] hover:text-[#0047B3] transition-colors cursor-pointer bg-white px-3.5 py-2 rounded-xl border border-slate-200/80 shadow-xs"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Course Catalog</span>
+              <span>Back to Modules Directory</span>
             </button>
           </div>
 
@@ -119,7 +119,7 @@ export default function FeaturedPrograms() {
               />
               <div className="absolute top-4 left-4 flex gap-1.5 flex-wrap">
                 <span className="bg-[#0B132B] text-white text-[9px] font-mono font-black tracking-widest px-2.5 py-1 rounded shadow uppercase">
-                  ACTIVE SYLLABUS
+                  CURRICULUM SPEC
                 </span>
                 <span className={`text-[9px] font-mono font-black tracking-widest px-2.5 py-1 rounded border shadow bg-white ${levelColorMap[activeCourse.level as keyof typeof levelColorMap]}`}>
                   {activeCourse.level} Level
@@ -132,13 +132,13 @@ export default function FeaturedPrograms() {
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="bg-[#0056D2]/10 text-[#0056D2] text-[10px] font-mono font-black px-2.5 py-1 rounded-md uppercase tracking-wider">
-                    Official Track Program
+                    MODULE DETAILS
                   </span>
                   <span className="bg-amber-500/10 text-amber-700 text-[10px] font-mono font-bold px-2.5 py-1 rounded-md flex items-center gap-1">
                     <Star className="w-3.5 h-3.5 text-amber-550 fill-amber-550" /> 4.9 Rating
                   </span>
                   <span className="bg-slate-50 text-slate-500 text-[10px] font-mono font-bold px-2.5 py-1 rounded-md flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5" /> {activeCourse.studentCount || "400"} Graduates
+                    <Users className="w-3.5 h-3.5" /> {activeCourse.studentCount || "400"} Alumni
                   </span>
                 </div>
 
@@ -154,16 +154,16 @@ export default function FeaturedPrograms() {
               {/* Instant enroll box */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-150 gap-4">
                 <div>
-                  <p className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">Tuition Pricing Model</p>
-                  <p className="text-slate-800 text-xs font-black mt-0.5">Complimentary LMS & Student Vault Access</p>
+                  <p className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">Tuition Access Model</p>
+                  <p className="text-[#0056D2] text-xs font-black mt-0.5">Part of the complete AI Online Business Course</p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-2xl font-display font-black text-[#0056D2]">{price}</span>
+                  <span className="text-sm font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-xl">Unlock All 12 Modules</span>
                   <button
                     onClick={() => handleEnroll(activeCourse.id)}
                     className="px-6 py-3 bg-[#0056D2] hover:bg-[#0047B3] text-white text-xs font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5 cursor-pointer min-h-[42px]"
                   >
-                    <span>Instant Enroll</span>
+                    <span>Enroll In Course</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -181,13 +181,24 @@ export default function FeaturedPrograms() {
               
               {/* 2. COURSE OVERVIEW */}
               <div className="bg-white border border-slate-150 rounded-2xl p-6 sm:p-8 space-y-4">
-                <h3 className="font-display font-black text-xs uppercase tracking-widest text-slate-405 flex items-center gap-2">
+                <h3 className="font-display font-black text-xs uppercase tracking-widest text-slate-500 flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-[#0056D2]" />
-                  <span>Course Description & Overview</span>
+                  <span>Module Introduction & Purpose</span>
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-605 leading-relaxed bg-slate-50/55 p-5 rounded-2xl border border-slate-100 font-semibold text-slate-600">
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed bg-slate-50/55 p-5 rounded-2xl border border-slate-100 font-semibold">
                   {activeCourse.overview || "This professional training track provides high-fidelity modules and custom workflow blueprints verified across in-person physical operations standards."}
                 </p>
+
+                {/* Business Value & Strategic Reason */}
+                <div className="mt-4 p-5 bg-blue-50/55 border border-blue-100 rounded-2xl space-y-2">
+                  <h4 className="text-xs font-black text-[#0056D2] uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-[#0056D2]" />
+                    <span>Business reason & strategic logic</span>
+                  </h4>
+                  <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed font-semibold">
+                    This module provides actionable computational leverage. Mastering this specific domain allows enterprise systems and local businesses to bypass tedious operational bottlenecks, automate content strategies, reduce headcount parameters and secure high-retainer clients natively.
+                  </p>
+                </div>
               </div>
 
               {/* 3. LEARNING OUTCOMES */}
@@ -377,18 +388,18 @@ export default function FeaturedPrograms() {
 
           </div>
 
-          {/* 8. ENROLLMENT CTA BLOCK */}
+          {/* 8. MODULE PAGE CTA SECTION */}
           <div className="bg-gradient-to-r from-[#030914] to-[#0A162B] text-white rounded-3xl p-8 sm:p-12 text-center my-16 relative overflow-hidden">
             <div className="absolute inset-0 bg-[#0056D2]/15 blur-[120px] pointer-events-none" />
             <div className="max-w-2xl mx-auto space-y-6 relative z-10">
               <span className="inline-block bg-[#0056D2]/25 text-blue-300 border border-blue-500/20 px-3 py-1 rounded-full text-[10px] font-mono tracking-widest uppercase">
-                Active Admissions Gate
+                COMPREHENSIVE VALUE OUTCOME
               </span>
               <h3 className="font-sans text-2xl sm:text-3xl font-black">
-                Lock in Enrollment: {activeCourse.title}
+                This Module Is Included In The Full AI Online Business Course
               </h3>
               <p className="text-slate-400 text-xs sm:text-sm leading-relaxed max-w-xl mx-auto">
-                Gain immediate lifetime access to full HD lessons, downloadable templates, prompt codes, and custom scrapers inside your student panel.
+                No separate purchases needed. Enrolling exactly once in our flagship training program grants you immediate lifelong access to this specific module syllabus along with all other 11 practical business modules, our Abuja/Lagos mentor network, and custom code scrapers.
               </p>
 
               <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-2">
@@ -396,13 +407,13 @@ export default function FeaturedPrograms() {
                   onClick={() => handleEnroll(activeCourse.id)}
                   className="px-8 py-3.5 bg-[#0056D2] hover:bg-[#0047B3] text-white font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 w-full sm:w-auto"
                 >
-                  Start Study Dynamic Program
+                  Enroll In Full Course
                 </button>
                 <button
                   onClick={() => navigateTo("programs")}
                   className="px-8 py-3.5 bg-white/10 hover:bg-white/15 border border-white/10 font-bold text-xs sm:text-sm rounded-xl transition-all w-full sm:w-auto"
                 >
-                  Back to Catalog
+                  See Other Modules
                 </button>
               </div>
             </div>
@@ -478,13 +489,13 @@ export default function FeaturedPrograms() {
           <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-1.5 bg-blue-50 text-[#0056D2] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border border-blue-100">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>OFFICIAL 12 PROGRAM SYLLABI</span>
+              <span>OFFICIAL 12 CURRICULUM MODULES</span>
             </div>
             <h1 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-[#0B132B]">
-              Explore Complete Curriculum
+              Explore Flagship Course Modules
             </h1>
             <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">
-              Below lies the comprehensive list of 12 structured specialized training courses designed for rapid digital mastery. Click any card to inspect detailed module outlines, skills list, and secure your enrollment.
+              We offer <strong className="text-[#0B132B] font-extrabold">exactly one flagship program: the AI Online Business Course</strong>. Below is the comprehensive list of its 12 learning modules. Students enroll once and gain immediate lifelong access to the entire directory of guides, templates and automated scrapers.
             </p>
           </div>
 
@@ -494,7 +505,7 @@ export default function FeaturedPrograms() {
             </div>
             <div>
               <p className="text-[10px] font-mono text-gray-400 uppercase tracking-widest font-black leading-none">Accredited</p>
-              <p className="text-[11px] text-gray-500 mt-1 font-bold">12 tracks matching in-person physical standards perfectly.</p>
+              <p className="text-[11px] text-gray-500 mt-1 font-bold">12 modules included under a single premium enrollment ticket.</p>
             </div>
           </div>
         </div>
@@ -577,7 +588,7 @@ export default function FeaturedPrograms() {
                           <Clock className="w-3.5 h-3.5 text-[#0056D2]" />
                           {course.duration}
                         </span>
-                        <span className="text-[#0056D2] font-mono font-bold uppercase">{price}</span>
+                        <span className="text-[#0055D2] font-mono font-bold uppercase tracking-wider bg-blue-50 border border-blue-105 px-2.5 py-0.5 rounded text-[9px]">INCLUDED IN COURSE</span>
                       </div>
 
                       <h3 className="font-display font-black text-base text-[#0B132B] tracking-tight group-hover:text-[#0056D2] transition-colors leading-tight">
@@ -622,7 +633,7 @@ export default function FeaturedPrograms() {
                   {/* Visual card actions */}
                   <div className="px-6 pb-6 pt-0">
                     <div className="w-full bg-slate-50 group-hover:bg-blue-50 group-hover:text-[#0056D2] text-[#0B132B] py-2.5 rounded-xl text-[11px] font-black text-center transition-all flex items-center justify-center gap-1 select-none border border-slate-150 group-hover:border-blue-100">
-                      <span>View Syllabus Details</span>
+                      <span>View Module Details</span>
                       <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
                     </div>
                   </div>

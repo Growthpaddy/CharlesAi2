@@ -85,35 +85,35 @@ export default function Footer() {
         {/* ROW 2: DETAILED SYLLABI & LINKS GRID */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-10 border-b border-slate-800 text-left">
           
-          {/* Column 1: Featured Courses */}
+          {/* Column 1: Curriculum Modules */}
           <div className="space-y-4">
             <h4 className="font-sans font-black text-xs uppercase tracking-widest text-[#2D7FF9]">
-              Featured Programs
+              Curriculum Modules
             </h4>
             <ul className="space-y-2.5 text-xs text-slate-400 font-medium">
               <li>
-                <button onClick={() => handleNav("dashboard")} className="hover:text-white hover:underline transition-colors cursor-pointer text-left focus:outline-none">
-                  Prompt Engineering (₦15k)
+                <button onClick={() => handleNav("programs")} className="hover:text-white hover:underline transition-colors cursor-pointer text-left focus:outline-none">
+                  AI Prompt Engineering
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav("dashboard")} className="hover:text-white hover:underline transition-colors cursor-pointer text-left focus:outline-none">
-                  AI Digital Products (Free)
+                <button onClick={() => handleNav("programs")} className="hover:text-white hover:underline transition-colors cursor-pointer text-left focus:outline-none">
+                  AI Digital Products
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav("dashboard")} className="hover:text-white hover:underline transition-colors cursor-pointer text-left focus:outline-none">
-                  AI Content Creation (Free)
+                <button onClick={() => handleNav("programs")} className="hover:text-white hover:underline transition-colors cursor-pointer text-left focus:outline-none">
+                  AI Content Creation
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav("dashboard")} className="hover:text-white hover:underline transition-colors cursor-pointer text-left focus:outline-none">
-                  App Creation with AI (Free)
+                <button onClick={() => handleNav("programs")} className="hover:text-white hover:underline transition-colors cursor-pointer text-left focus:outline-none">
+                  App Creation with AI
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav("dashboard")} className="hover:text-white hover:underline transition-colors cursor-pointer text-left focus:outline-none">
-                  AI Business Automation (Free)
+                <button onClick={() => handleNav("programs")} className="hover:text-white hover:underline transition-colors cursor-pointer text-left focus:outline-none">
+                  AI Business Automation
                 </button>
               </li>
             </ul>

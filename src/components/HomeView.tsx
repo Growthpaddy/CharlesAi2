@@ -79,23 +79,28 @@ export default function HomeView() {
               
               <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-[#0056D2] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Next Generation AI Academy</span>
+                <span>ONE FLAGSHIP PLATINUM PROGRAM</span>
               </div>
 
               <h1 className="font-display font-black text-3xl sm:text-5xl lg:text-[48px] xl:text-[56px] text-[#0B132B] tracking-tight leading-[1.08] max-w-2xl">
                 Transform Your Skills with AI & Build a <span className="text-[#0056D2]">Profitable</span> Online Business
               </h1>
 
-              <p className="text-gray-600 text-sm sm:text-base leading-relaxed max-w-xl font-medium">
-                Join over 3,500 students who have learned practical AI skills for business, content creation, automation, app development, and client acquisition.
-              </p>
+              <div className="space-y-3.5">
+                <p className="text-gray-600 text-sm sm:text-base leading-relaxed max-w-xl font-medium">
+                  Join over 3,500 students in our single flagship curriculum: the <strong className="text-slate-900 font-extrabold">AI Online Business Course</strong>. We offer one premium program — enroll once to gain lifelong access to all 12 learning modules.
+                </p>
+                <p className="text-xs text-[#0056D2] font-semibold leading-relaxed max-w-xl">
+                  ✓ One Single Enrollment &bull; ✓ Full Access to All 12 Modules &bull; ✓ Weekly Collaborative Labs
+                </p>
+              </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
                 <button
                   onClick={() => navigateTo("pricing")}
                   className="group px-8 py-4 bg-[#0056D2] hover:bg-[#0047b3] text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
                 >
-                  <span>Enroll Now</span>
+                  <span>Enroll in Full Course</span>
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </button>
                 
@@ -106,7 +111,7 @@ export default function HomeView() {
                   }}
                   className="px-8 py-4 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm rounded-xl border border-slate-200 hover:border-slate-300 transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
                 >
-                  <span>Browse Courses</span>
+                  <span>Explore 12 Modules</span>
                 </button>
               </div>
 
@@ -217,8 +222,8 @@ export default function HomeView() {
               </div>
               <div>
                 <p className="text-2xl sm:text-3xl font-display font-black leading-none">12</p>
-                <p className="text-xs text-slate-400 mt-1.5 font-sans font-bold uppercase tracking-wider">Premium Courses</p>
-                <p className="text-[10px] text-slate-500 mt-1 leading-snug">Specialized curriculums engineered</p>
+                <p className="text-xs text-slate-400 mt-1.5 font-sans font-bold uppercase tracking-wider">Curriculum Modules</p>
+                <p className="text-[10px] text-slate-500 mt-1 leading-snug">Included in one single flagship course</p>
               </div>
             </div>
 
@@ -332,7 +337,7 @@ export default function HomeView() {
         </div>
       </section>
 
-      {/* SECTION 4 — FEATURED COURSES */}
+      {/* SECTION 4 — PROGRAM MODULES */}
       <section id="featured-academy-courses" className="py-24 bg-gradient-to-b from-[#FAFCFF] to-white relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
@@ -340,28 +345,27 @@ export default function HomeView() {
             <div className="space-y-4 max-w-2xl">
               <span className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 text-emerald-600 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>Featured Academy Modules</span>
+                <span>12 Core Learning Modules</span>
               </span>
               <h2 className="font-display text-2xl sm:text-4xl font-black tracking-tight text-[#0B132B]">
-                Explore Course Catalogue
+                Program Modules Catalog
               </h2>
               <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">
-                Step into specialized programs focusing directly on hands-on deployment. Click any card below to read the comprehensive learning outcomes and secure your module access.
+                Our curriculum is built meticulously to cover high-value AI executions across 12 hyper-refined focus domains. <strong className="text-slate-900 font-extrabold">You do not purchase these separately</strong> — a single enrollment grants full lifelong access to every module listed below.
               </p>
             </div>
             
             <button
               onClick={() => navigateTo("programs")}
-              className="px-6 py-3 bg-[#0B132B] hover:bg-[#15234A] text-white text-xs font-bold rounded-xl transition-all cursor-pointer self-start md:self-end min-h-[44px] flex items-center gap-1"
+              className="px-6 py-3 bg-[#0B132B] hover:bg-[#15234A] text-white text-xs font-bold rounded-xl transition-all cursor-pointer self-start md:self-end min-h-[44px] flex items-center gap-1 shadow-sm"
             >
-              <span>View All 12 Courses</span>
+              <span>Browse All 12 Modules</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-12 text-left">
             {featuredCourses6.map((course) => {
-              const price = priceMap[course.id] || "Free";
               // Dynamically resolve module count from masterModules database
               const moduleCount = masterModules.filter(m => m.courseId === course.id).length || 4;
 
@@ -369,7 +373,7 @@ export default function HomeView() {
                 <div
                   key={course.id}
                   onClick={() => navigateToCourse(course.id)}
-                  className="group bg-white border border-slate-150 hover:border-blue-400/30 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl flex flex-col justify-between cursor-pointer"
+                  className="group bg-white border border-slate-150 hover:border-blue-400/30 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl flex flex-col justify-between cursor-pointer shadow-xs"
                 >
                   {/* Aspect Cover Image */}
                   <div className="relative overflow-hidden aspect-[16/10] bg-slate-50 border-b border-slate-100">
@@ -391,7 +395,7 @@ export default function HomeView() {
                     </div>
 
                     <div className="absolute top-3 right-3 bg-white/95 px-2 py-0.5 rounded-lg border border-gray-100 shadow-sm flex items-center gap-1 font-mono text-[10px] font-black text-[#0B132B]">
-                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-550" />
                       <span>{course.rating || "4.9"}</span>
                     </div>
                   </div>
@@ -404,7 +408,9 @@ export default function HomeView() {
                           <Clock className="w-3.5 h-3.5 text-[#0056D2]" />
                           {course.duration}
                         </span>
-                        <span className="text-[#0056D2] font-mono tracking-wide uppercase">{price}</span>
+                        <span className="text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded text-[9px] font-mono font-black tracking-wider">
+                          INCLUDED IN FULL COURSE
+                        </span>
                       </div>
 
                       <h3 className="font-display font-black text-base text-[#0B132B] tracking-tight group-hover:text-[#0056D2] transition-colors leading-tight">
@@ -419,10 +425,10 @@ export default function HomeView() {
                     {/* Specifications */}
                     <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-bold font-sans">
                       <span className="bg-slate-50 text-slate-500 px-2.5 py-1 rounded text-[10px]">
-                        {moduleCount} Syllabus Modules
+                        {moduleCount} Detailed Lessons
                       </span>
                       <span className="text-[#0056D2] flex items-center gap-1 font-black shrink-0 text-[11px] group-hover:underline">
-                        <span>View Course</span>
+                        <span>View Module Details</span>
                         <ChevronRight className="w-3 h-3" />
                       </span>
                     </div>
@@ -439,7 +445,7 @@ export default function HomeView() {
               onClick={() => navigateTo("programs")}
               className="group px-8 py-4 bg-[#0B132B] hover:bg-[#15234A] text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer max-w-sm"
             >
-              <span>View All 12 Courses</span>
+              <span>Explore All 12 Learning Modules</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </button>
             <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">
@@ -601,19 +607,19 @@ export default function HomeView() {
         </div>
       </section>
 
-      {/* SECTION 6 — STUDENT BENEFITS */}
+      {/* SECTION 5 — WHAT YOU WILL ACHIEVE */}
       <section id="student-benefits" className="py-24 bg-white text-left border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="text-center max-w-3xl mx-auto space-y-4 mb-20">
             <span className="inline-flex items-center gap-1.5 bg-blue-50 text-[#0056D2] px-3.5 py-1.5 rounded-full text-[11px] font-sans font-bold uppercase tracking-widest border border-blue-100">
-              STUDENT LIFECYCLE
+              ACTUAL OUTCOMES
             </span>
             <h2 className="font-sans text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0B132B]">
-              Core Student Benefit Systems
+              What You Will Achieve
             </h2>
             <p className="text-slate-500 text-xs sm:text-sm leading-relaxed font-medium">
-              We focus our digital engineering outputs around 8 core benefit clusters which allow graduates to unlock active operational capabilities immediately.
+              We construct our flagship curriculum around concrete output milestones so that you unlock active capabilities that generate real commercial leverage:
             </p>
           </div>
 
@@ -690,7 +696,7 @@ export default function HomeView() {
         </div>
       </section>
 
-      {/* SECTION 8 — FINAL CTA */}
+      {/* SECTION 7 — FINAL ENROLLMENT CTA */}
       <section id="homepage-cta-premium" className="py-24 bg-[#0B132B] text-white relative text-center">
         <div className="absolute inset-0 bg-[#0056D2]/15 blur-[120px] pointer-events-none" />
         <div className="max-w-4xl mx-auto px-4 relative z-10 space-y-6">
@@ -699,11 +705,11 @@ export default function HomeView() {
           </span>
           
           <h2 className="font-sans text-2xl sm:text-4xl font-extrabold leading-tight">
-            Ready to Build Your AI-Powered Future?
+            Ready to Master AI and Secure Your Digital Business?
           </h2>
           
-          <p className="text-slate-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
-            Begin learning in-demand AI skills with lifetime student updates. Lock in your seat today to gain immediate access to templates, community rooms and automated scrapers.
+          <p className="text-slate-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed font-medium">
+            Enroll in the full <strong className="text-white font-bold">AI Online Business Course</strong> today. Get immediate lifetime access to all 12 modules, downloadable templates, code mentors, and live automated scrapers.
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -711,13 +717,13 @@ export default function HomeView() {
               onClick={() => navigateTo("pricing")}
               className="px-8 py-3.5 bg-[#0056D2] hover:bg-[#0047b3] text-white font-bold rounded-xl transition-all text-xs cursor-pointer min-h-[48px]"
             >
-              Start Learning Today
+              Enroll in Full Course Now
             </button>
             <button 
-              onClick={() => navigateTo("contact")}
+              onClick={() => navigateTo("programs")}
               className="px-8 py-3.5 bg-white/10 hover:bg-white/15 text-white border border-white/10 font-bold rounded-xl transition-all text-xs cursor-pointer min-h-[48px]"
             >
-              Contact Us
+              Explore 12 Modules
             </button>
           </div>
         </div>

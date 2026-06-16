@@ -472,18 +472,18 @@ export const db = {
   },
 
   // Write modifications
-  enrollInCourse(courseId: string): Enrollment[] {
-    const enrollments = this.getEnrollments();
-    if (enrollments.some(e => e.courseId === courseId)) return enrollments;
-
-    const newEnrollment: Enrollment = {
-      id: `enr-${Math.random().toString(36).substr(2, 9)}`,
-      courseId,
+  enrollInFlagshipProgram(): Enrollment[] {
+    const enrollments: Enrollment[] = masterCourses.map((c, idx) => ({
+      id: `enr-flag-${c.id}-${idx}`,
+      courseId: c.id,
       enrolledAt: new Date().toISOString()
-    };
-    const updated = [...enrollments, newEnrollment];
-    localStorage.setItem("enrollments", JSON.stringify(updated));
-    return updated;
+    }));
+    localStorage.setItem("enrollments", JSON.stringify(enrollments));
+    return enrollments;
+  },
+
+  enrollInCourse(courseId: string): Enrollment[] {
+    return this.enrollInFlagshipProgram();
   },
 
   toggleLessonProgress(courseId: string, lessonId: string, completed: boolean): StudentProgress[] {
