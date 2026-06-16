@@ -5,7 +5,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-export type ViewType = "home" | "programs" | "paths" | "success" | "resources" | "about" | "pricing" | "services" | "contact" | "dashboard" | "course_details";
+export type ViewType = "home" | "programs" | "paths" | "success" | "resources" | "about" | "pricing" | "services" | "contact" | "dashboard" | "course_details" | "landing" | "thankyou";
 
 // Bidirectional mappings for SEO/LMS standard course routing
 export const slugToCourseIdMap: Record<string, string> = {
@@ -70,7 +70,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         }
       }
 
-      const validViews: ViewType[] = ["home", "programs", "paths", "success", "resources", "about", "pricing", "services", "contact", "dashboard"];
+      const validViews: ViewType[] = ["home", "programs", "paths", "success", "resources", "about", "pricing", "services", "contact", "dashboard", "landing", "thankyou"];
       if (validViews.includes(hash as ViewType)) {
         setCurrentView(hash as ViewType);
         setActiveCourseId(null);

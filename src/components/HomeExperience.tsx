@@ -60,7 +60,7 @@ export default function HomeExperience() {
             {/* Custom Action Call to Action */}
             <div className="pt-4 sm:pt-6 space-y-6">
               <button
-                onClick={() => navigateTo("pricing")}
+                onClick={() => navigateTo("landing")}
                 className="inline-flex items-center gap-2 bg-[#0056D2] hover:bg-[#003E9C] text-white font-sans font-bold text-xs sm:text-sm px-6 py-3 sm:py-3.5 rounded-lg transition-all shadow-md active:scale-98 cursor-pointer uppercase tracking-wider"
               >
                 <span>Save 50% now</span>
@@ -155,7 +155,7 @@ export default function HomeExperience() {
             {/* Custom Action Call to Action */}
             <div className="pt-4 sm:pt-6 space-y-5">
               <button
-                onClick={() => navigateTo("pricing")}
+                onClick={() => navigateTo("landing")}
                 className="inline-flex items-center gap-2 bg-white hover:bg-slate-150 text-[#141256] font-sans font-bold text-xs sm:text-sm px-6 py-3 sm:py-3.5 rounded-lg transition-all shadow-md active:scale-98 cursor-pointer uppercase tracking-wider"
               >
                 <span>Save 50% on Teams</span>

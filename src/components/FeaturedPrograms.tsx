@@ -65,9 +65,7 @@ export default function FeaturedPrograms() {
 
   // Safe enrollment click handler
   const handleEnroll = (courseId: string) => {
-    db.enrollInCourse(courseId);
-    window.dispatchEvent(new Event("storage"));
-    navigateTo("dashboard");
+    navigateTo("landing");
   };
 
   const toggleModule = (moduleId: string) => {

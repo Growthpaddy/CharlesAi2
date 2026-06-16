@@ -35,6 +35,8 @@ import LoginPortalModal from "./components/LoginPortalModal";
 import ServicesPage from "./components/ServicesPage";
 import ContactPage from "./components/ContactPage";
 import StudentDashboard from "./components/StudentDashboard";
+import LeadLandingPage from "./components/LeadLandingPage";
+import ThankYouPage from "./components/ThankYouPage";
 import { NavigationProvider, useNavigation, ViewType } from "./context/NavigationContext";
 import { initDB } from "./lib/db";
 
@@ -335,6 +337,18 @@ function AppContent() {
         {currentView === "dashboard" && (
           <div className="animate-in fade-in duration-300">
             <StudentDashboard />
+          </div>
+        )}
+
+        {currentView === "landing" && (
+          <div className="animate-in fade-in duration-350">
+            <LeadLandingPage />
+          </div>
+        )}
+
+        {currentView === "thankyou" && (
+          <div className="animate-in fade-in duration-350">
+            <ThankYouPage />
           </div>
         )}
       </main>

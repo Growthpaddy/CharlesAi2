@@ -63,7 +63,7 @@ export default function Header() {
       "testimonials": "success",
       "faqs": "resources",
       "instructors": "about",
-      "pricing": "pricing"
+      "pricing": "landing"
     };
 
     const targetView = idToView[id];
@@ -736,7 +736,7 @@ export default function Header() {
                   Log In Account
                 </button>
                 <button
-                  onClick={() => { navigateTo("pricing"); setMobileMenuOpen(false); }}
+                  onClick={() => { navigateTo("landing"); setMobileMenuOpen(false); }}
                   className="w-full py-3.5 bg-[#0056D2] text-white text-center text-xs font-sans font-bold rounded-xl flex items-center justify-center gap-2 min-h-[48px] shadow-lg shadow-blue-500/10 uppercase tracking-widest"
                 >
                   <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />

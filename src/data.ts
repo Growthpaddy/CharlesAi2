@@ -125,38 +125,38 @@ export const instructorInfo = {
 export const testimonials: Testimonial[] = [
   {
     id: "t-1",
-    name: "Emeka Okafor",
-    role: "eCommerce Operations Manager",
-    company: "Lagos Retail Network",
-    avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=300&h=300",
+    name: "Crypto_Ohms / Omega",
+    role: "Founder, ChainFlow Systems",
+    company: "Abuja Student Cohort",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300&h=300",
     rating: 5,
-    highlightOutcome: "Built Selar visual products in 10 days",
-    quote: "Following Course 2's system, I wrote, designed, and hosted an eBook detailing operational checklists on Selar. Sold over 120 copies in my first week. Incredible practical guidance!",
-    growthMetric: "+₦280k Passive Income",
+    highlightOutcome: "Built $11k Automated Sales Bot",
+    quote: "Your AI course changed the direction of my life in ways I didn't fully anticipate. I built the X Premium Store Bot—a fully automated Telegram bot handling subscription sales and crypto payments across 4 blockchain networks, running 24/7 without me being physically present.",
+    growthMetric: "$11,434+ Sales Revenue Generated",
     videoThumb: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600&h=400"
   },
   {
     id: "t-2",
-    name: "Funmilayo Adebayo",
-    role: "Content Coordinator",
-    company: "Vanguard Media Group",
-    avatar: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=300&h=300",
+    name: "Mariana",
+    role: "AI Business Operations Graduate",
+    company: "Lagos Executive Cohort",
+    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300&h=300",
     rating: 5,
-    highlightOutcome: "Automated media schedules with Grok",
-    quote: "By adopting the content generation strategies, we completely re-engineered how we publish on social channels. Automated script outputs save our studio upwards of 25 hours weekly.",
-    growthMetric: "Saved 25 Hours of Editing Weekly",
+    highlightOutcome: "Won $2,500 Implementation Prize",
+    quote: "I just wanted to say thank you so much! I won $2,500 for my real-world implementation of the workflows. We provided the knowledge, but the direct coaching and mentoring helped me follow through and win.",
+    growthMetric: "Won ₦3.8M ($2,500) Cash Prize",
     videoThumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=600&h=400"
   },
   {
     id: "t-3",
-    name: "Tobi Alabi",
-    role: "Digital Consultant",
-    company: "Lekki Agency Hub",
+    name: "Ebimene Jeffrey Simon-Peter",
+    role: "AI E-Book Author & Publisher",
+    company: "Port Harcourt Cohort",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300&h=300",
     rating: 5,
-    highlightOutcome: "Scored corporate operations contract",
-    quote: "The Client Acquisition strategies taught here work beautifully. I deployed cold email scraping nodes and signed my first organization retainer within six business days.",
-    growthMetric: "Locked ₦500k Monthly Retainer"
+    highlightOutcome: "Wrote & Published Historical Analysis Book",
+    quote: "Good evening sir Charles. I wanted to thank you for the AI course. You did not only sell me a course, but you inspired me, motivated me to delve into AI. I've written and published ebooks using this knowledge!",
+    growthMetric: "Published Amazon E-Book Visual Cover"
   }
 ];
 

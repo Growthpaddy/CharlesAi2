@@ -7,7 +7,6 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Sparkles, ShieldCheck, Mail, Lock, Play, ArrowRight, Chrome, Github } from "lucide-react";
 import { useNavigation } from "../context/NavigationContext";
-import PricingSection from "./PricingSection";
 
 export default function LoginPortalModal() {
   const { isLoginOpen, setLoginOpen } = useNavigation();
@@ -192,37 +191,77 @@ export default function LoginPortalModal() {
               </div>
             </div>
 
-            {/* RIGHT AREA: PRICING SECTION AND PATH ENROLLMENT (7 columns) */}
-            <div className="lg:col-span-7 bg-slate-50/50 p-6 sm:p-8 lg:p-10 flex flex-col justify-start overflow-hidden">
-              <div className="pb-6 border-b border-gray-200/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-mono font-black text-[#0056D2] uppercase tracking-widest block">
-                    No active enrollment?
+            {/* RIGHT AREA: WELCOMING PERSUASIVE PANEL (7 columns) */}
+            <div className="lg:col-span-7 bg-[#0B1B3D] p-6 sm:p-8 lg:p-10 flex flex-col justify-between text-white relative overflow-hidden">
+              {/* Subtle visual ambient glow */}
+              <div className="absolute -right-20 -bottom-20 w-60 h-60 bg-[#0056D2]/25 rounded-full filter blur-[60px] pointer-events-none" />
+              <div className="absolute -left-20 -top-20 w-60 h-60 bg-amber-500/10 rounded-full filter blur-[60px] pointer-events-none" />
+
+              <div className="space-y-6 relative z-10">
+                <div className="flex items-center gap-2">
+                  <span className="bg-blue-500/15 text-blue-300 border border-blue-500/20 text-[10px] font-mono font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-amber-300 animate-pulse" /> Welcome back, leader!
                   </span>
-                  <h4 className="font-sans font-bold text-[#0B1B3D] text-lg">
-                    Secure an active syllabus path below:
-                  </h4>
                 </div>
-                
-                <div className="bg-amber-100 text-amber-800 text-[10px] font-sans font-extrabold px-3 py-1 rounded-full border border-amber-200 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-amber-600 animate-spin" />
-                  <span>50% Enrollment Savings Active</span>
+
+                <div className="space-y-2">
+                  <h3 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+                    Pick Up Where You Left Off
+                  </h3>
+                  <p className="text-blue-100/70 text-xs sm:text-sm font-medium leading-relaxed">
+                    Log back into your specialized AI Online Business student terminal and step straight into direct wealth-building execution lanes.
+                  </p>
+                </div>
+
+                {/* Key motivating pillars */}
+                <div className="space-y-5 pt-5 border-t border-white/10">
+                  <div className="flex gap-3.5 items-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-400/20 flex items-center justify-center shrink-0 text-blue-300">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <h4 className="text-xs sm:text-sm font-bold text-white">Latest High-Yield AI Frameworks</h4>
+                      <p className="text-[11px] sm:text-xs text-blue-100/60 leading-normal">
+                        Access detailed prompt modules, video translators, and complete blueprint repositories for automated Telegram bots, e-books, and social agency contracts.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3.5 items-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-400/20 flex items-center justify-center shrink-0 text-blue-300">
+                      <Play className="w-4 h-4 text-amber-400 fill-amber-400/20" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <h4 className="text-xs sm:text-sm font-bold text-white">Interactive Sandbox & Practical Labs</h4>
+                      <p className="text-[11px] sm:text-xs text-blue-100/60 leading-normal">
+                        Launch your zero-install Jupyter notebook and play with client pitches, financial records systems, and Amazon-ready publishing designs in one place.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3.5 items-start">
+                    <div className="w-8 h-8 rounded-full bg-[#0056D2]/25 border border-blue-400/20 flex items-center justify-center shrink-0 text-blue-300">
+                      <ArrowRight className="w-4 h-4 text-blue-305" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <h4 className="text-xs sm:text-sm font-bold text-white">Direct Mentorship & Vetting Feed</h4>
+                      <p className="text-[11px] sm:text-xs text-blue-100/60 leading-normal">
+                        Submit your active campaigns to Coach Charles. Share milestones, network with top alumni, and audit matching student databases from Abuja, Port Harcourt, and Lagos.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Render the full pricing investment cards nicely with overflow */}
-              <div className="overflow-y-auto max-h-[580px] scrollbar-none pt-4 pr-1">
-                <PricingSection />
-              </div>
-              
-              <div className="pt-4 border-t border-gray-200 text-center text-[11px] text-gray-400 font-secondary">
-                Need customized enterprise multi-seat billing?{" "}
-                <button 
-                  onClick={() => { setLoginOpen(false); alert("Forwarding request to SANDRA COLE enterprise support team."); }}
-                  className="text-[#0056D2] font-semibold hover:underline"
-                >
-                  Contact registrar desk &rarr;
-                </button>
+              {/* Motivational high-context alumni quote footer */}
+              <div className="mt-8 pt-6 border-t border-white/10 relative z-10 flex flex-col gap-3">
+                <blockquote className="text-xs text-amber-205 font-bold italic border-l-2 border-amber-400 pl-3 leading-relaxed text-amber-205">
+                  "This course changes lives. It didn't just teach me about AI — it made me believe that it is completely possible for me, where I am, with what I had."
+                </blockquote>
+                <div className="flex justify-between items-center text-[10px] font-mono text-blue-200/50">
+                  <span className="font-extrabold uppercase">Omega / ChainFlow Systems</span>
+                  <span>Vetted Student Success Proof</span>
+                </div>
               </div>
             </div>
 
