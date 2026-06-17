@@ -253,79 +253,43 @@ export default function HomeView() {
       {/* SECTION 3 — ABOUT US */}
       <section id="about-us-premium" className="py-24 bg-white relative overflow-hidden text-left border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+          <div className="max-w-3xl mx-auto space-y-6">
             
-            {/* Left Column Image/illustration */}
-            <div className="lg:col-span-5 relative">
-              <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-indigo-500/10 rounded-3xl blur-2xl pointer-events-none" />
-              <div className="relative border border-slate-150 rounded-3xl overflow-hidden shadow-xl bg-slate-50 p-6 sm:p-8 space-y-6">
-                
-                <h3 className="text-sm font-bold text-[#0056D2] uppercase tracking-wider flex items-center gap-1.5">
-                  <Award className="w-4 h-4" /> Delivered Nationwide
-                </h3>
+            <span className="inline-flex items-center gap-1.5 bg-sky-50 text-sky-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+              <Compass className="w-3.5 h-3.5" />
+              Our Founding Manifesto
+            </span>
+            
+            <h2 className="font-display text-2xl sm:text-4xl font-black tracking-tight text-[#0B132B]">
+              Why Learn With AI Online Business?
+            </h2>
 
-                <blockquote className="text-base font-bold text-slate-705 leading-relaxed">
-                  "By delivering in-depth workshops to community systems and enterprises, we replace vague terminology with real computational leverage."
-                </blockquote>
+            <p className="text-[#0B132B] text-sm leading-relaxed font-semibold">
+              AI Online Business is a leading AI training academy dedicated to equipping individuals and organizations with practical, in-demand AI skills.
+            </p>
 
-                <div className="flex items-center gap-3">
-                  <img
-                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300&h=300"
-                    alt="Charles Cole"
-                    className="w-10 h-10 rounded-full object-cover border border-white"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div>
-                    <h4 className="text-xs font-black text-[#0B132B]">Sandra Cole</h4>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mt-0.5">Faculty Coordinator</p>
-                  </div>
+            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
+              We have trained over 3,550 students and delivered specialized in-person and digital training programs to churches, businesses, schools, and organizations across Nigeria.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+              <div className="flex gap-3 text-xs leading-relaxed text-slate-650">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#0056D2] flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
-
-                <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-2">
-                  <span className="bg-slate-50 text-[10px] text-slate-500 font-bold px-3 py-1 rounded-full border border-slate-150">Lekki Campus</span>
-                  <span className="bg-slate-50 text-[10px] text-slate-500 font-bold px-3 py-1 rounded-full border border-slate-150">Verified Hub</span>
+                <div>
+                  <h4 className="font-bold text-[#0B132B]">Applied Syllabi</h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">No long history lessons. We write prompts and configuration sequences directly.</p>
                 </div>
               </div>
-            </div>
 
-            {/* Right Column copy */}
-            <div className="lg:col-span-7 space-y-6">
-              <span className="inline-flex items-center gap-1.5 bg-sky-50 text-sky-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                <Compass className="w-3.5 h-3.5" />
-                Our Founding Manifesto
-              </span>
-              
-              <h2 className="font-display text-2xl sm:text-4xl font-black tracking-tight text-[#0B132B]">
-                Why Learn With AI Online Business?
-              </h2>
-
-              <p className="text-[#0B132B] text-sm leading-relaxed max-w-xl font-semibold">
-                AI Online Business is a leading AI training academy dedicated to equipping individuals and organizations with practical, in-demand AI skills.
-              </p>
-
-              <p className="text-slate-500 text-xs sm:text-sm leading-relaxed max-w-xl">
-                We have trained over 3,550 students and delivered specialized in-person and digital training programs to churches, businesses, schools, and organizations across Nigeria.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                <div className="flex gap-3 text-xs leading-relaxed text-slate-650">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#0056D2] flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-[#0B132B]">Applied Syllabi</h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">No long history lessons. We write prompts and configuration sequences directly.</p>
-                  </div>
+              <div className="flex gap-3 text-xs leading-relaxed text-slate-650">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
-
-                <div className="flex gap-3 text-xs leading-relaxed text-slate-650">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-[#0B132B]">Nigeria Context</h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Learn using payment providers like Selar and marketing methods that actually work here.</p>
-                  </div>
+                <div>
+                  <h4 className="font-bold text-[#0B132B]">Nigeria Context</h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Learn using payment providers like Selar and marketing methods that actually work here.</p>
                 </div>
               </div>
             </div>

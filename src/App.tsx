@@ -37,6 +37,7 @@ import ContactPage from "./components/ContactPage";
 import StudentDashboard from "./components/StudentDashboard";
 import LeadLandingPage from "./components/LeadLandingPage";
 import ThankYouPage from "./components/ThankYouPage";
+import CheckoutPage from "./components/CheckoutPage";
 import { NavigationProvider, useNavigation, ViewType } from "./context/NavigationContext";
 import { initDB } from "./lib/db";
 
@@ -349,6 +350,12 @@ function AppContent() {
         {currentView === "thankyou" && (
           <div className="animate-in fade-in duration-350">
             <ThankYouPage />
+          </div>
+        )}
+
+        {currentView === "checkout" && (
+          <div className="animate-in fade-in duration-350">
+            <CheckoutPage />
           </div>
         )}
       </main>

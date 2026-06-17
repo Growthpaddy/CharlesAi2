@@ -4,6 +4,7 @@
  */
 
 import { Course as LegacyCourse } from "../types";
+import { supabase, syncLocalStorageToSupabase } from "./supabase";
 
 // DB Relation Types
 export interface Category {
@@ -479,6 +480,23 @@ export const db = {
       enrolledAt: new Date().toISOString()
     }));
     localStorage.setItem("enrollments", JSON.stringify(enrollments));
+
+    // Upload to Supabase if config exists
+    if (supabase) {
+      for (const enr of enrollments) {
+        supabase
+          .from("enrollments")
+          .upsert({
+            id: enr.id,
+            course_id: enr.courseId,
+            enrolled_at: enr.enrolledAt
+          })
+          .then(({ error }) => {
+            if (error) console.error("Supabase enrollment sync failed:", error);
+          });
+      }
+    }
+
     return enrollments;
   },
 
@@ -490,20 +508,34 @@ export const db = {
     const progress = this.getStudentProgress();
     const existingIdx = progress.findIndex(p => p.courseId === courseId && p.lessonId === lessonId);
 
+    const targetProgress = existingIdx > -1 
+      ? { ...progress[existingIdx], completed, completedAt: new Date().toISOString() }
+      : { id: `${courseId}_${lessonId}`, courseId, lessonId, completed, completedAt: new Date().toISOString() };
+
     if (existingIdx > -1) {
-      progress[existingIdx].completed = completed;
-      progress[existingIdx].completedAt = new Date().toISOString();
+      progress[existingIdx] = targetProgress;
     } else {
-      progress.push({
-        id: `${courseId}_${lessonId}`,
-        courseId,
-        lessonId,
-        completed,
-        completedAt: new Date().toISOString()
-      });
+      progress.push(targetProgress);
     }
 
     localStorage.setItem("student_progress", JSON.stringify(progress));
+
+    // Upload change to Supabase
+    if (supabase) {
+      supabase
+        .from("student_progress")
+        .upsert({
+          id: targetProgress.id,
+          course_id: targetProgress.courseId,
+          lesson_id: targetProgress.lessonId,
+          completed: targetProgress.completed,
+          completed_at: targetProgress.completedAt
+        })
+        .then(({ error }) => {
+          if (error) console.error("Supabase lesson completion sync failed:", error);
+        });
+    }
+
     return progress;
   },
 
@@ -531,6 +563,9 @@ export function initDB() {
   db.getLessons();
   db.getEnrollments();
   db.getStudentProgress();
+
+  // Try automatic data migrations safely on client load
+  syncLocalStorageToSupabase();
 }
 
 // Convert legacyCourse types cleanly

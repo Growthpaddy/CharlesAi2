@@ -535,24 +535,15 @@ export default function Header() {
               </AnimatePresence>
             </div>
 
-            {/* RIGHT CONTAINER: LOG IN & OUTLINED JOIN FOR FREE ACTIONS + MOBILE OPTIMIZED TRIGGERS */}
+            {/* RIGHT CONTAINER: LOG IN & ACTIONS + MOBILE OPTIMIZED TRIGGERS */}
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               
               {/* Minimalist Log In Link Button */}
               <button
                 onClick={() => setLoginOpen(true)}
-                className="hidden md:block text-xs font-sans font-bold text-[#0056D2] hover:text-[#003E9C] hover:bg-blue-50/50 py-2.5 px-3 rounded-lg transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider"
+                className="block text-xs font-sans font-bold text-[#0056D2] hover:text-[#003E9C] hover:bg-blue-50/50 py-2.5 px-3 rounded-lg transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider"
               >
                 Log In
-              </button>
-
-              {/* Hollow Blue Outline 'Join for Free' Button (Coursera Signature) */}
-              <button
-                onClick={() => scrollToSection("pricing")}
-                className="bg-transparent border border-[#0056D2] hover:bg-blue-105/10 text-[#0056D2] px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-sans font-bold text-[10px] sm:text-xs uppercase tracking-wider sm:tracking-widest transition-all cursor-pointer min-h-[34px] sm:min-h-[40px] whitespace-nowrap"
-              >
-                <span className="hidden sm:inline">Join for Free</span>
-                <span className="sm:hidden">Join</span>
               </button>
 
               {/* Mobile Selective Search Toggle Button */}
@@ -734,13 +725,6 @@ export default function Header() {
                   className="w-full py-3 text-center text-xs font-sans font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl min-h-[44px] uppercase tracking-wider mt-2.5"
                 >
                   Log In Account
-                </button>
-                <button
-                  onClick={() => { navigateTo("landing"); setMobileMenuOpen(false); }}
-                  className="w-full py-3.5 bg-[#0056D2] text-white text-center text-xs font-sans font-bold rounded-xl flex items-center justify-center gap-2 min-h-[48px] shadow-lg shadow-blue-500/10 uppercase tracking-widest"
-                >
-                  <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
-                  <span>Join for Free</span>
                 </button>
               </div>
 

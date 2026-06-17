@@ -36,7 +36,7 @@ export default function ServicesPage() {
     {
       id: "srv-2",
       title: "Group Training",
-      price: "₦150,000",
+      price: "",
       duration: "1 Month",
       tagline: "Highly intensive peer mastermind groups working on rapid real-world products launch.",
       icon: Users,
@@ -54,7 +54,7 @@ export default function ServicesPage() {
     {
       id: "srv-3",
       title: "Corporate & Institutional Training",
-      price: "Custom Pricing",
+      price: "",
       duration: "Flexible Schedule",
       tagline: "Bespoke AI training programs delivered directly to churches, companies, businesses, schools and organizations across Nigeria.",
       icon: Landmark,
@@ -108,10 +108,17 @@ export default function ServicesPage() {
                   <div className={`p-4 rounded-2xl ${srv.popular ? "bg-blue-50 text-[#2D7FF9]" : "bg-gray-50 text-gray-550"}`}>
                     <srv.icon className="w-7 h-7" />
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-mono font-bold uppercase text-gray-400 block tracking-wider">Tuition Fee</span>
-                    <span className="text-2xl font-black font-display text-[#08142B]">{srv.price}</span>
-                  </div>
+                  {srv.price ? (
+                    <div className="text-right">
+                      <span className="text-[10px] font-mono font-bold uppercase text-gray-400 block tracking-wider">Tuition Fee</span>
+                      <span className="text-2xl font-black font-display text-[#08142B]">{srv.price}</span>
+                    </div>
+                  ) : (
+                    <div className="text-right">
+                      <span className="text-[10px] font-mono font-bold uppercase text-gray-400 block tracking-wider">Tuition Pricing</span>
+                      <span className="text-xs font-extrabold text-[#2D7FF9] block mt-1 bg-blue-50/50 px-2 py-0.5 rounded-md">Price on Request</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Info */}
@@ -143,8 +150,8 @@ export default function ServicesPage() {
               <div className="pt-8">
                 <button
                   onClick={() => {
-                    if (srv.id === "srv-1" || srv.id === "srv-2") {
-                      setLoginOpen(true);
+                    if (srv.id === "srv-1") {
+                      navigateTo("checkout");
                     } else {
                       navigateTo("contact");
                     }
@@ -155,7 +162,13 @@ export default function ServicesPage() {
                       : "bg-gray-50 hover:bg-gray-100 text-[#08142B] border border-gray-200"
                   }`}
                 >
-                  <span>{srv.id === "srv-3" ? "Inquire For Organization" : "Enroll Online Now"}</span>
+                  <span>
+                    {srv.id === "srv-1" 
+                      ? "Enroll & Proceed to Checkout" 
+                      : srv.id === "srv-2" 
+                        ? "Contact to Register Group" 
+                        : "Inquire For Organization"}
+                  </span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </button>
               </div>
