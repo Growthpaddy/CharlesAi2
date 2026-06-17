@@ -45,11 +45,11 @@ export default function AboutPage() {
             <span>AI ACADEMY FOUNDATION</span>
           </div>
           {/* Heading under 10 words */}
-          <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-[#08142B] leading-tight">
-            Accelerating Human Capacity Through Applied AI
+          <h1 className="font-display text-4xl sm:text-6xl font-black tracking-[0.01em] text-[#08142B] leading-none">
+            High-Impact Applied AI Training.
           </h1>
-          <p className="text-sm text-gray-500 max-w-2xl mx-auto leading-relaxed">
-            We bridge the gap between heavy academic machine learning and actionable commercial automations. Founded by technical system architects, we provide the ultimate workspace sandbox to prototype, deploy, and scale intelligent business routines.
+          <p className="text-sm sm:text-base text-gray-500 max-w-xl mx-auto leading-relaxed">
+            We replace vague terminology with real computational leverage. Built by technical architects to prototype, deploy and scale digital businesses.
           </p>
         </div>
       </section>
@@ -61,13 +61,13 @@ export default function AboutPage() {
           
           <div className="space-y-4">
             <span className="text-[10px] font-mono font-bold text-gray-400 tracking-wider uppercase block">
-              OUR MISSION & VALUES
+              MISSION
             </span>
-            <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-[#08142B] tracking-tight">
-              A Commitment to High-Fidelity Practical Competence
+            <h2 className="font-display text-3xl font-black text-[#08142B] tracking-tighter leading-none">
+              High-Fidelity Actionable Skills.
             </h2>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              We reject high-level tech-buzzwords and low-value generic content. Our training frameworks and code catalogs are continually audited and tested to run seamlessly on standard production platforms. Every course line, automation workflow, and system blueprint serves exactly one goal: giving our members elite practical autonomy.
+            <p className="text-slate-500 text-sm leading-relaxed">
+              We reject tech buzzwords and cookie-cutter frameworks. Every workflow and blueprint we deliver is continually audited to run seamlessly. Our only goal is giving you practical digital autonomy.
             </p>
           </div>
 

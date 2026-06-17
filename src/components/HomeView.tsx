@@ -50,14 +50,10 @@ export default function HomeView() {
 
   // Student Benefits array
   const benefitsList = [
-    { title: "Learn Practical AI Skills", desc: "No coding degree needed. Master the custom instructions, parameters, and techniques required to command AI models flawlessly." },
-    { title: "Build AI Applications", desc: "Deploy actual custom AI assistants, simple code boilerplates, and self-directed agents directly within our study modules." },
-    { title: "Create Digital Products", desc: "Format, design, and compile high-margin books and guides to list on Amazon KDP or Selar with zero capital expenses." },
-    { title: "Automate Businesses", desc: "Construct self-running email follow-ups, lead scraping nodes, and webhook systems that run in the background 24/7." },
-    { title: "Grow YouTube Channels", desc: "Step-by-step methods to design narrative audio scripts, synchronize visual frames, and launch faceless channels." },
-    { title: "Acquire High-Paying Clients", desc: "Automate local maps client list scraping, write highly custom cold outreach campaigns, and scale premium retainers." },
-    { title: "Build Online Businesses", desc: "Establish durable commercial assets matching digital service platforms, with active local payment integrations." },
-    { title: "Learn From Real Projects", desc: "Build capstones and assignments vetted directly on live corporate networks across Lagos and Abuja." }
+    { title: "Prompt Engineering", desc: "Command top models flawlessly. Master variables, system inputs, & custom instructions." },
+    { title: "Deploy AI Assistants", desc: "Build & launch functional chatbots, agents, & scraping workflows without code." },
+    { title: "Sell Digital Products", desc: "Self-publisher blueprints. Write, format, & list high-margin assets on Selar & Selar KDP." },
+    { title: "Automate Campaigns", desc: "Create self-running scraping pipelines, custom lead capture nodes, & 24/7 webhooks." }
   ];
 
   return (
@@ -79,20 +75,25 @@ export default function HomeView() {
               
               <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-[#0056D2] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>ONE FLAGSHIP PLATINUM PROGRAM</span>
+                <span>FLAGSHIP ACADEMY</span>
               </div>
 
-              <h1 className="font-display font-black text-3xl sm:text-5xl lg:text-[48px] xl:text-[56px] text-[#0B132B] tracking-tight leading-[1.08] max-w-2xl">
-                Transform Your Skills with AI & Build a <span className="text-[#0056D2]">Profitable</span> Online Business
+              <h1 className="font-display font-black text-4xl sm:text-6xl text-[#0B132B] tracking-tighter leading-[0.95] max-w-3xl">
+                Master AI. <br />
+                Build Digital Wealth.
               </h1>
 
-              <div className="space-y-3.5">
-                <p className="text-gray-600 text-sm sm:text-base leading-relaxed max-w-xl font-medium">
-                  Join over 3,500 students in our single flagship curriculum: the <strong className="text-slate-900 font-extrabold">AI Online Business Course</strong>. We offer one premium program — enroll once to gain lifelong access to all 12 learning modules.
+              <div className="space-y-4">
+                <p className="text-slate-500 text-sm sm:text-base leading-relaxed max-w-xl font-medium">
+                  Enroll in our single, highly optimized curriculum. Master 12 real-world AI learning modules alongside 3,500+ professionals.
                 </p>
-                <p className="text-xs text-[#0056D2] font-semibold leading-relaxed max-w-xl">
-                  ✓ One Single Enrollment &bull; ✓ Full Access to All 12 Modules &bull; ✓ Weekly Collaborative Labs
-                </p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-[#0056D2] font-extrabold">
+                  <span>✓ One-Time Enrollment</span>
+                  <span className="text-slate-300">•</span>
+                  <span>✓ Complete 12 Modules</span>
+                  <span className="text-slate-300">•</span>
+                  <span>✓ Direct Cohort Labs</span>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
@@ -100,7 +101,7 @@ export default function HomeView() {
                   onClick={() => navigateTo("landing")}
                   className="group px-8 py-4 bg-[#0056D2] hover:bg-[#0047b3] text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
                 >
-                  <span>Enroll in Full Course</span>
+                  <span>Enroll in Course</span>
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </button>
                 
@@ -111,7 +112,7 @@ export default function HomeView() {
                   }}
                   className="px-8 py-4 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm rounded-xl border border-slate-200 hover:border-slate-300 transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
                 >
-                  <span>Explore 12 Modules</span>
+                  <span>Explore Modules</span>
                 </button>
               </div>
 
@@ -205,47 +206,43 @@ export default function HomeView() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             
-            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 text-left flex items-start gap-4 hover:border-blue-500/20 transition-all">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-left flex items-start gap-4 hover:border-blue-500/20 transition-all">
               <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
                 <Users className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-2xl sm:text-3xl font-display font-black leading-none">3,500+</p>
-                <p className="text-xs text-slate-400 mt-1.5 font-sans font-bold uppercase tracking-wider">Students Trained</p>
-                <p className="text-[10px] text-slate-500 mt-1 leading-snug">Empowered on active digital applications</p>
+                <p className="text-[11px] text-slate-350 mt-1.5 font-bold uppercase tracking-wider">Students Trained</p>
               </div>
             </div>
 
-            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 text-left flex items-start gap-4 hover:border-blue-500/20 transition-all">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-left flex items-start gap-4 hover:border-blue-500/20 transition-all">
               <div className="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0">
                 <BookOpen className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-2xl sm:text-3xl font-display font-black leading-none">12</p>
-                <p className="text-xs text-slate-400 mt-1.5 font-sans font-bold uppercase tracking-wider">Curriculum Modules</p>
-                <p className="text-[10px] text-slate-500 mt-1 leading-snug">Included in one single flagship course</p>
+                <p className="text-[11px] text-slate-350 mt-1.5 font-bold uppercase tracking-wider">Core Modules</p>
               </div>
             </div>
 
-            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 text-left flex items-start gap-4 hover:border-blue-500/20 transition-all">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-left flex items-start gap-4 hover:border-blue-500/20 transition-all">
               <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-2xl sm:text-3xl font-display font-black leading-none">100%</p>
-                <p className="text-xs text-slate-400 mt-1.5 font-sans font-bold uppercase tracking-wider">Online Learning</p>
-                <p className="text-[10px] text-slate-500 mt-1 leading-snug">Study from home at your comfort</p>
+                <p className="text-[11px] text-slate-350 mt-1.5 font-bold uppercase tracking-wider">Practical Learning</p>
               </div>
             </div>
 
-            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 text-left flex items-start gap-4 hover:border-blue-500/20 transition-all">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-left flex items-start gap-4 hover:border-blue-500/20 transition-all">
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
                 <Award className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-lg sm:text-xl font-display font-black leading-none pt-1">Corporate Training</p>
-                <p className="text-xs text-slate-400 mt-1.5 font-sans font-bold uppercase tracking-wider">Available</p>
-                <p className="text-[10px] text-slate-500 mt-1 leading-snug">Churches, teams, & businesses</p>
+                <p className="text-2xl sm:text-3xl font-display font-black leading-none">Enterprise</p>
+                <p className="text-[11px] text-slate-350 mt-1.5 font-bold uppercase tracking-wider">Programs Active</p>
               </div>
             </div>
 
@@ -611,15 +608,15 @@ export default function HomeView() {
       <section id="student-benefits" className="py-24 bg-white text-left border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <div className="text-center max-w-3xl mx-auto space-y-4 mb-20">
-            <span className="inline-flex items-center gap-1.5 bg-blue-50 text-[#0056D2] px-3.5 py-1.5 rounded-full text-[11px] font-sans font-bold uppercase tracking-widest border border-blue-100">
-              ACTUAL OUTCOMES
+          <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
+            <span className="inline-flex items-center gap-1.5 bg-blue-50 text-[#0056D2] px-3.5 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-widest border border-blue-100/50">
+              OUTCOMES
             </span>
-            <h2 className="font-sans text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0B132B]">
+            <h2 className="font-sans text-3xl sm:text-4xl font-black text-[#0B132B] tracking-tight leading-none">
               What You Will Achieve
             </h2>
-            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed font-medium">
-              We construct our flagship curriculum around concrete output milestones so that you unlock active capabilities that generate real commercial leverage:
+            <p className="text-slate-500 text-xs sm:text-sm">
+              Learn practical, end-to-end modular frameworks designed for direct application:
             </p>
           </div>
 
@@ -666,7 +663,7 @@ export default function HomeView() {
               <div key={t.id} className="bg-white border border-slate-150 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-xs hover:shadow-md transition-all">
                 <div className="space-y-4">
                   <div className="flex gap-1">
-                    {[...Array(t.rating)].map((_, i) => (
+                     {[...Array(t.rating)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
                     ))}
                   </div>
@@ -701,29 +698,29 @@ export default function HomeView() {
         <div className="absolute inset-0 bg-[#0056D2]/15 blur-[120px] pointer-events-none" />
         <div className="max-w-4xl mx-auto px-4 relative z-10 space-y-6">
           <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-black tracking-widest uppercase bg-[#0056D2]/20 text-blue-300 px-3.5 py-1.5 rounded-full border border-blue-500/20">
-            <Sparkles className="w-3.5 h-3.5" /> SECURE YOUR MODULE ACCESS
+            <Sparkles className="w-3.5 h-3.5" /> INSTANT LIFETIME ACCESS
           </span>
           
-          <h2 className="font-sans text-2xl sm:text-4xl font-extrabold leading-tight">
-            Ready to Master AI and Secure Your Digital Business?
+          <h2 className="font-sans text-3xl sm:text-5xl font-black leading-none tracking-tighter">
+            Build Your Digital Business today.
           </h2>
           
-          <p className="text-slate-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed font-medium">
-            Enroll in the full <strong className="text-white font-bold">AI Online Business Course</strong> today. Get immediate lifetime access to all 12 modules, downloadable templates, code mentors, and live automated scrapers.
+          <p className="text-slate-400 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
+            Gain immediate access to all 12 premium modules, frameworks, live labs, and direct messaging channels.
           </p>
 
-          <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center items-center">
             <button 
               onClick={() => navigateTo("landing")}
               className="px-8 py-3.5 bg-[#0056D2] hover:bg-[#0047b3] text-white font-bold rounded-xl transition-all text-xs cursor-pointer min-h-[48px]"
             >
-              Enroll in Full Course Now
+              Enroll in Course
             </button>
             <button 
               onClick={() => navigateTo("programs")}
-              className="px-8 py-3.5 bg-white/10 hover:bg-white/15 text-white border border-white/10 font-bold rounded-xl transition-all text-xs cursor-pointer min-h-[48px]"
+              className="px-8 py-3.5 bg-white/10 hover:bg-white/15 text-white border border-white/15 font-bold rounded-xl transition-all text-xs cursor-pointer min-h-[48px]"
             >
-              Explore 12 Modules
+              Explore Modules
             </button>
           </div>
         </div>
