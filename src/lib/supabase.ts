@@ -5,15 +5,33 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || "";
-const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "";
+const supabaseUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || "").trim();
+const supabaseAnonKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "").trim();
+
+// Ensure the URL is truthy, non-placeholder, and is a valid HTTP/HTTPS URL
+const isValidHttpUrl = (url: string): boolean => {
+  if (!url || url.includes("VITE_SUPABASE_URL") || url.startsWith("YOUR_")) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch (_) {
+    return false;
+  }
+};
 
 // Graceful check for active credentials
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey && isValidHttpUrl(supabaseUrl));
 
-export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+let supabaseClient = null;
+if (isSupabaseConfigured) {
+  try {
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+  } catch (err) {
+    console.error("Failed to initialize Supabase client with active credentials:", err);
+  }
+}
+
+export const supabase = supabaseClient;
 
 // Clean SQL migration sequence to copy/paste directly in Supabase SQL Editor
 export const SUPABASE_SQL_藍圖 = `
