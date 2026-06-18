@@ -27,6 +27,7 @@ export interface Course {
   skills: string[];
   outcomes: string[];
   overview: string;
+  price?: string;
 }
 
 export interface CourseModule {
@@ -584,7 +585,8 @@ export function getLegacyFeaturedCourses(): LegacyCourse[] {
       studentCount: c.studentCount,
       instructor: c.instructorName,
       instructorAvatar: c.instructorAvatar,
-      skillsAcquired: c.skills
+      skillsAcquired: c.skills,
+      price: c.price || "₦45,000"
     };
   });
 }

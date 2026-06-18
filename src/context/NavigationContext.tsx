@@ -61,8 +61,17 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       const pathname = window.location.pathname;
       const hash = window.location.hash.replace("#", "");
       
-      // Support clean pathname direct entry /admin-dashboard
-      if (pathname === "/admin-dashboard" || pathname.startsWith("/admin-dashboard")) {
+      // Support clean pathname direct entry for requested admin endpoints
+      const checkPath = pathname.toLowerCase();
+      if (
+        checkPath === "/admin-dashboard" || 
+        checkPath === "/admin-login" || 
+        checkPath === "/addmin-login" ||
+        pathname.startsWith("/admin-dashboard") ||
+        pathname.startsWith("/Admin-dashboard") ||
+        pathname.startsWith("/Admin-login") ||
+        pathname.startsWith("/Addmin-login")
+      ) {
         setCurrentView("admin");
         setActiveCourseId(null);
         return;
@@ -79,7 +88,13 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       }
 
       const validViews: ViewType[] = ["home", "programs", "paths", "success", "resources", "about", "pricing", "services", "contact", "dashboard", "landing", "thankyou", "checkout", "admin"];
-      if (hash === "admin-dashboard") {
+      const checkHash = hash.toLowerCase();
+      if (
+        checkHash === "admin-dashboard" || 
+        checkHash === "admin-login" || 
+        checkHash === "addmin-login" || 
+        checkHash === "admin"
+      ) {
         setCurrentView("admin");
         setActiveCourseId(null);
       } else if (validViews.includes(hash as ViewType)) {

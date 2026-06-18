@@ -235,6 +235,7 @@ export default function AdminDashboard() {
   const [courseFormOutcomes, setCourseFormOutcomes] = useState("");
   const [courseFormInstructor, setCourseFormInstructor] = useState("Sandra Cole");
   const [courseFormThumbnail, setCourseFormThumbnail] = useState("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600&h=450");
+  const [courseFormPrice, setCourseFormPrice] = useState("₦45,000");
 
   // Modules form state
   const [showAddModule, setShowAddModule] = useState(false);
@@ -550,6 +551,7 @@ export default function AdminDashboard() {
     setCourseFormOutcomes(course.outcomes ? course.outcomes.join(", ") : "");
     setCourseFormInstructor(course.instructorName || "Sandra Cole");
     setCourseFormThumbnail(course.thumbnail);
+    setCourseFormPrice(course.price || "₦45,000");
     setShowAddCourse(true);
     
     // Smooth scroll support to help admin locate form instantly
@@ -580,6 +582,7 @@ export default function AdminDashboard() {
             instructorName: courseFormInstructor,
             skills: courseFormSkills ? courseFormSkills.split(",").map(s => s.trim()) : c.skills,
             outcomes: courseFormOutcomes ? courseFormOutcomes.split(",").map(o => o.trim()) : c.outcomes,
+            price: courseFormPrice,
           };
         }
         return c;
@@ -602,7 +605,8 @@ export default function AdminDashboard() {
             instructor_name: courseFormInstructor,
             thumbnail_url: courseFormThumbnail,
             skills: courseFormSkills ? courseFormSkills.split(",").map(s => s.trim()) : [],
-            outcomes: courseFormOutcomes ? courseFormOutcomes.split(",").map(o => o.trim()) : []
+            outcomes: courseFormOutcomes ? courseFormOutcomes.split(",").map(o => o.trim()) : [],
+            price: courseFormPrice
           });
         } catch (err) {
           console.warn("Could not sync updated course to Supabase:", err);
@@ -615,6 +619,7 @@ export default function AdminDashboard() {
       setCourseFormOverview("");
       setCourseFormSkills("");
       setCourseFormOutcomes("");
+      setCourseFormPrice("₦45,000");
       setEditingCourseId(null);
       setShowAddCourse(false);
 
@@ -636,7 +641,8 @@ export default function AdminDashboard() {
         instructorName: courseFormInstructor,
         instructorAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150&h=150",
         skills: courseFormSkills ? courseFormSkills.split(",").map(s => s.trim()) : ["Applied AI", "LMS Tools Mastery"],
-        outcomes: courseFormOutcomes ? courseFormOutcomes.split(",").map(o => o.trim()) : ["Scale digital solutions", "Achieve high-fidelity automation"]
+        outcomes: courseFormOutcomes ? courseFormOutcomes.split(",").map(o => o.trim()) : ["Scale digital solutions", "Achieve high-fidelity automation"],
+        price: courseFormPrice,
       };
 
       const updatedC = [...courses, newC];
@@ -686,7 +692,8 @@ export default function AdminDashboard() {
             instructor_name: courseFormInstructor,
             thumbnail_url: courseFormThumbnail,
             skills: courseFormSkills ? courseFormSkills.split(",").map(s => s.trim()) : ["Applied AI", "LMS Tools Mastery"],
-            outcomes: courseFormOutcomes ? courseFormOutcomes.split(",").map(o => o.trim()) : ["Scale digital solutions", "Achieve high-fidelity automation"]
+            outcomes: courseFormOutcomes ? courseFormOutcomes.split(",").map(o => o.trim()) : ["Scale digital solutions", "Achieve high-fidelity automation"],
+            price: courseFormPrice
           });
         } catch (err) {
           console.warn("Could not insert course onto Supabase:", err);
@@ -699,6 +706,7 @@ export default function AdminDashboard() {
       setCourseFormOverview("");
       setCourseFormSkills("");
       setCourseFormOutcomes("");
+      setCourseFormPrice("₦45,000");
       setShowAddCourse(false);
       
       // Auto preset dropdown default choice for modules & lessons tabs
@@ -1984,6 +1992,17 @@ export default function AdminDashboard() {
                     />
                   </div>
 
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-600">Tuition Price (Price Tag e.g. '₦45,000')</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. ₦45,000"
+                      value={courseFormPrice}
+                      onChange={(e) => setCourseFormPrice(e.target.value)}
+                      className="w-full text-xs p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+
                   <div className="space-y-1 md:col-span-2">
                     <label className="text-xs font-bold text-slate-600">Comprehensive Overview / Curated Syllabus Details</label>
                     <textarea
@@ -2252,6 +2271,7 @@ export default function AdminDashboard() {
                       <th className="px-4 py-3">Course Title</th>
                       <th className="px-4 py-3">Category</th>
                       <th className="px-4 py-3">Instructor</th>
+                      <th className="px-4 py-3">Price</th>
                       <th className="px-4 py-3">Metrics</th>
                       <th className="px-4 py-3">Structure</th>
                       <th className="px-4 py-3 text-right">Actions</th>
@@ -2277,6 +2297,7 @@ export default function AdminDashboard() {
                             </td>
                             <td className="px-4 py-3.5 font-bold text-slate-700">{catName}</td>
                             <td className="px-4 py-3.5 text-slate-500">{c.instructorName}</td>
+                            <td className="px-4 py-3.5 font-bold text-emerald-700">{c.price || "₦45,000"}</td>
                             <td className="px-4 py-3.5">
                               <span className="font-mono text-[10px] block font-extrabold text-[#0056D2]">{c.duration}</span>
                               <span className="font-mono text-[9px] text-gray-400 font-medium block">Level: {c.level}</span>
@@ -2320,7 +2341,7 @@ export default function AdminDashboard() {
 
                           {isExpanded && (
                             <tr className="bg-slate-100/30">
-                              <td colSpan={6} className="px-6 py-4 border-l-4 border-l-[#0056D2] bg-slate-50/40">
+                              <td colSpan={7} className="px-6 py-4 border-l-4 border-l-[#0056D2] bg-slate-50/40">
                                 <div className="space-y-4">
                                   {/* Inner Header Actions */}
                                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200/60 pb-3 mb-2">

@@ -118,9 +118,14 @@ export default function StudentDashboard() {
         {/* UPPER ACADEMY HERO HEADER */}
         <div className="bg-white border border-gray-150 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 bg-[#2D7FF9]/10 text-[#2D7FF9] px-3 py-1 rounded-full text-[10px] font-sans font-extrabold uppercase tracking-wider">
-              <GraduationCap className="w-3.5 h-3.5 text-[#2D7FF9]" />
-              <span>COGNITIVE STUDENT ACCESS</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 bg-[#2D7FF9]/10 text-[#2D7FF9] px-3 py-1 rounded-full text-[10px] font-sans font-extrabold uppercase tracking-wider">
+                <GraduationCap className="w-3.5 h-3.5 text-[#2D7FF9]" />
+                <span>COGNITIVE STUDENT ACCESS</span>
+              </div>
+              <div className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono">
+                <Shield className="w-3 h-3 text-amber-600 animate-pulse h-3 w-3" /> SECURE LIVE READ-ONLY DATA STREAM
+              </div>
             </div>
             <h2 className="font-display text-2xl sm:text-3xl font-black text-[#08142B] tracking-tight">
               Welcome Back, Active Student

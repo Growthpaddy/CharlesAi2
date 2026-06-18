@@ -9,7 +9,7 @@ import { X, Sparkles, ShieldCheck, Mail, Lock, Play, ArrowRight, Chrome, Github 
 import { useNavigation } from "../context/NavigationContext";
 
 export default function LoginPortalModal() {
-  const { isLoginOpen, setLoginOpen } = useNavigation();
+  const { isLoginOpen, setLoginOpen, navigateTo } = useNavigation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,8 +35,8 @@ export default function LoginPortalModal() {
       setTimeout(() => {
         setLoginSuccess(false);
         setLoginOpen(false);
-        alert("Authentication complete! Entering direct student workspace console...");
-      }, 1500);
+        navigateTo("dashboard");
+      }, 1200);
     }, 1800);
   };
 

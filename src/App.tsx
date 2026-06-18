@@ -37,6 +37,7 @@ import ServicesPage from "./components/ServicesPage";
 import ContactPage from "./components/ContactPage";
 import StudentDashboard from "./components/StudentDashboard";
 import LeadLandingPage from "./components/LeadLandingPage";
+import CourseDetailPage from "./components/CourseDetailPage";
 import ThankYouPage from "./components/ThankYouPage";
 import CheckoutPage from "./components/CheckoutPage";
 import { NavigationProvider, useNavigation, ViewType } from "./context/NavigationContext";
@@ -345,6 +346,12 @@ function AppContent() {
         {currentView === "landing" && (
           <div className="animate-in fade-in duration-350">
             <LeadLandingPage />
+          </div>
+        )}
+
+        {currentView === "course_details" && (
+          <div className="animate-in fade-in duration-350">
+            <CourseDetailPage />
           </div>
         )}
 

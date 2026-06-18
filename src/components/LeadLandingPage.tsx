@@ -72,27 +72,28 @@ export default function LeadLandingPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fullName || !formData.email || !formData.whatsapp) {
-      alert("Please enter all required information to qualify for the Free Toolkit!");
+      alert("Please enter all required information to lock in your 70% Tuition Discount!");
       return;
     }
 
     setIsSubmitting(true);
+    localStorage.setItem("tuition_discount_claimed", "true");
 
     // Call Supabase lead sync layer
     insertLead({
       name: formData.fullName,
       phone: formData.whatsapp,
       email: formData.email,
-      qualification: "Qualified Master Lead",
-      goal: "LMS Free Toolkit Blueprint Optin"
+      qualification: "70% Discount Locked Lead",
+      goal: "LMS 70% Tuition Discount Claimed"
     }).then(() => {
       setIsSubmitting(false);
-      // Seamlessly redirect to Thank You page
-      navigateTo("thankyou");
+      // Seamlessly redirect to Course Details page
+      navigateTo("course_details");
     }).catch((err) => {
       console.error(err);
       setIsSubmitting(false);
-      navigateTo("thankyou"); // Fallback gracefully
+      navigateTo("course_details"); // Fallback gracefully
     });
   };
 
@@ -115,7 +116,7 @@ export default function LeadLandingPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
             </span>
-            <span>Limited Offer: $1,499 AI Blueprint Pack free today</span>
+            <span>Limited Offer: 70% Flagship Tuition Discount Locked In Today</span>
             <span className="hidden sm:inline text-white/30">•</span>
             <span className="font-mono text-[11px] text-[#FCF50F] bg-[#FCF50F]/10 px-2 py-0.5 rounded">
               Only {remainingSlots} slots remaining
@@ -208,20 +209,28 @@ export default function LeadLandingPage() {
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center gap-2">
                     <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">
-                      Instant Access
+                      Instant Lock-In
                     </span>
-                    <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold font-mono">
-                      100% FREE BLUEPRINT
+                    <span className="bg-[#FCF50F]/20 text-[#0E1B3E] px-2 py-0.5 rounded text-[10px] font-bold font-mono border border-[#FCF50F]/40">
+                      70% TUITION DISCOUNT ACTIVE
                     </span>
                   </div>
 
                   <h3 className="font-sans text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                    Get the AI Business Blueprint
+                    Lock In Your 70% Discount
                   </h3>
 
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Submit your basic registration details below to immediately unlock active prompt models, automated tool blueprints, and the Saturday cohort lab recording details.
+                    Submit your basic registration details below to immediately lock in our 70% tuition discount code and proceed directly to full course outlines, modules, and billing credentials.
                   </p>
+
+                  <div className="flex items-center gap-2 bg-amber-50/70 border border-amber-100/60 rounded-xl p-3 text-xs justify-center font-mono">
+                    <Clock className="w-4 h-4 text-[#0056D2] animate-pulse" />
+                    <span className="text-slate-600 font-bold">Offer expiring in:</span>
+                    <span className="text-[#0E1B3E] font-black text-xs bg-[#FCF50F] px-2.5 py-0.5 rounded text-slate-900 border border-[#b2ac0e]/20 shadow-xs">
+                      {String(timeLeft.minutes).padStart(2, '0')}m {String(timeLeft.seconds).padStart(2, '0')}s
+                    </span>
+                  </div>
                 </div>
 
                 {/* Form Input fields */}
@@ -296,11 +305,11 @@ export default function LeadLandingPage() {
                     {isSubmitting ? (
                       <>
                         <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        <span>Verifying Qualification...</span>
+                        <span>Locking in Tuition Discount...</span>
                       </>
                     ) : (
                       <>
-                        <span>Get Free Blueprint & Toolkits</span>
+                        <span>Claim Discount &amp; View Syllabus outlines</span>
                         <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                       </>
                     )}
@@ -319,9 +328,9 @@ export default function LeadLandingPage() {
                       SUPABASE SYNC ACTIVE
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      LOCAL DEVS MODE
+                    <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      SECURE OFFLINE ENGINE
                     </span>
                   )}
                 </div>
@@ -694,34 +703,27 @@ export default function LeadLandingPage() {
           </span>
 
           <h2 className="font-display text-2xl sm:text-4xl font-black tracking-tight leading-none text-white">
-            Secure Your Blueprint &amp; Toolkits
+            Secure Your 70% Flagship Tuition Discount Now
           </h2>
 
           <p className="text-slate-400 text-xs sm:text-sm leading-relaxed max-w-lg mx-auto">
-            Do not let another week pass with legacy manual processes. Download the qualified package, secure your access link, and initiate lifelong cohort credentials.
+            Do not let another week pass with legacy manual processes. Lock in your limited credential slot, secure your discount, and begin learning immediately.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+          <div className="flex flex-col gap-4 justify-center items-center max-w-md mx-auto">
             <a
               href="#fullName"
-              className="px-8 py-3.5 bg-[#0056D2] hover:bg-[#0047b3] text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center gap-2 group"
+              className="w-full sm:w-auto px-8 py-4 bg-[#FCF50F] hover:bg-yellow-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 group transform hover:scale-[1.02] duration-200"
             >
-              <span>Get Free Blueprint</span>
+              <span>🚀 SCROLL UP &amp; CLAIM 70% OFF ({String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')} LEFT)</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </a>
-            
-            <a
-              href="#fullName"
-              className="px-8 py-3.5 bg-white/10 hover:bg-white/15 text-white border border-white/10 font-bold text-xs rounded-xl transition-all"
-            >
-              Learn More
             </a>
           </div>
 
-          <div className="pt-6 text-xs text-slate-550 font-mono flex flex-wrap justify-center items-center gap-x-6 gap-y-2">
-            <span>✓ Lifelong Access</span>
-            <span>✓ Weekly Audits Included</span>
-            <span>✓ Absolute Risk-Free Lock-in</span>
+          <div className="pt-4 text-xs text-slate-500 font-mono flex flex-wrap justify-center items-center gap-x-6 gap-y-2">
+            <span>✓ {remainingSlots} Slots Left</span>
+            <span>✓ Evergreen Timer Offer</span>
+            <span>✓ Direct Instructor Guidance</span>
           </div>
 
         </div>

@@ -40,6 +40,7 @@ export interface Course {
   skillsAcquired: string[];
   overview?: string;
   outcomes?: string[];
+  price?: string;
 }
 
 export interface CurriculumModule {

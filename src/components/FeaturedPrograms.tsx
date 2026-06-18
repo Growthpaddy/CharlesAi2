@@ -20,6 +20,22 @@ export default function FeaturedPrograms() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
 
+  // Pull published courses dynamically from local/cloud databases synchronized with Supabase
+  const [courses, setCourses] = useState<Course[]>(() => {
+    const local = localStorage.getItem("courses");
+    if (local) {
+      try {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.warn("Failed parsing courses inside Course Library: ", e);
+      }
+    }
+    return masterCourses;
+  });
+
   // Auto-expand the first module of the curriculum accordion for premium engagement
   useEffect(() => {
     if (activeCourseId) {
@@ -32,10 +48,10 @@ export default function FeaturedPrograms() {
   }, [activeCourseId]);
 
   // Find currently active course
-  const activeCourse = masterCourses.find(c => c.id === activeCourseId);
+  const activeCourse = courses.find(c => c.id === activeCourseId);
 
   // Filter available courses for standard catalog catalog list
-  const filteredCourses = masterCourses.filter(course => {
+  const filteredCourses = courses.filter(course => {
     const matchesLevel = selectedLevel === "All" || course.level === selectedLevel;
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           course.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -85,7 +101,7 @@ export default function FeaturedPrograms() {
       .sort((a, b) => a.sortOrder - b.sortOrder);
 
     // Filter related courses (3 courses from catalog excluding current, same level or similar)
-    const relatedCourses = masterCourses
+    const relatedCourses = courses
       .filter(c => c.id !== activeCourse.id)
       .slice(0, 3);
 
