@@ -5,7 +5,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-export type ViewType = "home" | "programs" | "paths" | "success" | "resources" | "about" | "pricing" | "services" | "contact" | "dashboard" | "course_details" | "landing" | "thankyou" | "checkout";
+export type ViewType = "home" | "programs" | "paths" | "success" | "resources" | "about" | "pricing" | "services" | "contact" | "dashboard" | "course_details" | "landing" | "thankyou" | "checkout" | "admin";
 
 // Bidirectional mappings for SEO/LMS standard course routing
 export const slugToCourseIdMap: Record<string, string> = {
@@ -58,8 +58,16 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // Handle browser back/forward buttons using hash router
   useEffect(() => {
     const handleHashChange = () => {
+      const pathname = window.location.pathname;
       const hash = window.location.hash.replace("#", "");
       
+      // Support clean pathname direct entry /admin-dashboard
+      if (pathname === "/admin-dashboard" || pathname.startsWith("/admin-dashboard")) {
+        setCurrentView("admin");
+        setActiveCourseId(null);
+        return;
+      }
+
       if (hash.startsWith("courses/")) {
         const slug = hash.replace("courses/", "");
         const matchedCourseId = slugToCourseIdMap[slug];
@@ -70,8 +78,11 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         }
       }
 
-      const validViews: ViewType[] = ["home", "programs", "paths", "success", "resources", "about", "pricing", "services", "contact", "dashboard", "landing", "thankyou", "checkout"];
-      if (validViews.includes(hash as ViewType)) {
+      const validViews: ViewType[] = ["home", "programs", "paths", "success", "resources", "about", "pricing", "services", "contact", "dashboard", "landing", "thankyou", "checkout", "admin"];
+      if (hash === "admin-dashboard") {
+        setCurrentView("admin");
+        setActiveCourseId(null);
+      } else if (validViews.includes(hash as ViewType)) {
         setCurrentView(hash as ViewType);
         setActiveCourseId(null);
       } else {
@@ -81,16 +92,29 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     };
 
     window.addEventListener("hashchange", handleHashChange);
+    // Listen for history popstate events too to react on pathname changes
+    window.addEventListener("popstate", handleHashChange);
     // Trigger on mount
     handleHashChange();
 
-    return () => window.removeEventListener("hashchange", handleHashChange);
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+      window.removeEventListener("popstate", handleHashChange);
+    };
   }, []);
 
   const navigateTo = (view: ViewType) => {
     setCurrentView(view);
     setActiveCourseId(null);
-    window.location.hash = view === "home" ? "" : view;
+    if (view === "admin") {
+      window.history.pushState({}, "", "/admin-dashboard");
+    } else {
+      if (window.location.pathname === "/admin-dashboard") {
+        window.history.pushState({}, "", "/" + (view === "home" ? "" : `#${view}`));
+      } else {
+        window.location.hash = view === "home" ? "" : view;
+      }
+    }
     window.scrollTo({ top: 0, behavior: "instant" });
   };
 

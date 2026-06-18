@@ -9,6 +9,7 @@ import {
   Sparkles, TrendingUp, Users, Zap, Terminal 
 } from "lucide-react";
 import Header from "./components/Header";
+import AdminDashboard from "./components/AdminDashboard";
 import Hero from "./components/Hero";
 import WhyUs from "./components/WhyUs";
 import Curriculum from "./components/Curriculum";
@@ -64,7 +65,7 @@ function AppContent() {
   return (
     <div id="app-root" className="min-h-screen bg-[#FAFBFC] text-[#0B1B3D] font-sans antialiased relative selection:bg-[#0056D2]/25 selection:text-[#0B1B3D] flex flex-col justify-between">
       {/* Sticky top-level Glass navigation */}
-      <Header />
+      {currentView !== "admin" && <Header />}
 
       {/* Main visual layouts stack dynamically routed */}
       <main className="flex-grow">
@@ -358,10 +359,16 @@ function AppContent() {
             <CheckoutPage />
           </div>
         )}
+
+        {currentView === "admin" && (
+          <div className="animate-in fade-in duration-300">
+            <AdminDashboard />
+          </div>
+        )}
       </main>
 
       {/* Global persistent premium Footer at the very bottom */}
-      <Footer />
+      {currentView !== "admin" && <Footer />}
       
       {/* Interactive Secure Student Gate Overlay */}
       <LoginPortalModal />

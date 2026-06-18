@@ -466,6 +466,13 @@ export default function Header() {
               >
                 ⚡ Study Console
               </button>
+              <button
+                type="button"
+                onClick={() => navigateTo("admin")}
+                className="hidden lg:block text-xs font-sans font-bold text-gray-700 hover:text-slate-900 bg-gray-100/70 border border-gray-200 py-1.5 px-3 rounded-lg transition-all whitespace-nowrap cursor-pointer hover:shadow-xs"
+              >
+                ⚙️ Admin Console
+              </button>
             </div>
 
             {/* CENTER CONTAINER: PERFECTLY ROUNDED DEEP SEARCH BAR WITH SELECTIVE REALTIME FILTER */}
@@ -719,6 +726,12 @@ export default function Header() {
                   className="w-full py-3 text-center text-xs font-sans font-bold text-[#0056D2] bg-blue-50 border border-blue-105 rounded-xl min-h-[44px] uppercase tracking-wider"
                 >
                   ⚡ Student Study Console
+                </button>
+                <button
+                  onClick={() => { navigateTo("admin"); setMobileMenuOpen(false); }}
+                  className="w-full py-3 text-center text-xs font-sans font-bold text-gray-700 bg-gray-55 bg-gray-50 border border-gray-200 rounded-xl min-h-[44px] uppercase tracking-wider"
+                >
+                  ⚙️ Admin Console
                 </button>
                 <button
                   onClick={() => { setLoginOpen(true); setMobileMenuOpen(false); }}
