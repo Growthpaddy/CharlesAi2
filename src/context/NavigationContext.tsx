@@ -67,10 +67,9 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         checkPath === "/admin-dashboard" || 
         checkPath === "/admin-login" || 
         checkPath === "/addmin-login" ||
-        pathname.startsWith("/admin-dashboard") ||
-        pathname.startsWith("/Admin-dashboard") ||
-        pathname.startsWith("/Admin-login") ||
-        pathname.startsWith("/Addmin-login")
+        checkPath.startsWith("/admin-dashboard") ||
+        checkPath.startsWith("/admin-login") ||
+        checkPath.startsWith("/addmin-login")
       ) {
         setCurrentView("admin");
         setActiveCourseId(null);
