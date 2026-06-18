@@ -196,7 +196,16 @@ export default function AdminDashboard() {
   const [dbEnrollments, setDbEnrollments] = useState<any[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [enrollmentCourseId, setEnrollmentCourseId] = useState<string>("");
+  const [enrollmentStatus, setEnrollmentStatus] = useState<string>("active");
   const [showAddEnrollment, setShowAddEnrollment] = useState<boolean>(false);
+
+  // Profile fields editor state
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
+  const [editingProfileName, setEditingProfileName] = useState<string>("");
+  const [editingProfileEmail, setEditingProfileEmail] = useState<string>("");
+  const [editingProfileLocation, setEditingProfileLocation] = useState<string>("");
+  const [editingProfileRole, setEditingProfileRole] = useState<string>("student");
+  const [editingProfileStatus, setEditingProfileStatus] = useState<string>("active");
 
   // Simulated tables state
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -926,7 +935,60 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleCreateEnrollment = async (userId: string, courseId: string) => {
+  const handleUpdateProfile = async (
+    profileId: string, 
+    updatedName: string, 
+    updatedEmail: string, 
+    updatedLocation: string, 
+    updatedRole: string,
+    updatedStatus: string
+  ) => {
+    if (!updatedName.trim()) {
+      alert("Student name cannot be empty.");
+      return;
+    }
+    if (!updatedEmail.trim()) {
+      alert("Student email cannot be empty.");
+      return;
+    }
+
+    const updated = profiles.map(p => {
+      if (p.id === profileId) {
+        return { 
+          ...p, 
+          full_name: updatedName.trim(), 
+          email: updatedEmail.trim().toLowerCase(),
+          location: updatedLocation.trim(),
+          role: updatedRole,
+          status: updatedStatus 
+        };
+      }
+      return p;
+    });
+
+    setProfiles(updated);
+    localStorage.setItem("admin_profiles", JSON.stringify(updated));
+
+    if (supabase && isSupabaseConfigured) {
+      try {
+        await supabase.from("profiles").upsert({
+          id: profileId,
+          full_name: updatedName.trim(),
+          email: updatedEmail.trim().toLowerCase(),
+          location: updatedLocation.trim(),
+          role: updatedRole,
+          status: updatedStatus
+        });
+      } catch (err) {
+        console.warn("Could not sync updated profile to Supabase:", err);
+      }
+    }
+
+    setEditingProfileId(null);
+    triggerToast(`Updated profile for student ${updatedName.trim()} successfully!`);
+  };
+
+  const handleCreateEnrollment = async (userId: string, courseId: string, statusOpt?: string) => {
     if (!courseId) {
       alert("Please choose a program / course first.");
       return;
@@ -937,11 +999,13 @@ export default function AdminDashboard() {
       return;
     }
 
+    const targetStatus = statusOpt || enrollmentStatus || "active";
+
     const newEnr = {
       id: `enr-${userId.substring(0, 5)}-${courseId.substring(0, 5)}-${Date.now().toString().slice(-4)}`,
       user_id: userId,
       course_id: courseId,
-      status: "active",
+      status: targetStatus,
       enrolled_at: new Date().toISOString()
     };
 
@@ -955,7 +1019,7 @@ export default function AdminDashboard() {
           id: newEnr.id,
           user_id: userId,
           course_id: courseId,
-          status: "active"
+          status: targetStatus
         });
       } catch (err) {
         console.warn("Could not insert enrollment to Supabase:", err);
@@ -963,6 +1027,7 @@ export default function AdminDashboard() {
     }
 
     setEnrollmentCourseId("");
+    setEnrollmentStatus("active");
     setShowAddEnrollment(false);
     triggerToast("Pathway enrollment successfully recorded!");
   };
@@ -2533,124 +2598,288 @@ export default function AdminDashboard() {
 
                             {isSelected && (
                               <tr className="bg-slate-50/50">
-                                <td colSpan={4} className="px-6 py-4 border-l-4 border-l-indigo-600 bg-white shadow-xs">
-                                  <div className="space-y-4">
-                                    <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                                      <span className="font-extrabold text-[11px] text-slate-800 uppercase tracking-wider font-display">
-                                        Pathway Enrollments History — {p.full_name}
-                                      </span>
-                                      <button
-                                        onClick={() => setShowAddEnrollment(!showAddEnrollment)}
-                                        className="text-[10px] font-black text-white bg-[#0056D2] hover:bg-[#003E9C] px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm cursor-pointer"
-                                      >
-                                        <Plus className="w-3 h-3" />
-                                        <span>Durable Pathway Register</span>
-                                      </button>
-                                    </div>
-
-                                    {/* Register enrollment in course form */}
-                                    {showAddEnrollment && (
-                                      <div className="bg-slate-50 border border-gray-200 rounded-2xl p-4 max-w-md animate-in fade-in duration-200">
-                                        <h4 className="font-extrabold text-slate-900 text-xs mb-3 flex items-center justify-between">
-                                          <span>Register pathway program manually</span>
-                                          <button 
-                                            onClick={() => setShowAddEnrollment(false)}
-                                            className="text-slate-400 hover:text-slate-600 transition"
-                                          >
-                                            <X className="w-4 h-4" />
-                                          </button>
+                                <td colSpan={4} className="px-6 py-6 border-l-4 border-l-indigo-600 bg-white shadow-xs">
+                                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                                    
+                                    {/* COLUMN 1: STUDENT PROFILE CONTROLLER & EDITING VIEW */}
+                                    <div className="lg:col-span-5 bg-slate-50/50 rounded-2xl p-5 border border-slate-100 text-left">
+                                      <div className="flex items-center justify-between border-b border-gray-200/80 pb-2.5 mb-4">
+                                        <h4 className="font-display font-black text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                                          <span>👤 Student Profile Details</span>
                                         </h4>
-                                        <div className="space-y-3">
+                                        <button
+                                          onClick={() => {
+                                            if (editingProfileId === p.id) {
+                                              setEditingProfileId(null);
+                                            } else {
+                                              setEditingProfileId(p.id);
+                                              setEditingProfileName(p.full_name || "");
+                                              setEditingProfileEmail(p.email || "");
+                                              setEditingProfileLocation(p.location || "");
+                                              setEditingProfileRole(p.role || "student");
+                                              setEditingProfileStatus(p.status || "active");
+                                            }
+                                          }}
+                                          className={`text-[10px] font-black px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                                            editingProfileId === p.id 
+                                              ? "bg-slate-250 text-slate-700 hover:bg-slate-300"
+                                              : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                                          }`}
+                                        >
+                                          {editingProfileId === p.id ? "Cancel" : "Edit Profile"}
+                                        </button>
+                                      </div>
+
+                                      {editingProfileId === p.id ? (
+                                        <div className="space-y-3.5 text-left animate-in fade-in duration-200">
                                           <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-slate-500 block">Select active course program *</label>
+                                            <label className="text-[10px] font-bold text-slate-500 block">Full Name *</label>
+                                            <input
+                                              type="text"
+                                              value={editingProfileName}
+                                              onChange={(e) => setEditingProfileName(e.target.value)}
+                                              className="w-full text-xs p-2.5 rounded-xl border border-gray-200 bg-white font-medium focus:outline-none focus:border-indigo-500"
+                                              placeholder="Michael Peters"
+                                            />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-slate-500 block">Email Address *</label>
+                                            <input
+                                              type="email"
+                                              value={editingProfileEmail}
+                                              onChange={(e) => setEditingProfileEmail(e.target.value)}
+                                              className="w-full text-xs p-2.5 rounded-xl border border-gray-200 bg-white font-medium focus:outline-none focus:border-indigo-500"
+                                              placeholder="michael@petersai.com"
+                                            />
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <div className="space-y-1">
+                                              <label className="text-[10px] font-bold text-slate-500 block">Location</label>
+                                              <input
+                                                type="text"
+                                                value={editingProfileLocation}
+                                                onChange={(e) => setEditingProfileLocation(e.target.value)}
+                                                className="w-full text-xs p-2.5 rounded-xl border border-gray-200 bg-white font-medium focus:outline-none focus:border-indigo-500"
+                                                placeholder="Lagos"
+                                              />
+                                            </div>
+                                            <div className="space-y-1">
+                                              <label className="text-[10px] font-bold text-slate-500 block">Academic Role</label>
+                                              <select
+                                                value={editingProfileRole}
+                                                onChange={(e) => setEditingProfileRole(e.target.value)}
+                                                className="w-full text-xs p-2.5 rounded-xl border border-gray-200 bg-white font-medium focus:outline-none"
+                                              >
+                                                <option value="student">Student</option>
+                                                <option value="cohort graduate">Cohort Graduate</option>
+                                                <option value="instructor">Instructor</option>
+                                                <option value="admin">Admin</option>
+                                              </select>
+                                            </div>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-slate-500 block">System Access State</label>
                                             <select
-                                              value={enrollmentCourseId}
-                                              onChange={(e) => setEnrollmentCourseId(e.target.value)}
-                                              className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-none bg-white font-medium"
+                                              value={editingProfileStatus}
+                                              onChange={(e) => setEditingProfileStatus(e.target.value)}
+                                              className="w-full text-xs p-2.5 rounded-xl border border-gray-200 bg-white font-medium focus:outline-none"
                                             >
-                                              <option value="">-- Choose Course --</option>
-                                              {courses.map(crs => (
-                                                <option key={crs.id} value={crs.id}>{crs.title}</option>
-                                              ))}
+                                              <option value="active">Active (Granted)</option>
+                                              <option value="suspended">Suspended (Restricted)</option>
                                             </select>
                                           </div>
-                                          <div className="flex justify-end gap-2 pt-1">
+
+                                          <div className="pt-2">
                                             <button
                                               type="button"
-                                              onClick={() => setShowAddEnrollment(false)}
-                                              className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:bg-slate-200 rounded-lg transition"
+                                              onClick={() => handleUpdateProfile(
+                                                p.id,
+                                                editingProfileName,
+                                                editingProfileEmail,
+                                                editingProfileLocation,
+                                                editingProfileRole,
+                                                editingProfileStatus
+                                              )}
+                                              className="w-full py-2.5 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition shadow-sm cursor-pointer border border-indigo-600/30 text-center"
                                             >
-                                              Cancel
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => handleCreateEnrollment(p.id, enrollmentCourseId)}
-                                              className="px-4 py-1.5 text-[10px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition shadow-sm"
-                                            >
-                                              Grant Enrollment
+                                              Save Profile Details
                                             </button>
                                           </div>
                                         </div>
-                                      </div>
-                                    )}
-
-                                    {/* Enrollments table list */}
-                                    {studentEnrollments.length === 0 ? (
-                                      <div className="text-center py-6 bg-slate-50 border border-dashed border-gray-200 rounded-2xl p-4">
-                                        <p className="text-[11px] font-medium text-slate-500">This user is not currently registered in any active pathways.</p>
-                                        <p className="text-[9px] text-slate-400 mt-0.5">Use the "Durable Pathway Register" button above to give user academic tokens.</p>
-                                      </div>
-                                    ) : (
-                                      <div className="space-y-2">
-                                        {studentEnrollments.map((enr) => {
-                                          const parentCourse = courses.find(c => c.id === enr.course_id || c.title === enr.course_id);
-                                          const courseTitle = parentCourse ? parentCourse.title : enr.course_id;
-                                          const courseThumbnail = parentCourse ? parentCourse.thumbnail : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=200&h=150";
-                                          return (
-                                            <div key={enr.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs bg-slate-50 hover:bg-slate-100/75 px-4 py-3 rounded-2xl border border-gray-100 transition-all gap-3">
-                                              <div className="flex items-center gap-3">
-                                                <img src={courseThumbnail} alt="" className="w-10 h-8 rounded-lg object-cover shrink-0 border border-gray-200" />
-                                                <div>
-                                                  <span className="font-bold text-slate-900 block">{courseTitle}</span>
-                                                  <span className="text-[10px] text-slate-400 block mt-0.5">
-                                                    ID: {enr.id} {enr.enrolled_at ? `| Registered: ${new Date(enr.enrolled_at).toLocaleDateString()}` : ""}
-                                                  </span>
-                                                </div>
+                                      ) : (
+                                        <div className="space-y-3.5 text-left text-xs text-slate-700 animate-in fade-in duration-200">
+                                          <div className="bg-white p-4 rounded-xl border border-slate-150 space-y-2.5 shadow-xs">
+                                            <div>
+                                              <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Full Name</span>
+                                              <span className="font-extrabold text-slate-850 text-sm">{p.full_name || "N/A"}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Email Address</span>
+                                              <span className="font-medium text-slate-700 font-mono">{p.email || "N/A"}</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 pt-0.5">
+                                              <div>
+                                                <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Location</span>
+                                                <span className="font-semibold text-slate-700">{p.location || "N/A"}</span>
                                               </div>
-                                              <div className="flex items-center gap-2 self-end sm:self-auto">
-                                                {/* Enrollment Status Indicator/Button Cycle */}
-                                                <button
-                                                  onClick={() => handleToggleEnrollmentStatus(enr.id, enr.status)}
-                                                  className={`text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase transition cursor-pointer ${
-                                                    enr.status === "completed"
-                                                      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                                      : enr.status === "suspended"
-                                                      ? "bg-rose-50 text-rose-700 border-rose-100"
-                                                      : "bg-blue-50 text-blue-700 border-blue-100"
-                                                  }`}
-                                                  title="Click to cycle status (Active -> Completed -> Suspended)"
-                                                >
-                                                  {enr.status || "active"}
-                                                </button>
-
-                                                {/* Cancel enrollment */}
-                                                <button
-                                                  onClick={() => {
-                                                    if (confirm(`Are you sure you want to remove the enrollment for course "${courseTitle}"?`)) {
-                                                      handleRemoveEnrollment(enr.id);
-                                                    }
-                                                  }}
-                                                  className="p-1 hover:bg-red-50 text-red-500 rounded-lg cursor-pointer transition-colors"
-                                                  title="Deregister this pathway"
-                                                >
-                                                  <Trash2 className="w-4 h-4" />
-                                                </button>
+                                              <div>
+                                                <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Academic Role</span>
+                                                <span className="font-extrabold text-[10px] text-[#0056D2] capitalize">{p.role || "student"}</span>
                                               </div>
                                             </div>
-                                          );
-                                        })}
+                                            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-1">
+                                              <div>
+                                                <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Account ID</span>
+                                                <span className="font-mono text-[10px] text-slate-450">{p.id}</span>
+                                              </div>
+                                              <div className="text-right">
+                                                <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">System Status</span>
+                                                <span className={`inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                                                  p.status === "suspended" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
+                                                }`}>
+                                                  {p.status || "active"}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* COLUMN 2: PATHWAY ENROLLMENTS MANAGER */}
+                                    <div className="lg:col-span-7 space-y-4 text-left">
+                                      <div className="flex items-center justify-between border-b border-gray-150 pb-2.5">
+                                        <span className="font-display font-black text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                                          <span>📚 Pathway Enrollments History ({studentEnrollments.length})</span>
+                                        </span>
+                                        <button
+                                          onClick={() => setShowAddEnrollment(!showAddEnrollment)}
+                                          className="text-[10px] font-black text-white bg-[#0056D2] hover:bg-[#003E9C] px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm cursor-pointer transition-all"
+                                        >
+                                          <Plus className="w-3" />
+                                          <span>Manually Add Enrollment</span>
+                                        </button>
                                       </div>
-                                    )}
+
+                                      {/* Register enrollment in course form */}
+                                      {showAddEnrollment && (
+                                        <div className="bg-slate-50 border border-gray-200 rounded-2xl p-4 animate-in fade-in duration-200 text-left">
+                                          <h4 className="font-extrabold text-slate-900 text-xs mb-3 flex items-center justify-between">
+                                            <span>Preregister course program manually</span>
+                                            <button 
+                                              onClick={() => setShowAddEnrollment(false)}
+                                              className="text-slate-400 hover:text-slate-655 transition"
+                                            >
+                                              <X className="w-4 h-4" />
+                                            </button>
+                                          </h4>
+                                          <div className="space-y-3.5">
+                                            <div className="space-y-1">
+                                              <label className="text-[10px] font-bold text-slate-500 block">Select Course Program *</label>
+                                              <select
+                                                value={enrollmentCourseId}
+                                                onChange={(e) => setEnrollmentCourseId(e.target.value)}
+                                                className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-none bg-white font-medium"
+                                              >
+                                                <option value="">-- Choose Course --</option>
+                                                {courses.map(crs => (
+                                                  <option key={crs.id} value={crs.id}>{crs.title}</option>
+                                                ))}
+                                              </select>
+                                            </div>
+                                            
+                                            <div className="space-y-1">
+                                              <label className="text-[10px] font-bold text-slate-500 block">Starting Enrollment Status *</label>
+                                              <select
+                                                value={enrollmentStatus}
+                                                onChange={(e) => setEnrollmentStatus(e.target.value)}
+                                                className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-none bg-white font-medium"
+                                              >
+                                                <option value="active">Active (Full Ongoing Study)</option>
+                                                <option value="completed">Completed (Graduated)</option>
+                                                <option value="suspended">Suspended (Blocked / On Hold)</option>
+                                              </select>
+                                            </div>
+
+                                            <div className="flex justify-end gap-2 pt-1 border-t border-gray-150">
+                                              <button
+                                                type="button"
+                                                onClick={() => setShowAddEnrollment(false)}
+                                                className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:bg-slate-200 rounded-lg transition"
+                                              >
+                                                Cancel
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleCreateEnrollment(p.id, enrollmentCourseId, enrollmentStatus)}
+                                                className="px-4 py-1.5 text-[10px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition shadow-sm cursor-pointer whitespace-nowrap"
+                                              >
+                                                Grant Enrollment & Set Status
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Enrollments table list */}
+                                      {studentEnrollments.length === 0 ? (
+                                        <div className="text-center py-6 bg-slate-50 border border-dashed border-gray-200 rounded-2xl p-4">
+                                          <p className="text-[11px] font-medium text-slate-500">This user is not currently registered in any active pathways.</p>
+                                          <p className="text-[9px] text-slate-400 mt-0.5">Use the "Manually Add Enrollment" option to allocate coursework tokens with set status.</p>
+                                        </div>
+                                      ) : (
+                                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                          {studentEnrollments.map((enr) => {
+                                            const parentCourse = courses.find(c => c.id === enr.course_id || c.title === enr.course_id);
+                                            const courseTitle = parentCourse ? parentCourse.title : enr.course_id;
+                                            const courseThumbnail = parentCourse ? parentCourse.thumbnail : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=200&h=150";
+                                            return (
+                                              <div key={enr.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs bg-slate-50 hover:bg-slate-100/75 px-4 py-3 rounded-2xl border border-gray-100 transition-all gap-3 text-left">
+                                                <div className="flex items-center gap-3">
+                                                  <img src={courseThumbnail} alt="" className="w-10 h-8 rounded-lg object-cover shrink-0 border border-gray-200" />
+                                                  <div>
+                                                    <span className="font-bold text-slate-900 block">{courseTitle}</span>
+                                                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                                                      ID: {enr.id} {enr.enrolled_at ? `| Registered: ${new Date(enr.enrolled_at).toLocaleDateString()}` : ""}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 self-end sm:self-auto">
+                                                  {/* Enrollment Status Indicator/Button Cycle */}
+                                                  <button
+                                                    onClick={() => handleToggleEnrollmentStatus(enr.id, enr.status)}
+                                                    className={`text-[9px] font-extrabold px-2.5 py-1 rounded border uppercase transition cursor-pointer ${
+                                                      enr.status === "completed"
+                                                        ? "bg-emerald-50 text-emerald-700 border-emerald-100 font-bold"
+                                                        : enr.status === "suspended"
+                                                        ? "bg-rose-50 text-rose-700 border-rose-100 font-bold"
+                                                        : "bg-blue-50 text-blue-700 border-blue-100 font-bold"
+                                                    }`}
+                                                    title="Click to cycle status (Active -> Completed -> Suspended)"
+                                                  >
+                                                    {enr.status || "active"}
+                                                  </button>
+
+                                                  {/* Cancel enrollment */}
+                                                  <button
+                                                    onClick={() => {
+                                                      if (confirm(`Are you sure you want to remove the enrollment for course "${courseTitle}"?`)) {
+                                                        handleRemoveEnrollment(enr.id);
+                                                      }
+                                                    }}
+                                                    className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg cursor-pointer transition-colors"
+                                                    title="Deregister this pathway"
+                                                  >
+                                                    <Trash2 className="w-4 h-4" />
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+
                                   </div>
                                 </td>
                               </tr>
