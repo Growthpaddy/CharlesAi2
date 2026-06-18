@@ -29,7 +29,7 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileSearchVisible, setMobileSearchVisible] = useState(false);
-  const { navigateTo, setLoginOpen } = useNavigation();
+  const { navigateTo, setLoginOpen, currentView, isLoginOpen } = useNavigation();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -533,13 +533,24 @@ export default function Header() {
             {/* RIGHT CONTAINER: LOG IN & ACTIONS + MOBILE OPTIMIZED TRIGGERS */}
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               
-              {/* Minimalist Log In Link Button */}
-              <button
-                onClick={() => setLoginOpen(true)}
-                className="block text-xs font-sans font-bold text-[#0056D2] hover:text-[#003E9C] hover:bg-blue-50/50 py-2.5 px-3 rounded-lg transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider"
-              >
-                Log In
-              </button>
+              {/* Minimalist Log In Link Button or Live Admin indicate */}
+              {localStorage.getItem("is_admin_authenticated") === "true" ? (
+                <button
+                  onClick={() => navigateTo("admin")}
+                  className="flex items-center gap-1.5 bg-[#08142B] hover:bg-slate-900 text-amber-400 border border-amber-400 py-1.5 px-3 rounded-full shadow-xs transition-all cursor-pointer select-none"
+                  title="Signed in as Master Admin. Click to view Admin Dashboard."
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-mono font-bold tracking-tight uppercase">Admin Console</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setLoginOpen(true)}
+                  className="block text-xs font-sans font-bold text-[#0056D2] hover:text-[#003E9C] hover:bg-blue-50/50 py-2.5 px-3 rounded-lg transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider"
+                >
+                  Log In
+                </button>
+              )}
 
               {/* Mobile Selective Search Toggle Button */}
               <button
@@ -710,12 +721,21 @@ export default function Header() {
                   Contact Desk
                 </button>
                 {/* Restrict administrative consoles from public drawer links */}
-                <button
-                  onClick={() => { setLoginOpen(true); setMobileMenuOpen(false); }}
-                  className="w-full py-3 text-center text-xs font-sans font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl min-h-[44px] uppercase tracking-wider mt-2.5"
-                >
-                  Log In Account
-                </button>
+                {localStorage.getItem("is_admin_authenticated") === "true" ? (
+                  <button
+                    onClick={() => { navigateTo("admin"); setMobileMenuOpen(false); }}
+                    className="w-full py-3 text-center text-xs font-sans font-bold text-amber-700 bg-amber-50 hover:bg-amber-150 border border-amber-200 rounded-xl min-h-[44px] uppercase tracking-wider mt-2.5 font-mono"
+                  >
+                    🛡️ Open Admin Console
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setLoginOpen(true); setMobileMenuOpen(false); }}
+                    className="w-full py-3 text-center text-xs font-sans font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl min-h-[44px] uppercase tracking-wider mt-2.5"
+                  >
+                    Log In Account
+                  </button>
+                )}
               </div>
 
             </motion.div>

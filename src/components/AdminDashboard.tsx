@@ -329,12 +329,7 @@ export default function AdminDashboard() {
     if (localInvoices) {
       setInvoices(JSON.parse(localInvoices));
     } else {
-      const defaultInvoices: Invoice[] = [
-        { id: "inv-001", studentName: "Michael Peters", studentEmail: "michael@petersai.com", courseTitle: "AI Prompt Engineering Mastery", amount: 199, status: "Paid", issuedAt: "2026-06-15T12:00:00Z" },
-        { id: "inv-002", studentName: "Sarah Chukwu", studentEmail: "chukwu.sarah@yahoo.com", courseTitle: "AI Digital Products Creation", amount: 249, status: "Paid", issuedAt: "2026-06-16T14:30:00Z" },
-        { id: "inv-003", studentName: "Amara Davies", studentEmail: "amara@daviescorp.io", courseTitle: "AI Content Creation Suite", amount: 249, status: "Pending", issuedAt: "2026-06-17T09:15:00Z" },
-        { id: "inv-004", studentName: "John Doe", studentEmail: "john.doe@gmail.com", courseTitle: "App Creation with AI", amount: 149, status: "Overdue", issuedAt: "2026-06-10T10:00:00Z" }
-      ];
+      const defaultInvoices: Invoice[] = [];
       localStorage.setItem("admin_invoices", JSON.stringify(defaultInvoices));
       setInvoices(defaultInvoices);
     }
@@ -344,11 +339,7 @@ export default function AdminDashboard() {
     if (localSurveys) {
       setSurveys(JSON.parse(localSurveys));
     } else {
-      const defaultSurveys: SurveyResponse[] = [
-        { id: "srv-001", studentName: "Franklin Opara", rating: 5, feedback: "This course completely restructured my digital agency product line. Absolutely incredible delivery!", category: "AI Digital Products", submittedAt: "2026-06-14T11:00:00Z" },
-        { id: "srv-002", studentName: "Amadi Kenneth", rating: 5, feedback: "The Prompt Engineering section CO-STAR layout is the first prompt pattern that gave me solid predictable code responses.", category: "AI Prompt Engineering", submittedAt: "2026-06-16T18:00:00Z" },
-        { id: "srv-003", studentName: "Clara Johnson", rating: 4, feedback: "Strong curriculum plan. Love the sandbox terminal play. Needs more Figma to Webflow prompts but overall stellar.", category: "AI Content Creation", submittedAt: "2026-06-17T08:00:00Z" }
-      ];
+      const defaultSurveys: SurveyResponse[] = [];
       localStorage.setItem("admin_surveys", JSON.stringify(defaultSurveys));
       setSurveys(defaultSurveys);
     }
@@ -358,10 +349,7 @@ export default function AdminDashboard() {
     if (localLiveStr) {
       setLiveClasses(JSON.parse(localLiveStr));
     } else {
-      const defaultLive: LiveClass[] = [
-        { id: "live-1", title: "Live Cohort Meet: Prompt Tuning Deep Dive", date: "2026-06-20", time: "18:00", instructor: "Charles Tuti", classUrl: "https://meet.google.com/xyz-abc" },
-        { id: "live-2", title: "Fireside: Product Launch Formula on AWS/Selar", date: "2026-06-25", time: "17:00", instructor: "Sandra Cole", classUrl: "https://meet.google.com/qwe-rty" }
-      ];
+      const defaultLive: LiveClass[] = [];
       localStorage.setItem("admin_live_classes", JSON.stringify(defaultLive));
       setLiveClasses(defaultLive);
     }
@@ -371,10 +359,7 @@ export default function AdminDashboard() {
     if (localBlogs) {
       setBlogPosts(JSON.parse(localBlogs));
     } else {
-      const defaultBlogs: BlogPost[] = [
-        { id: "blog-1", title: "Top 7 GPT-4o Rules for Prompt Engineers", excerpt: "Avoid hallucination by formatting your system prompts with nested strict Markdown parameters.", author: "Charles Tuti", publishedAt: "2026-06-12", category: "AI Trends" },
-        { id: "blog-2", title: "How to Build an Automation Funnel under $20/month", excerpt: "Stop burning money on complex enterprise subscriptions. Maximize multi-hop Webhooks inside Make.com.", author: "Sandra Cole", publishedAt: "2026-06-15", category: "Automation" }
-      ];
+      const defaultBlogs: BlogPost[] = [];
       localStorage.setItem("admin_blogs", JSON.stringify(defaultBlogs));
       setBlogPosts(defaultBlogs);
     }
@@ -384,10 +369,7 @@ export default function AdminDashboard() {
     if (localArticles) {
       setKbArticles(JSON.parse(localArticles));
     } else {
-      const defaultArticles: KBArticle[] = [
-        { id: "kb-001", title: "Troubleshooting invalid Supabase VITE variables", excerpt: "This article lists steps to identify and bypass empty token or configuration variables inside React context.", category: "System Setup", author: "Dev Team" },
-        { id: "kb-002", title: "Configuring auto-delivery of digital assets on Selar", excerpt: "Setup immediate webhooks for successful payments so customers receive prompt cards and eBooks instantly.", category: "Sales Operations", author: "Sandra Cole" }
-      ];
+      const defaultArticles: KBArticle[] = [];
       localStorage.setItem("admin_kb_articles", JSON.stringify(defaultArticles));
       setKbArticles(defaultArticles);
     }
@@ -397,11 +379,7 @@ export default function AdminDashboard() {
     if (localGrades) {
       setGrades(JSON.parse(localGrades));
     } else {
-      const defaultGrades: GradeRecord[] = [
-        { id: "grd-001", studentName: "Michael Peters", courseTitle: "AI Prompt Engineering Mastery", lessonTitle: "CO-STAR Prompt Framework Exercises", submittedAt: "2026-06-16T15:20:00Z", status: "Pending", grade: "", feedback: "" },
-        { id: "grd-002", studentName: "Sarah Chukwu", courseTitle: "AI Digital Products Creation", lessonTitle: "eBook Cover Design on Canva Layouts", submittedAt: "2026-06-17T11:40:00Z", status: "Pending", grade: "", feedback: "" },
-        { id: "grd-003", studentName: "John Doe", courseTitle: "Prompt Engineering Mastery", lessonTitle: "Zero-Shot vs Few-Shot Modeling Parameters", submittedAt: "2026-06-15T09:00:00Z", status: "Graded", grade: "A", feedback: "Outstanding deployment of systematic templates!" }
-      ];
+      const defaultGrades: GradeRecord[] = [];
       localStorage.setItem("admin_grades", JSON.stringify(defaultGrades));
       setGrades(defaultGrades);
     }
@@ -411,10 +389,7 @@ export default function AdminDashboard() {
     if (localTesti) {
       setTestimonials(JSON.parse(localTesti));
     } else {
-      const defaultTesti = [
-        { id: "testi-1", name: "Franklin Opara", role: "Digital Merchant", quote: "The absolute gold standard in applied education. Sandra is detail-oriented, patient, & results-driven.", rating: 5 },
-        { id: "testi-2", name: "Theresa Benson", role: "Workflow Consultant", quote: "I automated my entire onboarding system inside 4 days of launching Course 5 of AI Institute.", rating: 5 }
-      ];
+      const defaultTesti: any[] = [];
       localStorage.setItem("admin_testimonials", JSON.stringify(defaultTesti));
       setTestimonials(defaultTesti);
     }
@@ -424,35 +399,7 @@ export default function AdminDashboard() {
     if (localProfiles) {
       setProfiles(JSON.parse(localProfiles));
     } else {
-      const defaultProfiles = [
-        {
-          id: "user-peters-111",
-          full_name: "Michael Peters",
-          email: "michael@petersai.com",
-          role: "student",
-          status: "active",
-          location: "Lagos",
-          created_at: "2026-06-15T12:00:00Z"
-        },
-        {
-          id: "user-chukwu-222",
-          full_name: "Sarah Chukwu",
-          email: "chukwu.sarah@yahoo.com",
-          role: "student",
-          status: "active",
-          location: "Enugu",
-          created_at: "2026-06-16T14:30:00Z"
-        },
-        {
-          id: "user-doe-333",
-          full_name: "John Doe",
-          email: "john.doe@gmail.com",
-          role: "student",
-          status: "active",
-          location: "Abuja",
-          created_at: "2026-06-10T10:00:00Z"
-        }
-      ];
+      const defaultProfiles: any[] = [];
       localStorage.setItem("admin_profiles", JSON.stringify(defaultProfiles));
       setProfiles(defaultProfiles);
     }
@@ -462,29 +409,7 @@ export default function AdminDashboard() {
     if (localEnrollmentsStr) {
       setDbEnrollments(JSON.parse(localEnrollmentsStr));
     } else {
-      const defaultEnrollments = [
-        {
-          id: "enr-001",
-          user_id: "user-peters-111",
-          course_id: "course-1",
-          status: "active",
-          enrolled_at: "2026-06-15T12:30:00Z"
-        },
-        {
-          id: "enr-002",
-          user_id: "user-chukwu-222",
-          course_id: "course-2",
-          status: "active",
-          enrolled_at: "2026-06-16T15:00:00Z"
-        },
-        {
-          id: "enr-003",
-          user_id: "user-doe-333",
-          course_id: "course-1",
-          status: "active",
-          enrolled_at: "2026-06-10T10:15:00Z"
-        }
-      ];
+      const defaultEnrollments: any[] = [];
       localStorage.setItem("admin_enrollments", JSON.stringify(defaultEnrollments));
       setDbEnrollments(defaultEnrollments);
     }
@@ -1339,8 +1264,7 @@ export default function AdminDashboard() {
     { id: "kb", label: "Knowledge Base", icon: MessageSquare },
     { id: "grading", label: "Grading Center", icon: GraduationCap },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
-    { id: "testimonials", label: "Testimonials", icon: Star },
-    { id: "supabase", label: "Supabase & RLS Setup", icon: RefreshCw }
+    { id: "testimonials", label: "Testimonials", icon: Star }
   ];
 
   if (!isAdminAuth) {
@@ -1545,11 +1469,10 @@ export default function AdminDashboard() {
           </div>
         </div>
         
-        {/* Supabase immediate setup info for admins to check even before log in */}
+        {/* Admin credentials information block */}
         <div className="mt-8 text-center max-w-sm text-slate-500 text-xs leading-relaxed font-sans px-4">
-          Looking for Supabase database setups and SQL injection commands? Connect via credentials to open instructions directly.
           {signedUpAdmin ? (
-            <span> Custom Admin registered: <strong className="text-emerald-400 font-mono">{signedUpAdmin.email}</strong>. Default backup emails are also active.</span>
+            <span> Custom Admin registered: <strong className="text-[#60A5FA] font-mono">{signedUpAdmin.email}</strong>. Layout is secured.</span>
           ) : (
             <span> Default admin email: <strong className="text-slate-300 font-mono">admin@dspacademy.com</strong> & password: <strong className="text-slate-300 font-mono">adminpassword123</strong>.</span>
           )}
@@ -1564,9 +1487,8 @@ export default function AdminDashboard() {
       {/* SIDEBAR CONTAINER */}
       <aside 
         id="collapsible-sidebar"
-        className={`bg-white border-r border-gray-200 transition-all duration-305 flex flex-col justify-between shrink-0 fixed left-0 top-16 bottom-0 z-30 ${
-          isSidebarCollapsed ? "w-18" : "w-64"
-        }`}
+        className="bg-white border-r border-gray-200 transition-all duration-300 flex flex-col justify-between shrink-0 fixed left-0 top-16 bottom-0 z-30"
+        style={{ width: isSidebarCollapsed ? "72px" : "260px" }}
       >
         <div className="flex flex-col flex-1 h-full pt-4 overflow-y-auto scrollbar-none px-3 justify-between">
           
@@ -1642,9 +1564,8 @@ export default function AdminDashboard() {
 
       {/* MAIN VIEWPORT CONTAINER */}
       <main 
-        className={`flex-1 transition-all duration-305 min-w-0 p-4 sm:p-8 ${
-          isSidebarCollapsed ? "pl-22" : "pl-70"
-        }`}
+        className="flex-1 transition-all duration-300 min-w-0 p-4 sm:p-8"
+        style={{ paddingLeft: isSidebarCollapsed ? "72px" : "260px" }}
       >
         {/* Dynamic State Toast Indicator */}
         {toastMsg && (
@@ -1825,20 +1746,12 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Immediate Sync Trigger status details */}
-                  <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl text-[10px] text-slate-500 leading-relaxed space-y-1.5">
-                    <span className="font-mono uppercase font-extrabold tracking-wider text-slate-400 block">Supabase Connection status:</span>
-                    <div>
-                      {isSupabaseConfigured ? (
-                        <p className="text-emerald-700 font-bold flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          DATABASE ACTIVE AND STREAMING
-                        </p>
-                      ) : (
-                        <p className="text-amber-700 font-medium">
-                          Local offline cache mode active. Link variables safely via AI Studio keys to launch real tables.
-                        </p>
-                      )}
-                    </div>
+                  <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl text-[10px] text-slate-500 leading-relaxed space-y-1">
+                    <span className="font-mono uppercase font-extrabold tracking-wider text-slate-400 block">SECURE CONSOLE CREDENTIALS:</span>
+                    <p className="text-[#0056D2] font-semibold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      MASTER SECURED DATA STREAM ACTIVE
+                    </p>
                   </div>
                 </div>
 
@@ -3143,7 +3056,7 @@ export default function AdminDashboard() {
         {activeTab === "leads" && (
           <div className="space-y-6 animate-in fade-in duration-200">
             <p className="text-xs text-slate-500 text-left">
-              Displays immediate opt-ins captured from your LMS landing pages. Syncs automatically in background when Supabase credentials are loaded.
+              Displays immediate opt-ins captured from your LMS landing pages. Syncs automatically in the background.
             </p>
 
             <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm overflow-hidden text-left">
