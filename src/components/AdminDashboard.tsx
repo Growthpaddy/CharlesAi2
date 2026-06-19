@@ -10,7 +10,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Eye, Trash2, Edit2, Check, X, 
   Search, Calendar, Mail, Phone, DollarSign, Clock, FileText, 
   Download, ArrowUpRight, CheckCircle2, AlertCircle, Heart, FolderPlus,
-  Tv, Award, RefreshCw, Layers, UserPlus
+  Tv, Award, RefreshCw, Layers, UserPlus, LogOut
 } from "lucide-react";
 import { db, Course, CourseModule, Lesson, Category } from "../lib/db";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
@@ -152,7 +152,7 @@ export default function AdminDashboard() {
     // Aesthetic verification lag for security feel
     await new Promise(resolve => setTimeout(resolve, 700));
 
-    const validEmails = ["admin@dspacademy.com", "admin@academy.com", "dspacademyonline@gmail.com"];
+    const validEmails = ["admin@ai-onlinebusiness.com", "admin@academy.com", "dspacademyonline@gmail.com"];
     
     let isMatched = false;
     let displayName = "Chief Academic Director";
@@ -166,6 +166,8 @@ export default function AdminDashboard() {
 
     if (isMatched) {
       localStorage.setItem("is_admin_authenticated", "true");
+      localStorage.setItem("admin_logged_in_name", displayName);
+      localStorage.setItem("admin_logged_in_email", adminEmail);
       setIsAdminAuth(true);
       setActiveTab("dashboard");
       triggerToast(`Welcome back, ${displayName}! Access granted.`);
@@ -177,9 +179,25 @@ export default function AdminDashboard() {
 
   const handleAdminLogout = () => {
     localStorage.removeItem("is_admin_authenticated");
+    localStorage.removeItem("admin_logged_in_name");
+    localStorage.removeItem("admin_logged_in_email");
     setIsAdminAuth(false);
     triggerToast("Logged out of the administration console securely.");
-    navigateTo("home");
+    navigateTo("admin");
+    window.location.hash = "admin-login";
+  };
+
+  const getAdminDisplayName = () => {
+    const storedName = localStorage.getItem("admin_logged_in_name");
+    if (storedName) return storedName;
+    
+    if (signedUpAdmin) return signedUpAdmin.name;
+    
+    const storedEmail = localStorage.getItem("admin_logged_in_email");
+    if (storedEmail) {
+      return storedEmail.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    }
+    return "Chief Academic Director";
   };
 
   // Sidebar fold/unfold layout state (Collapsible)
@@ -1269,7 +1287,7 @@ export default function AdminDashboard() {
 
   if (!isAdminAuth) {
     return (
-      <div className="min-h-screen bg-[#071329] text-white flex flex-col items-center justify-center p-4 antialiased pt-24 selection:bg-[#0056D2]/50 selection:text-white w-full">
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col items-center justify-center p-4 antialiased pt-24 selection:bg-[#0056D2]/20 selection:text-[#0056D2] w-full">
         {toastMsg && (
           <div className="fixed top-20 right-6 bg-[#08142B] text-white border border-white/10 px-5 py-3 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-top-4 duration-300 max-w-sm flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
@@ -1277,24 +1295,24 @@ export default function AdminDashboard() {
           </div>
         )}
         
-        <div className="w-full max-w-md bg-[#0F2142] border border-white/10 p-8 rounded-3xl shadow-2xl space-y-6 text-left relative overflow-hidden">
-          {/* Subtle decoration light-burst */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/15 rounded-full blur-3xl -mr-10 -mt-10" />
+        <div className="w-full max-w-sm bg-white border border-slate-250 p-8 rounded-3xl shadow-xl space-y-6 text-left relative overflow-hidden">
+          {/* Subtle decoration accent */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10" />
           
-          <div className="space-y-2 text-center md:text-left relative z-10 w-full">
-            <span className="text-[10px] font-mono font-black text-[#60A5FA] uppercase tracking-widest block">
-              DSP Academy • Security Core
+          <div className="space-y-1 relative z-10 w-full text-center">
+            <span className="text-[10px] font-sans font-bold text-[#0056D2] uppercase tracking-wider block">
+              Ai -Online Business Portal
             </span>
-            <h1 className="font-display text-2xl font-black tracking-tight text-white mb-1">
-              ⚙️ Security Console Gate
+            <h1 className="font-display text-2xl font-black tracking-tight text-slate-900 mb-1">
+              Admin Login
             </h1>
-            <p className="text-xs text-slate-300">
-              Enter authorized administrator credentials or register a master profile.
+            <p className="text-xs text-slate-500">
+              Please enter your business credentials to manage lessons and view applications.
             </p>
           </div>
 
           {/* Dual authentication tabs */}
-          <div className="grid grid-cols-2 p-1 bg-[#071329] rounded-2xl relative z-10 border border-white/5">
+          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl relative z-10 border border-slate-200">
             <button
               type="button"
               onClick={() => {
@@ -1303,8 +1321,8 @@ export default function AdminDashboard() {
               }}
               className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 authMode === "signin"
-                  ? "bg-[#0056D2] text-white shadow-md"
-                  : "text-slate-400 hover:text-white"
+                  ? "bg-white text-slate-900 shadow-xs border border-slate-200/50"
+                  : "text-slate-500 hover:text-slate-800"
               }`}
             >
               Sign In
@@ -1320,16 +1338,16 @@ export default function AdminDashboard() {
               disabled={!!signedUpAdmin}
               className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                 signedUpAdmin
-                  ? "opacity-35 cursor-not-allowed text-slate-500 bg-[#071329]"
+                  ? "opacity-35 cursor-not-allowed text-slate-400 bg-transparent"
                   : authMode === "signup"
-                  ? "bg-[#0056D2] text-white shadow-md cursor-pointer"
-                  : "text-slate-400 hover:text-white cursor-pointer"
+                  ? "bg-white text-slate-900 shadow-xs border border-slate-200/50 cursor-pointer"
+                  : "text-slate-500 hover:text-slate-800 cursor-pointer"
               }`}
-              title={signedUpAdmin ? "Only one admin registry is allowed. Signup is closed." : "Register new admin account"}
+              title={signedUpAdmin ? "Only one admin account is allowed. Signup is closed." : "Register new admin account"}
             >
               <span>{signedUpAdmin ? "🔒" : ""} Sign Up</span>
               {signedUpAdmin && (
-                <span className="text-[8px] bg-white/10 px-1 py-0.2 rounded font-mono text-slate-400">
+                <span className="text-[8px] bg-slate-200 px-1 py-0.5 rounded font-mono text-slate-650">
                   Closed
                 </span>
               )}
@@ -1337,8 +1355,8 @@ export default function AdminDashboard() {
           </div>
 
           {adminAuthErr && (
-            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 p-3.5 rounded-2xl text-xs font-semibold flex items-start gap-2.5 animate-bounce">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="bg-rose-50 border border-rose-250 text-rose-800 p-3.5 rounded-2xl text-xs font-semibold flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               <span>{adminAuthErr}</span>
             </div>
           )}
@@ -1346,21 +1364,20 @@ export default function AdminDashboard() {
           {authMode === "signin" ? (
             <form onSubmit={handleAdminLogin} className="space-y-4 relative z-10 animate-in fade-in duration-200">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300 block">Administrator Email</label>
+                <label className="text-xs font-bold text-slate-700 block">Email Address</label>
                 <input
                   type="email"
                   required
-                  placeholder="admin@dspacademy.com"
+                  placeholder="admin@ai-onlinebusiness.com"
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
-                  className="w-full text-xs p-3.5 bg-[#071329] border border-white/15 text-white rounded-2xl focus:outline-none focus:border-[#4285F4] transition-colors"
+                  className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold text-slate-300 block">Console PIN / Secret Password</label>
-                  <span className="text-[10px] font-mono text-slate-400">Default: adminpassword123</span>
+                  <label className="text-xs font-bold text-slate-700 block">Password</label>
                 </div>
                 <input
                   type="password"
@@ -1368,24 +1385,23 @@ export default function AdminDashboard() {
                   placeholder="••••••••••••••"
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
-                  className="w-full text-xs p-3.5 bg-[#071329] border border-white/15 text-white rounded-2xl focus:outline-none focus:border-[#4285F4] transition-colors"
+                  className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isLoggingIn}
-                className="w-full py-4 bg-[#0056D2] hover:bg-blue-600 active:scale-99 text-xs uppercase tracking-wider font-extrabold text-white rounded-2xl shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer border border-[#4285F4]/30"
+                className="w-full py-3.5 bg-[#0056D2] hover:bg-blue-600 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isLoggingIn ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                    <span>Decrypting Core Access...</span>
+                    <span>Signing in...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-                    <span>Authenticate Console &rarr;</span>
+                    <span>Sign In to Dashboard &rarr;</span>
                   </>
                 )}
               </button>
@@ -1393,33 +1409,33 @@ export default function AdminDashboard() {
           ) : (
             <form onSubmit={handleAdminSignup} className="space-y-4 relative z-10 animate-in fade-in duration-200">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300 block">Administrator Name</label>
+                <label className="text-xs font-bold text-slate-700 block">Your Name</label>
                 <input
                   type="text"
                   required
                   disabled={!!signedUpAdmin}
-                  placeholder="e.g. Master Director"
+                  placeholder="e.g. Chief Director"
                   value={signupName}
                   onChange={(e) => setSignupName(e.target.value)}
-                  className="w-full text-xs p-3.5 bg-[#071329] border border-white/15 text-white rounded-2xl focus:outline-none focus:border-emerald-500 transition-colors disabled:opacity-55 disabled:cursor-not-allowed"
+                  className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300 block">Email Address</label>
+                <label className="text-xs font-bold text-slate-700 block">Email Address</label>
                 <input
                   type="email"
                   required
                   disabled={!!signedUpAdmin}
-                  placeholder="e.g. supervisor@dspacademy.com"
+                  placeholder="e.g. director@ai-onlinebusiness.com"
                   value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)}
-                  className="w-full text-xs p-3.5 bg-[#071329] border border-white/15 text-white rounded-2xl focus:outline-none focus:border-emerald-500 transition-colors disabled:opacity-55 disabled:cursor-not-allowed"
+                  className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300 block">Password</label>
+                <label className="text-xs font-bold text-slate-700 block">Create Password</label>
                 <input
                   type="password"
                   required
@@ -1427,179 +1443,182 @@ export default function AdminDashboard() {
                   placeholder="••••••••••••••"
                   value={signupPassword}
                   onChange={(e) => setSignupPassword(e.target.value)}
-                  className="w-full text-xs p-3.5 bg-[#071329] border border-white/15 text-white rounded-2xl focus:outline-none focus:border-emerald-500 transition-colors disabled:opacity-55 disabled:cursor-not-allowed"
+                  className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isSigningUp || !!signedUpAdmin}
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 active:scale-99 text-xs uppercase tracking-wider font-extrabold text-white rounded-2xl shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer border border-emerald-500/30 disabled:opacity-35 disabled:cursor-not-allowed"
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
               >
                 {isSigningUp ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                    <span>Signing up custom Admin...</span>
+                    <span>Creating Administrator Account...</span>
                   </>
                 ) : (
                   <>
-                    <UserPlus className="w-4 h-4 text-emerald-250 animate-pulse" />
-                    <span>Register Admin Account &rarr;</span>
+                    <UserPlus className="w-4 h-4 text-emerald-20" />
+                    <span>Create Admin Account</span>
                   </>
                 )}
               </button>
             </form>
           )}
 
-          <div className="pt-4 border-t border-white/5 flex justify-between items-center text-[10px]">
+          <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-500">
             <button
               onClick={() => navigateTo("dashboard")}
               type="button"
-              className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="text-slate-500 hover:text-slate-900 transition-colors cursor-pointer font-medium"
             >
               &larr; Back to Student Area
             </button>
             {signedUpAdmin ? (
-              <span className="text-emerald-400 font-mono flex items-center gap-1">
-                ● Master Admin Active
+              <span className="text-emerald-700 font-sans flex items-center gap-1 font-semibold">
+                ● Admin Configured
               </span>
             ) : (
-              <span className="text-slate-500 font-mono">SECURE AES-250</span>
+              <span className="text-slate-400 font-mono">Secure Access</span>
             )}
           </div>
-        </div>
-        
-        {/* Admin credentials information block */}
-        <div className="mt-8 text-center max-w-sm text-slate-500 text-xs leading-relaxed font-sans px-4">
-          {signedUpAdmin ? (
-            <span> Custom Admin registered: <strong className="text-[#60A5FA] font-mono">{signedUpAdmin.email}</strong>. Layout is secured.</span>
-          ) : (
-            <span> Default admin email: <strong className="text-slate-300 font-mono">admin@dspacademy.com</strong> & password: <strong className="text-slate-300 font-mono">adminpassword123</strong>.</span>
-          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex bg-[#FAFBFC] min-h-screen text-[#0C1E3E] antialiased pt-16">
+    <div className="flex bg-[#F8FAFC] min-h-screen text-[#0C1E3E] antialiased pt-16">
       
       {/* SIDEBAR CONTAINER */}
       <aside 
         id="collapsible-sidebar"
-        className="bg-white border-r border-gray-200 transition-all duration-300 flex flex-col justify-between shrink-0 fixed left-0 top-16 bottom-0 z-30"
+        className="bg-white border-r border-gray-200 transition-all duration-300 flex flex-col justify-between shrink-0 fixed left-0 top-16 bottom-0 z-30 shadow-xs"
         style={{ width: isSidebarCollapsed ? "72px" : "260px" }}
       >
-        <div className="flex flex-col flex-1 h-full pt-4 overflow-y-auto scrollbar-none px-3 justify-between">
-          
-          <div className="space-y-4">
-            {/* Header with quick collapsible trigger */}
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 px-2">
-              {!isSidebarCollapsed && (
-                <span className="text-[10px] uppercase font-mono font-black tracking-widest text-slate-400">
-                  SYSTEM CORE CONSOLE
-                </span>
-              )}
-              <button 
-                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer w-7 h-7 flex items-center justify-center mx-auto"
-                title={isSidebarCollapsed ? "Expand Menu" : "Collapse Menu"}
-              >
-                {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-              </button>
-            </div>
+        {/* Sidebar Header Collapser */}
+        <div className="pt-4 px-4 pb-3 border-b border-gray-100 flex items-center justify-between shrink-0">
+          {!isSidebarCollapsed && (
+            <span className="text-[10px] uppercase font-mono font-black tracking-widest text-[#0056D2]">
+              SYSTEM RUNTIME
+            </span>
+          )}
+          <button 
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer w-7 h-7 flex items-center justify-center mx-auto"
+            title={isSidebarCollapsed ? "Expand Menu" : "Collapse Menu"}
+          >
+            {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+        </div>
 
-            {/* Menu Items Loop */}
-            <nav className="space-y-1" aria-label="Admin Navigation Panel">
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setActiveTab(item.id as AdminTab);
-                      setSearchQuery(""); // Clear lookup filters
-                    }}
-                    className={`w-full flex items-center gap-3.5 py-3.5 px-3 rounded-xl text-left transition-all group cursor-pointer ${
-                      isActive 
-                        ? "bg-[#EEF6FF] text-[#0056D2] font-black shadow-xs-soft" 
-                        : "text-slate-650 hover:bg-slate-50 hover:text-slate-900 font-bold text-xs sm:text-sm"
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 shrink-0 transition-transform group-hover:scale-105 ${
-                      isActive ? "text-[#0056D2]" : "text-slate-400 group-hover:text-slate-600"
-                    }`} />
-                    {!isSidebarCollapsed && (
-                      <span className="text-xs tracking-tight truncate">{item.label}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+        {/* Menu Items Loop - INDEPENDENT SCROLL FOR MENU WALL PROTECTION */}
+        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+          <nav className="space-y-1" aria-label="Admin Navigation Panel">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id as AdminTab);
+                    setSearchQuery(""); // Clear lookup filters
+                  }}
+                  className={`w-full flex items-center gap-3 py-3 px-3 rounded-xl text-left transition-all group cursor-pointer ${
+                    isActive 
+                      ? "bg-[#EEF6FF] text-[#0056D2] font-black shadow-xs-soft" 
+                      : "text-slate-650 hover:bg-slate-50 hover:text-slate-900 font-bold text-xs sm:text-sm"
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 shrink-0 transition-transform group-hover:scale-105 ${
+                    isActive ? "text-[#0056D2]" : "text-slate-400 group-hover:text-slate-600"
+                  }`} />
+                  {!isSidebarCollapsed && (
+                    <span className="text-xs tracking-tight truncate">{item.label}</span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
-          {/* Bottom Back Button */}
-          <div className="pb-6 pt-4 border-t border-gray-100 px-1 space-y-1">
-            <button
-              type="button"
-              onClick={() => navigateTo("dashboard")}
-              className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[#0056D2] hover:bg-blue-50 transition-colors cursor-pointer"
-            >
-              <Award className="w-4 h-4 text-[#0056D2]" />
-              {!isSidebarCollapsed && <span className="truncate">View Student Console</span>}
-            </button>
-            <button
-              type="button"
-              onClick={handleAdminLogout}
-              className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4 text-rose-600" />
-              {!isSidebarCollapsed && <span className="truncate">Sign Out Console</span>}
-            </button>
-          </div>
-
+        {/* Bottom Back & Logout Options - Shielded in Sidebar Footer */}
+        <div className="p-4 border-t border-gray-100 bg-slate-50/50 space-y-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => navigateTo("dashboard")}
+            className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[#0056D2] hover:bg-blue-50 transition-colors cursor-pointer"
+          >
+            <Award className="w-4 h-4 text-[#0056D2]" />
+            {!isSidebarCollapsed && <span className="truncate">View Student Console</span>}
+          </button>
+          <button
+            type="button"
+            onClick={handleAdminLogout}
+            className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+          >
+            <LogOut className="w-4 h-4 text-rose-600" />
+            {!isSidebarCollapsed && <span className="truncate">Sign Out Console</span>}
+          </button>
         </div>
       </aside>
 
       {/* MAIN VIEWPORT CONTAINER */}
       <main 
-        className="flex-1 transition-all duration-300 min-w-0 p-4 sm:p-8"
-        style={{ paddingLeft: isSidebarCollapsed ? "72px" : "260px" }}
+        className="flex-1 transition-all duration-300 min-w-0 p-4 sm:p-8 bg-[#F8FAFC]"
+        style={{ paddingLeft: isSidebarCollapsed ? "88px" : "276px" }}
       >
-        {/* Dynamic State Toast Indicator */}
-        {toastMsg && (
-          <div className="fixed top-20 right-6 bg-[#08142B] text-white border border-white/10 px-5 py-3 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-top-4 duration-300 max-w-sm flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-            <span className="text-xs leading-relaxed font-bold">{toastMsg}</span>
-          </div>
-        )}
-
-        {/* Global Action Breadcrumb Header bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 mb-8 border-b border-gray-200">
-          <div>
-            <span className="text-[10px] font-mono font-black text-[#0056D2] uppercase tracking-widest block mb-1">
-              Applied Academy Cloud Manager
-            </span>
-            <h1 className="font-display text-2xl sm:text-3xl font-black text-[#08142B] tracking-tight capitalize">
-              {activeTab === "leads" ? "AI Masterclass Leads" : activeTab === "kb" ? "Knowledge Base" : `${activeTab} control desk`}
-            </h1>
-          </div>
-
-          {/* Contextual search input inside dashboard bar */}
-          {(activeTab === "courses" || activeTab === "invoices" || activeTab === "leads" || activeTab === "students") && (
-            <div className="relative w-64">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
-                type="text"
-                placeholder={`Search ${activeTab}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white text-xs pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              />
+        <div className="max-w-6xl mx-auto w-full space-y-8 pb-16 text-left">
+          
+          {/* Dynamic State Toast Indicator */}
+          {toastMsg && (
+            <div className="fixed top-20 right-6 bg-[#08142B] text-white border border-white/10 px-5 py-3 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-top-4 duration-300 max-w-sm flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <span className="text-xs leading-relaxed font-bold">{toastMsg}</span>
             </div>
           )}
-        </div>
+
+          {/* Global Action Breadcrumb Header bar with Clear Welcome banner */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-200">
+            <div>
+              <span className="text-[10px] font-mono font-bold text-[#0056D2] uppercase tracking-widest block mb-1">
+                ⚙️ Applied Academy Cloud Manager
+              </span>
+              <h2 className="text-slate-500 text-xs font-medium mb-1">
+                Welcome back, <span className="font-bold text-slate-800 font-sans text-sm">{getAdminDisplayName()}</span> 👋
+              </h2>
+              <h1 className="font-display text-2xl sm:text-3xl font-black text-[#08142B] tracking-tight capitalize">
+                {activeTab === "leads" ? "AI Masterclass Leads" : activeTab === "kb" ? "Knowledge Base" : `${activeTab} control desk`}
+              </h1>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Contextual search input inside dashboard bar */}
+              {(activeTab === "courses" || activeTab === "invoices" || activeTab === "leads" || activeTab === "students") && (
+                <div className="relative w-64">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    placeholder={`Search ${activeTab}...`}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white text-xs pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              )}
+
+              <button
+                onClick={handleAdminLogout}
+                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-2 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-xs min-h-[40px]"
+                title="Log Out secure session"
+              >
+                <LogOut className="w-4 h-4 text-rose-600" />
+                <span>Log Out</span>
+              </button>
+            </div>
+          </div>
 
         {/* ======================================================== */}
         {/* TAB 1: GENERAL METRICS DASHBOARD CONTAINER */}
@@ -3798,7 +3817,7 @@ export default function AdminDashboard() {
 
                   <div className="relative">
                     <pre className="w-full bg-slate-950 text-emerald-400 font-mono text-[11px] leading-relaxed p-4 rounded-2xl overflow-x-auto whitespace-pre-wrap max-h-[450px]">
-{`-- DSP ACADEMY SUPABASE SCHEMAS & SECURE RLS POLICIES
+{`-- AI -ONLINE BUSINESS SUPABASE SCHEMAS & SECURE RLS POLICIES
 -- Clean, optimized schema with strict admin access and student enrolled restrictions.
 
 -- 1. PROFILES TABLE
@@ -3818,7 +3837,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 -- Admins have full access to all CRUD operations on profiles
 CREATE POLICY "Admins full override profiles" ON public.profiles
     FOR ALL USING (
-        auth.jwt() ->> 'email' IN ('admin@dspacademy.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
+        auth.jwt() ->> 'email' IN ('admin@ai-onlinebusiness.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -3852,7 +3871,7 @@ ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
 -- Admin-only override allows full CRUD operations (insert, select, update, delete)
 CREATE POLICY "Admins full override courses" ON public.courses
     FOR ALL USING (
-        auth.jwt() ->> 'email' IN ('admin@dspacademy.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
+        auth.jwt() ->> 'email' IN ('admin@ai-onlinebusiness.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -3884,7 +3903,7 @@ ALTER TABLE public.modules ENABLE ROW LEVEL SECURITY;
 -- Admins bypass security constraints for modules completely
 CREATE POLICY "Admins full override modules" ON public.modules
     FOR ALL USING (
-        auth.jwt() ->> 'email' IN ('admin@dspacademy.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
+        auth.jwt() ->> 'email' IN ('admin@ai-onlinebusiness.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -3918,7 +3937,7 @@ ALTER TABLE public.lessons ENABLE ROW LEVEL SECURITY;
 -- Admins have perfect command of the lessons collection
 CREATE POLICY "Admins full override lessons" ON public.lessons
     FOR ALL USING (
-        auth.jwt() ->> 'email' IN ('admin@dspacademy.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
+        auth.jwt() ->> 'email' IN ('admin@ai-onlinebusiness.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -3951,7 +3970,7 @@ ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
 -- Admins grant, modify, and delete registrations at will
 CREATE POLICY "Admins full override enrollments" ON public.enrollments
     FOR ALL USING (
-        auth.jwt() ->> 'email' IN ('admin@dspacademy.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
+        auth.jwt() ->> 'email' IN ('admin@ai-onlinebusiness.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -3964,7 +3983,7 @@ CREATE POLICY "Students read own enrollments only" ON public.enrollments
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(`-- DSP ACADEMY SUPABASE SCHEMAS & SECURE RLS POLICIES
+                        navigator.clipboard.writeText(`-- AI -ONLINE BUSINESS SUPABASE SCHEMAS & SECURE RLS POLICIES
 -- Clean, optimized schema with strict admin access and student enrolled restrictions.
 
 -- 1. PROFILES TABLE
@@ -3984,7 +4003,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 -- Admins have full access to all CRUD operations on profiles
 CREATE POLICY "Admins full override profiles" ON public.profiles
     FOR ALL USING (
-        auth.jwt() ->> 'email' IN ('admin@dspacademy.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
+        auth.jwt() ->> 'email' IN ('admin@ai-onlinebusiness.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -4018,7 +4037,7 @@ ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
 -- Admin-only override allows full CRUD operations (insert, select, update, delete)
 CREATE POLICY "Admins full override courses" ON public.courses
     FOR ALL USING (
-        auth.jwt() ->> 'email' IN ('admin@dspacademy.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
+        auth.jwt() ->> 'email' IN ('admin@ai-onlinebusiness.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -4050,7 +4069,7 @@ ALTER TABLE public.modules ENABLE ROW LEVEL SECURITY;
 -- Admins bypass security constraints for modules completely
 CREATE POLICY "Admins full override modules" ON public.modules
     FOR ALL USING (
-        auth.jwt() ->> 'email' IN ('admin@dspacademy.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
+        auth.jwt() ->> 'email' IN ('admin@ai-onlinebusiness.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -4084,7 +4103,7 @@ ALTER TABLE public.lessons ENABLE ROW LEVEL SECURITY;
 -- Admins have perfect command of the lessons collection
 CREATE POLICY "Admins full override lessons" ON public.lessons
     FOR ALL USING (
-        auth.jwt() ->> 'email' IN ('admin@dspacademy.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
+        auth.jwt() ->> 'email' IN ('admin@ai-onlinebusiness.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -4117,7 +4136,7 @@ ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
 -- Admins grant, modify, and delete registrations at will
 CREATE POLICY "Admins full override enrollments" ON public.enrollments
     FOR ALL USING (
-        auth.jwt() ->> 'email' IN ('admin@dspacademy.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
+        auth.jwt() ->> 'email' IN ('admin@ai-onlinebusiness.com', 'admin@academy.com', 'dspacademyonline@gmail.com')
         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -4138,6 +4157,7 @@ CREATE POLICY "Students read own enrollments only" ON public.enrollments
           </div>
         )}
 
+        </div>
       </main>
 
     </div>

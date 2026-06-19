@@ -537,11 +537,19 @@ export default function Header() {
               {localStorage.getItem("is_admin_authenticated") === "true" ? (
                 <button
                   onClick={() => navigateTo("admin")}
-                  className="flex items-center gap-1.5 bg-[#08142B] hover:bg-slate-900 text-amber-400 border border-amber-400 py-1.5 px-3 rounded-full shadow-xs transition-all cursor-pointer select-none"
+                  className="flex items-center gap-2 bg-[#08142B] hover:bg-slate-900 text-white border border-amber-400/80 py-1.5 px-3 rounded-full shadow-md transition-all cursor-pointer select-none group"
                   title="Signed in as Master Admin. Click to view Admin Dashboard."
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] font-mono font-bold tracking-tight uppercase">Admin Console</span>
+                  <div className="relative">
+                    <div className="w-6 h-6 rounded-full bg-amber-500 text-[#08142B] flex items-center justify-center font-bold text-[10px] font-mono shadow-inner group-hover:scale-110 transition-transform">
+                      AD
+                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-[#08142B] animate-pulse" />
+                  </div>
+                  <div className="hidden sm:flex flex-col items-start leading-[1.1] pr-1 text-left">
+                    <span className="text-[10px] font-semibold text-slate-300">Welcome Back</span>
+                    <span className="text-[9px] font-mono font-bold tracking-tight text-amber-400 uppercase">Admin Console</span>
+                  </div>
                 </button>
               ) : (
                 <button

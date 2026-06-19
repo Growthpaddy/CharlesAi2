@@ -60,7 +60,7 @@ export default function ContactPage() {
         <div className="max-w-3xl mx-auto text-center space-y-4">
           <div className="inline-flex items-[#2D7FF9] items-center gap-1.5 bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider">
             <Sparkles className="w-4 h-4 text-emerald-500 animate-bounce" />
-            <span>CONNECT WITH THE ACADEMY</span>
+            <span>CONNECT WITH THE TEAM</span>
           </div>
           <h2 className="font-display text-3xl sm:text-4xl font-black text-[#08142B] tracking-tight">
             Get in Touch With AI Online Business
@@ -112,9 +112,9 @@ export default function ContactPage() {
                     <Mail className="w-6 h-6" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-mono font-bold text-gray-400 uppercase tracking-wider">Institutional Support</h4>
-                    <p className="text-sm font-bold text-[#08142B] mt-0.5">dspacademyonline@gmail.com</p>
-                    <p className="text-xs text-slate-500 font-medium">Registrar Desk, Active 24 Hours</p>
+                    <h4 className="text-xs font-mono font-bold text-gray-400 uppercase tracking-wider">Official Support</h4>
+                    <p className="text-sm font-bold text-[#08142B] mt-0.5">support@ai-onlinebusiness.com</p>
+                    <p className="text-xs text-slate-500 font-medium">Support Desk, Active 24 Hours</p>
                   </div>
                 </div>
 

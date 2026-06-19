@@ -32,7 +32,7 @@ export default function ThankYouPage() {
   // Bank Info constants
   const BANK_NAME = "Sterling Bank PLC";
   const BANK_ACCOUNT = "0124809511";
-  const ACCOUNT_NAME = "DSP Digital Academy Ltd";
+  const ACCOUNT_NAME = "Ai -Online Business Ltd";
   const TUITION_FEE = "₦35,000"; // Dynamic localized value
 
   const copyToClipboard = (text: string, type: "bank" | "acc") => {

@@ -216,7 +216,7 @@ export default function CheckoutPage() {
 
   // Build registrar WhatsApp link with detailed dynamic prefilled text
   const whatsappPrefix = "https://wa.me/2348091234567?text=";
-  const whatsappMessage = `Hello DSP Academy, I have registered my student account [${studentName}] (${studentEmail}) on the checkout portal and completed the transfer payment of ${formattedFinalPrice} for the flagship program: "${activeCourse.title}". Kindly review my screenshot and activate my course portal instantly.`;
+  const whatsappMessage = `Hello Ai -Online Business Team, I have registered my student account [${studentName}] (${studentEmail}) on the checkout portal and completed the transfer payment of ${formattedFinalPrice} for the flagship program: "${activeCourse.title}". Kindly review my screenshot and activate my course portal instantly.`;
   const encodedWhatsappUrl = whatsappPrefix + encodeURIComponent(whatsappMessage);
 
   return (
