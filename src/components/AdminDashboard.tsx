@@ -1489,136 +1489,153 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="flex bg-[#F8FAFC] min-h-screen text-[#0C1E3E] antialiased pt-16">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0C1E3E] antialiased">
       
-      {/* SIDEBAR CONTAINER */}
-      <aside 
-        id="collapsible-sidebar"
-        className="bg-white border-r border-gray-200 transition-all duration-300 flex flex-col justify-between shrink-0 fixed left-0 top-16 bottom-0 z-30 shadow-xs"
-        style={{ width: isSidebarCollapsed ? "72px" : "260px" }}
-      >
-        {/* Sidebar Header Collapser */}
-        <div className="pt-4 px-4 pb-3 border-b border-gray-100 flex items-center justify-between shrink-0">
-          {!isSidebarCollapsed && (
-            <span className="text-[10px] uppercase font-mono font-black tracking-widest text-[#0056D2]">
-              SYSTEM RUNTIME
+      {/* PERSISTENT ADMIN HEADER WITH LOGOUT */}
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-xs px-4 sm:px-8 py-3.5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0056D2] to-[#2D7FF9] flex items-center justify-center text-white font-black text-sm shadow-md">
+            AI
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs font-black text-slate-900 tracking-tight leading-none">
+              Client Manager
             </span>
-          )}
-          <button 
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer w-7 h-7 flex items-center justify-center mx-auto"
-            title={isSidebarCollapsed ? "Expand Menu" : "Collapse Menu"}
-          >
-            {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
+            <span className="text-[9px] font-bold text-[#0056D2] tracking-wider uppercase mt-0.5 font-mono">
+              Admin Platform
+            </span>
+          </div>
         </div>
 
-        {/* Menu Items Loop - INDEPENDENT SCROLL FOR MENU WALL PROTECTION */}
-        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-          <nav className="space-y-1" aria-label="Admin Navigation Panel">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id as AdminTab);
-                    setSearchQuery(""); // Clear lookup filters
-                  }}
-                  className={`w-full flex items-center gap-3 py-3 px-3 rounded-xl text-left transition-all group cursor-pointer ${
-                    isActive 
-                      ? "bg-[#EEF6FF] text-[#0056D2] font-black shadow-xs-soft" 
-                      : "text-slate-650 hover:bg-slate-50 hover:text-slate-900 font-bold text-xs sm:text-sm"
-                  }`}
-                >
-                  <Icon className={`w-5 h-5 shrink-0 transition-transform group-hover:scale-105 ${
-                    isActive ? "text-[#0056D2]" : "text-slate-400 group-hover:text-slate-600"
-                  }`} />
-                  {!isSidebarCollapsed && (
-                    <span className="text-xs tracking-tight truncate">{item.label}</span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Bottom Back & Logout Options - Shielded in Sidebar Footer */}
-        <div className="p-4 border-t border-gray-100 bg-slate-50/50 space-y-1.5 shrink-0">
+        <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={() => navigateTo("dashboard")}
-            className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[#0056D2] hover:bg-blue-50 transition-colors cursor-pointer"
+            className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <Award className="w-4 h-4 text-[#0056D2]" />
-            {!isSidebarCollapsed && <span className="truncate">View Student Console</span>}
+            <span className="hidden sm:inline">Student Console</span>
           </button>
+          
           <button
             type="button"
             onClick={handleAdminLogout}
-            className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/60 py-2 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs min-h-[38px]"
+            title="Log Out secure session"
           >
-            <LogOut className="w-4 h-4 text-rose-600" />
-            {!isSidebarCollapsed && <span className="truncate">Sign Out Console</span>}
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
           </button>
         </div>
-      </aside>
+      </header>
 
-      {/* MAIN VIEWPORT CONTAINER */}
-      <main 
-        className="flex-1 transition-all duration-300 min-w-0 p-4 sm:p-8 bg-[#F8FAFC]"
-        style={{ paddingLeft: isSidebarCollapsed ? "88px" : "276px" }}
-      >
-        <div className="max-w-6xl mx-auto w-full space-y-8 pb-16 text-left">
-          
-          {/* Dynamic State Toast Indicator */}
-          {toastMsg && (
-            <div className="fixed top-20 right-6 bg-[#08142B] text-white border border-white/10 px-5 py-3 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-top-4 duration-300 max-w-sm flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-              <span className="text-xs leading-relaxed font-bold">{toastMsg}</span>
-            </div>
-          )}
-
-          {/* Global Action Breadcrumb Header bar with Clear Welcome banner */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-200">
-            <div>
-              <span className="text-[10px] font-mono font-bold text-[#0056D2] uppercase tracking-widest block mb-1">
-                ⚙️ Applied Academy Cloud Manager
-              </span>
-              <h2 className="text-slate-500 text-xs font-medium mb-1">
-                Welcome back, <span className="font-bold text-slate-800 font-sans text-sm">{getAdminDisplayName()}</span> 👋
-              </h2>
-              <h1 className="font-display text-2xl sm:text-3xl font-black text-[#08142B] tracking-tight capitalize">
-                {activeTab === "leads" ? "AI Masterclass Leads" : activeTab === "kb" ? "Knowledge Base" : `${activeTab} control desk`}
-              </h1>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {/* Contextual search input inside dashboard bar */}
-              {(activeTab === "courses" || activeTab === "invoices" || activeTab === "leads" || activeTab === "students") && (
-                <div className="relative w-64">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    placeholder={`Search ${activeTab}...`}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white text-xs pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              )}
-
-              <button
-                onClick={handleAdminLogout}
-                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-2 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-xs min-h-[40px]"
-                title="Log Out secure session"
-              >
-                <LogOut className="w-4 h-4 text-rose-600" />
-                <span>Log Out</span>
-              </button>
-            </div>
+      {/* CENTRALIZED GRID WORKSPACE CONTAINER */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Dynamic State Toast Indicator */}
+        {toastMsg && (
+          <div className="fixed top-20 right-6 bg-[#08142B] text-white border border-white/10 px-5 py-3 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-top-4 duration-300 max-w-sm flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+            <span className="text-xs leading-relaxed font-bold">{toastMsg}</span>
           </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          
+          {/* LEFT SIDEBAR NAVIGATION CARD */}
+          <div className="lg:col-span-1">
+            <aside className="sticky top-24 bg-white border border-gray-200/80 rounded-3xl p-4 shadow-sm space-y-4">
+              
+              <div className="flex items-center justify-between pb-2.5 border-b border-gray-150">
+                <span className="text-[10px] font-mono font-black tracking-widest text-[#0056D2] uppercase">
+                  Runtime Menu
+                </span>
+                <span className="text-[9px] bg-blue-50 text-[#0056D2] px-2 py-0.5 rounded-md font-bold font-mono">
+                  v2.2
+                </span>
+              </div>
+
+              {/* Side navigation menu: Scrollable with a fixed height */}
+              <div className="h-[432px] overflow-y-auto pr-1 space-y-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                <nav className="space-y-1" aria-label="Admin Navigation Panel">
+                  {menuItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setActiveTab(item.id as AdminTab);
+                          setSearchQuery(""); // Clear lookup filters
+                        }}
+                        className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all group cursor-pointer ${
+                          isActive 
+                            ? "bg-[#EEF6FF] text-[#0056D2] font-black shadow-xs-soft" 
+                            : "text-slate-650 hover:bg-slate-50 hover:text-slate-900 font-bold text-xs"
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-105 ${
+                          isActive ? "text-[#0056D2]" : "text-slate-400 group-hover:text-slate-600"
+                        }`} />
+                        <span className="text-xs tracking-tight truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+
+              {/* Sidebar Action Footer bar */}
+              <div className="pt-3 border-t border-gray-150 space-y-1">
+                <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100 flex flex-col gap-1.5">
+                  <span className="text-[9px] font-mono font-bold text-slate-400 block uppercase tracking-wider">
+                    OPERATOR SESSION
+                  </span>
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
+                    <span className="truncate max-w-[120px]">{getAdminDisplayName()}</span>
+                    <span className="text-emerald-600 font-normal flex items-center gap-1 font-mono text-[9px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                      Active
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </aside>
+          </div>
+
+          {/* RIGHT MAIN VIEWPORT CONTAINER */}
+          <div className="lg:col-span-3 space-y-8">
+            
+            {/* Global Action Breadcrumb Header bar with Clear Welcome banner */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-200">
+              <div>
+                <span className="text-[10px] font-mono font-bold text-[#0056D2] uppercase tracking-widest block mb-1">
+                  ⚙️ Applied Academy Cloud Manager
+                </span>
+                <h2 className="text-slate-500 text-xs font-medium mb-1">
+                  Welcome back, <span className="font-bold text-slate-800 font-sans text-sm">{getAdminDisplayName()}</span> 👋
+                </h2>
+                <h1 className="font-display text-2xl sm:text-3xl font-black text-[#08142B] tracking-tight capitalize">
+                  {activeTab === "leads" ? "AI Masterclass Leads" : activeTab === "kb" ? "Knowledge Base" : `${activeTab} control desk`}
+                </h1>
+              </div>
+
+              <div className="flex items-center gap-3 self-end sm:self-auto">
+                {/* Contextual search input inside dashboard bar */}
+                {(activeTab === "courses" || activeTab === "invoices" || activeTab === "leads" || activeTab === "students") && (
+                  <div className="relative w-64">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder={`Search ${activeTab}...`}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-white text-xs pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
 
         {/* ======================================================== */}
         {/* TAB 1: GENERAL METRICS DASHBOARD CONTAINER */}
@@ -4157,9 +4174,9 @@ CREATE POLICY "Students read own enrollments only" ON public.enrollments
           </div>
         )}
 
-        </div>
-      </main>
-
+          </div> {/* lg:col-span-3 */}
+        </div> {/* grid */}
+      </div> {/* max-w-7xl */}
     </div>
   );
 }
