@@ -142,7 +142,9 @@ export default function AdminDashboard() {
           .select("id, name, email, password");
         
         if (!checkErr && existing && existing.length > 0) {
-          setAdminAuthErr("An administrator account has already been registered globally. Signup is closed.");
+          const errMsg = "An administrator account has already been registered globally. Signup is closed.";
+          setAdminAuthErr(errMsg);
+          triggerToast("Registration Blocked: A global administrator account already exists.");
           const firstAdmin = existing[0];
           setSignedUpAdmin(firstAdmin);
           localStorage.setItem("signed_up_admin", JSON.stringify(firstAdmin));
@@ -239,7 +241,9 @@ export default function AdminDashboard() {
 
         if (error) {
           console.error("Failed to commit final admin record to Supabase:", error);
-          setAdminAuthErr("Administrative registration limit reached or database insert failed.");
+          const feedback = "Administrative registration limit reached. Only one global account is authorized.";
+          setAdminAuthErr(feedback);
+          triggerToast("Registration Error: Only one administrator account is allowed globally.");
           setIsSigningUp(false);
           return;
         }
