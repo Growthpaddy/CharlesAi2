@@ -10,8 +10,9 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Eye, Trash2, Edit2, Check, X, 
   Search, Calendar, Mail, Phone, DollarSign, Clock, FileText, 
   Download, ArrowUpRight, CheckCircle2, AlertCircle, Heart, FolderPlus,
-  Tv, Award, RefreshCw, Layers, UserPlus, LogOut
+  Tv, Award, RefreshCw, Layers, UserPlus, LogOut, ShieldCheck, Key, QrCode, Lock, Shield
 } from "lucide-react";
+import * as OTPAuth from "otpauth";
 import { db, Course, CourseModule, Lesson, Category } from "../lib/db";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { useNavigation } from "../context/NavigationContext";
@@ -111,6 +112,12 @@ export default function AdminDashboard() {
     return stored ? JSON.parse(stored) : null;
   });
 
+  // Multi-Factor Authentication (MFA) States
+  const [mfaSetupData, setMfaSetupData] = useState<{ secret: string; qrUrl: string } | null>(null);
+  const [mfaSetupToken, setMfaSetupToken] = useState("");
+  const [mfaChallengeData, setMfaChallengeData] = useState<{ id: string; email: string; name: string; mfaSecret: string } | null>(null);
+  const [mfaChallengeToken, setMfaChallengeToken] = useState("");
+
   const handleAdminSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdminAuthErr("");
@@ -126,22 +133,134 @@ export default function AdminDashboard() {
     }
 
     setIsSigningUp(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
 
-    const newAdmin = {
-      name: signupName.trim(),
-      email: signupEmail.trim().toLowerCase(),
-      password: signupPassword
-    };
+    if (supabase && isSupabaseConfigured) {
+      try {
+        // Double check no other administrator has already registered in Supabase
+        const { data: existing, error: checkErr } = await supabase
+          .from("admin_accounts")
+          .select("id, name, email, password");
+        
+        if (!checkErr && existing && existing.length > 0) {
+          setAdminAuthErr("An administrator account has already been registered globally. Signup is closed.");
+          const firstAdmin = existing[0];
+          setSignedUpAdmin(firstAdmin);
+          localStorage.setItem("signed_up_admin", JSON.stringify(firstAdmin));
+          setIsSigningUp(false);
+          setAuthMode("signin");
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking remote admin account existence during signup:", err);
+        setAdminAuthErr("Database connection error. Try again later or apply the SQL setup schema in Supabase.");
+        setIsSigningUp(false);
+        return;
+      }
+    }
 
-    localStorage.setItem("signed_up_admin", JSON.stringify(newAdmin));
-    setSignedUpAdmin(newAdmin);
-    setIsSigningUp(false);
-    setAuthMode("signin");
-    setAdminEmail(newAdmin.email);
-    setAdminPassword("");
+    // Generate standard cryptographically secure TOTP Secret & configuration
+    try {
+      const tempSecret = new OTPAuth.Secret({ size: 20 });
+      const base32Str = tempSecret.base32;
+      const totpObj = new OTPAuth.TOTP({
+        issuer: "DSP Academy",
+        label: signupEmail.trim().toLowerCase(),
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret: tempSecret
+      });
+      const uriStr = totpObj.toString();
+      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(uriStr)}`;
+
+      setMfaSetupData({
+        secret: base32Str,
+        qrUrl: qrImageUrl
+      });
+      setMfaSetupToken("");
+      setIsSigningUp(false);
+      triggerToast("Scan the secure MFA QR Code using your Authenticator mobile app to bind.");
+    } catch (err) {
+      console.error("Failed to initialize system TOTP generator:", err);
+      setAdminAuthErr("Failed to initialize security key generator. Try again.");
+      setIsSigningUp(false);
+    }
+  };
+
+  const handleVerifyAndCompleteSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaSetupData || !signupName.trim() || !signupEmail.trim() || !signupPassword) {
+      setAdminAuthErr("Signup state has expired. Please refresh and try again.");
+      return;
+    }
+
     setAdminAuthErr("");
-    triggerToast(`Congratulations ${newAdmin.name}! Admin account registered. Login to continue.`);
+    setIsSigningUp(true);
+
+    // Verify 6-digit TOTP token using otpauth
+    try {
+      const totpVerify = new OTPAuth.TOTP({
+        issuer: "DSP Academy",
+        label: signupEmail.trim().toLowerCase(),
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret: OTPAuth.Secret.fromBase32(mfaSetupData.secret)
+      });
+
+      const delta = totpVerify.validate({
+        token: mfaSetupToken.trim(),
+        window: 1 // allows a 30-sec clock drift
+      });
+
+      if (delta === null) {
+        setAdminAuthErr("The verification security code is invalid. Please confirm your device clock matches UTC time and check your authenticator application.");
+        setIsSigningUp(false);
+        return;
+      }
+
+      const newAdmin = {
+        name: signupName.trim(),
+        email: signupEmail.trim().toLowerCase(),
+        password: signupPassword,
+        mfa_secret: mfaSetupData.secret,
+        mfa_enabled: true
+      };
+
+      if (supabase && isSupabaseConfigured) {
+        // Insert record into Supabase
+        const { error } = await supabase.from("admin_accounts").insert({
+          name: newAdmin.name,
+          email: newAdmin.email,
+          password: newAdmin.password,
+          mfa_secret: newAdmin.mfa_secret,
+          mfa_enabled: true
+        });
+
+        if (error) {
+          console.error("Failed to commit final admin record to Supabase:", error);
+          setAdminAuthErr("Administrative registration limit reached or database insert failed.");
+          setIsSigningUp(false);
+          return;
+        }
+      }
+
+      localStorage.setItem("signed_up_admin", JSON.stringify(newAdmin));
+      setSignedUpAdmin(newAdmin);
+      setIsSigningUp(false);
+      
+      // Navigate to Sign In component
+      setAuthMode("signin");
+      setAdminEmail(newAdmin.email);
+      setAdminPassword("");
+      setMfaSetupData(null);
+      setMfaSetupToken("");
+      triggerToast("Administrator account successfully registered with active MFA. Sign in to access your academy.");
+    } catch (err) {
+      console.error("MFA Validation Error during user signup phase:", err);
+      setAdminAuthErr("Multi-Factor cryptographical check failed. Verify configuration and security codes.");
+      setIsSigningUp(false);
+    }
   };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
@@ -150,31 +269,136 @@ export default function AdminDashboard() {
     setIsLoggingIn(true);
     
     // Aesthetic verification lag for security feel
-    await new Promise(resolve => setTimeout(resolve, 700));
+    await new Promise(resolve => setTimeout(resolve, 600));
 
     const validEmails = ["admin@ai-onlinebusiness.com", "admin@academy.com", "dspacademyonline@gmail.com"];
     
     let isMatched = false;
     let displayName = "Chief Academic Director";
+    let targetAdminRecord: any = null;
 
     if (validEmails.includes(adminEmail.toLowerCase()) && adminPassword === "adminpassword123") {
       isMatched = true;
+      targetAdminRecord = {
+        name: "Chief Academic Director",
+        email: adminEmail.toLowerCase(),
+        mfa_enabled: false
+      };
     } else if (signedUpAdmin && adminEmail.toLowerCase() === signedUpAdmin.email.toLowerCase() && adminPassword === signedUpAdmin.password) {
       isMatched = true;
       displayName = signedUpAdmin.name;
+      targetAdminRecord = signedUpAdmin;
+    } else if (supabase && isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from("admin_accounts")
+          .select("*")
+          .eq("email", adminEmail.toLowerCase())
+          .eq("password", adminPassword)
+          .maybeSingle();
+        
+        if (!error && data) {
+          isMatched = true;
+          displayName = data.name;
+          targetAdminRecord = data;
+          setSignedUpAdmin(data);
+          localStorage.setItem("signed_up_admin", JSON.stringify(data));
+        }
+      } catch (err) {
+        console.error("Error logging in via Supabase admin check:", err);
+      }
     }
 
-    if (isMatched) {
+    if (isMatched && targetAdminRecord) {
+      // Intercept login with Multi-Factor Authentication Challenge screen if configured
+      if (targetAdminRecord.mfa_enabled || targetAdminRecord.mfa_secret) {
+        setMfaChallengeData({
+          id: targetAdminRecord.id || "local",
+          email: targetAdminRecord.email,
+          name: targetAdminRecord.name,
+          mfaSecret: targetAdminRecord.mfa_secret
+        });
+        setMfaChallengeToken("");
+        setIsLoggingIn(false);
+        triggerToast("MFA verification code required to complete access.");
+        return;
+      }
+
+      // Bypass when MFA is not active on default sandbox credentials
       localStorage.setItem("is_admin_authenticated", "true");
       localStorage.setItem("admin_logged_in_name", displayName);
       localStorage.setItem("admin_logged_in_email", adminEmail);
       setIsAdminAuth(true);
       setActiveTab("dashboard");
       triggerToast(`Welcome back, ${displayName}! Access granted.`);
+      
+      // Redirect upon login to dashboard hash
+      window.location.hash = "admin-dashboard";
+      if (window.location.pathname.includes("admin-login")) {
+        window.history.pushState({}, "", "/admin-dashboard");
+      }
     } else {
       setAdminAuthErr("Invalid administrative credentials. Please verify your Email and Password.");
     }
     setIsLoggingIn(false);
+  };
+
+  const handleVerifyMfaChallenge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaChallengeData) {
+      setAdminAuthErr("MFA check session timed out or is uninitialized.");
+      return;
+    }
+
+    setAdminAuthErr("");
+    setIsLoggingIn(true);
+
+    try {
+      const totpVerify = new OTPAuth.TOTP({
+        issuer: "DSP Academy",
+        label: mfaChallengeData.email,
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret: OTPAuth.Secret.fromBase32(mfaChallengeData.mfaSecret)
+      });
+
+      const delta = totpVerify.validate({
+        token: mfaChallengeToken.trim(),
+        window: 2 // allow clock tolerance up to 60 seconds
+      });
+
+      if (delta === null) {
+        setAdminAuthErr("The 6-digit MFA code is incorrect. Please verify your app credentials and try again.");
+        setIsLoggingIn(false);
+        return;
+      }
+
+      // Valid token! Grant auth access
+      localStorage.setItem("is_admin_authenticated", "true");
+      localStorage.setItem("admin_logged_in_name", mfaChallengeData.name);
+      localStorage.setItem("admin_logged_in_email", mfaChallengeData.email);
+      setIsAdminAuth(true);
+      setActiveTab("dashboard");
+      triggerToast(`Session authenticated. Access granted for ${mfaChallengeData.name}!`);
+
+      // Reset components
+      setMfaChallengeData(null);
+      setMfaChallengeToken("");
+      setAdminEmail("");
+      setAdminPassword("");
+
+      // Redirect upon login to dashboard hash
+      window.location.hash = "admin-dashboard";
+      if (window.location.pathname.includes("admin-login")) {
+        window.history.pushState({}, "", "/admin-dashboard");
+      }
+    } catch (err) {
+      console.error("MFA authentication calculation error:", err);
+      setAdminAuthErr("An internal security calculation exception occurred. Verify device system clock.");
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   const handleAdminLogout = () => {
@@ -309,10 +533,91 @@ export default function AdminDashboard() {
     setTimeout(() => setToastMsg(""), 3500);
   };
 
+  // Monitor location hashes and paths for redirection rules
+  useEffect(() => {
+    const handleRedirectSecurityRules = () => {
+      const isAuth = localStorage.getItem("is_admin_authenticated") === "true";
+      const hash = window.location.hash.toLowerCase();
+      const path = window.location.pathname.toLowerCase();
+      
+      const isDashboardUrl = hash.includes("admin-dashboard") || path.includes("admin-dashboard") || hash === "#admin" || hash === "#admin-dashboard";
+      const isLoginUrl = hash.includes("admin-login") || path.includes("admin-login") || hash === "#admin-login" || hash.includes("addmin-login");
+
+      if (!isAuth) {
+        // Redirection for Non-admins attempting to access dashboard
+        if (isDashboardUrl) {
+          triggerToast("Access denied. Redirecting to login portal.");
+          window.location.hash = "admin-login";
+          if (window.location.pathname.includes("admin-dashboard")) {
+            window.history.replaceState(null, "", "/admin-login");
+          }
+          setIsAdminAuth(false);
+        }
+      } else {
+        // Redirection for Admins visiting the login URL
+        if (isLoginUrl) {
+          triggerToast("Session active. Directing to dashboard.");
+          window.location.hash = "admin-dashboard";
+          if (window.location.pathname.includes("admin-login")) {
+            window.history.replaceState(null, "", "/admin-dashboard");
+          }
+          setIsAdminAuth(true);
+        }
+      }
+    };
+
+    // Run check immediately on mount and auth state change
+    handleRedirectSecurityRules();
+
+    window.addEventListener("hashchange", handleRedirectSecurityRules);
+    window.addEventListener("popstate", handleRedirectSecurityRules);
+
+    return () => {
+      window.removeEventListener("hashchange", handleRedirectSecurityRules);
+      window.removeEventListener("popstate", handleRedirectSecurityRules);
+    };
+  }, [isAdminAuth]);
+
   // Load all databases
   useEffect(() => {
     loadDatabase();
   }, []);
+
+  // Check for globally registered admin on mount and when authentication mode changes with polling for incognito/multi-tab sync
+  useEffect(() => {
+    const fetchGlobalAdmin = async () => {
+      if (supabase && isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from("admin_accounts")
+            .select("*");
+          if (!error && data && data.length > 0) {
+            // Find first or any admin account
+            const firstAdmin = data[0];
+            setSignedUpAdmin(firstAdmin);
+            localStorage.setItem("signed_up_admin", JSON.stringify(firstAdmin));
+          } else if (data && data.length === 0) {
+            setSignedUpAdmin(null);
+            localStorage.removeItem("signed_up_admin");
+          }
+        } catch (err) {
+          console.error("Error querying remote admin_accounts:", err);
+        }
+      }
+    };
+
+    fetchGlobalAdmin();
+
+    // If the operator session is NOT authenticated, poll periodically to capture registrations in separate tabs/browsers
+    let intervalId: any;
+    if (!isAdminAuth) {
+      intervalId = setInterval(fetchGlobalAdmin, 2000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [authMode, isAdminAuth]);
 
   const loadDatabase = () => {
     const cats = db.getCategories();
@@ -1299,172 +1604,321 @@ export default function AdminDashboard() {
           {/* Subtle decoration accent */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10" />
           
-          <div className="space-y-1 relative z-10 w-full text-center">
-            <span className="text-[10px] font-sans font-bold text-[#0056D2] uppercase tracking-wider block">
-              Ai -Online Business Portal
-            </span>
-            <h1 className="font-display text-2xl font-black tracking-tight text-slate-900 mb-1">
-              Admin Login
-            </h1>
-            <p className="text-xs text-slate-500">
-              Please enter your business credentials to manage lessons and view applications.
-            </p>
-          </div>
-
-          {/* Dual authentication tabs */}
-          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl relative z-10 border border-slate-200">
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode("signin");
-                setAdminAuthErr("");
-              }}
-              className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                authMode === "signin"
-                  ? "bg-white text-slate-900 shadow-xs border border-slate-200/50"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!signedUpAdmin) {
-                  setAuthMode("signup");
-                  setAdminAuthErr("");
-                }
-              }}
-              disabled={!!signedUpAdmin}
-              className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                signedUpAdmin
-                  ? "opacity-35 cursor-not-allowed text-slate-400 bg-transparent"
-                  : authMode === "signup"
-                  ? "bg-white text-slate-900 shadow-xs border border-slate-200/50 cursor-pointer"
-                  : "text-slate-500 hover:text-slate-800 cursor-pointer"
-              }`}
-              title={signedUpAdmin ? "Only one admin account is allowed. Signup is closed." : "Register new admin account"}
-            >
-              <span>{signedUpAdmin ? "🔒" : ""} Sign Up</span>
-              {signedUpAdmin && (
-                <span className="text-[8px] bg-slate-200 px-1 py-0.5 rounded font-mono text-slate-650">
-                  Closed
-                </span>
-              )}
-            </button>
-          </div>
-
-          {adminAuthErr && (
-            <div className="bg-rose-50 border border-rose-250 text-rose-800 p-3.5 rounded-2xl text-xs font-semibold flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <span>{adminAuthErr}</span>
-            </div>
-          )}
-
-          {authMode === "signin" ? (
-            <form onSubmit={handleAdminLogin} className="space-y-4 relative z-10 animate-in fade-in duration-200">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 block">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="admin@ai-onlinebusiness.com"
-                  value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
-                  className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold text-slate-700 block">Password</label>
+          {mfaChallengeData ? (
+            <div className="space-y-5 relative z-10 animate-in fade-in duration-300">
+              <div className="text-center space-y-2">
+                <div className="mx-auto w-12 h-12 bg-blue-50 text-[#0056D2] rounded-full flex items-center justify-center border border-blue-100 shadow-xs">
+                  <ShieldCheck className="w-6 h-6 animate-pulse" />
                 </div>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••••••••"
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all"
+                <h1 className="font-display text-xl font-black text-slate-900">MFA Verification</h1>
+                <p className="text-[11px] text-slate-500">
+                  Enter the 6-digit verification code generated by your Authenticator app for account <strong>{mfaChallengeData.email}</strong>.
+                </p>
+              </div>
+
+              {adminAuthErr && (
+                <div className="bg-rose-50 border border-rose-250 text-rose-800 p-3.5 rounded-2xl text-xs font-semibold flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <span>{adminAuthErr}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleVerifyMfaChallenge} className="space-y-4">
+                <div className="space-y-1.5 text-center">
+                  <label className="text-xs font-bold text-slate-700 block text-left">Authenticator Code</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    placeholder="e.g. 123456"
+                    value={mfaChallengeToken}
+                    onChange={(e) => setMfaChallengeToken(e.target.value.replace(/\D/g, ""))}
+                    className="w-full text-center text-2xl font-mono tracking-widest p-3 bg-slate-50 border border-[#0056D2]/30 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all font-bold"
+                    autoFocus
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoggingIn}
+                  className="w-full py-3.5 bg-[#0056D2] hover:bg-blue-600 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isLoggingIn ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <span>Authenticating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Verify & Access Dashboard &rarr;</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMfaChallengeData(null);
+                    setMfaChallengeToken("");
+                    setAdminAuthErr("");
+                  }}
+                  className="w-full text-center text-[10px] text-slate-400 hover:text-slate-600 transition-all font-medium py-1"
+                >
+                  Cancel and Sign In Again
+                </button>
+              </form>
+            </div>
+          ) : mfaSetupData ? (
+            <div className="space-y-5 relative z-10 animate-in fade-in duration-300">
+              <div className="text-center space-y-2">
+                <div className="mx-auto w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center border border-emerald-100 shadow-xs">
+                  <QrCode className="w-6 h-6 animate-pulse" />
+                </div>
+                <h1 className="font-display text-xl font-black text-slate-900">Secure Setup MFA</h1>
+                <p className="text-[11px] text-slate-500">
+                  Scan this QR code using Google Authenticator, Microsoft Authenticator, or generic TOTP app to authorize admin registration.
+                </p>
+              </div>
+
+              {adminAuthErr && (
+                <div className="bg-rose-50 border border-rose-250 text-rose-850 p-3.5 rounded-2xl text-xs font-semibold flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <span>{adminAuthErr}</span>
+                </div>
+              )}
+
+              <div className="flex justify-center p-3 bg-slate-50 border border-slate-205 rounded-2xl mx-auto w-fit">
+                <img
+                  src={mfaSetupData.qrUrl}
+                  alt="MFA QR Code"
+                  className="w-[170px] h-[170px] select-none shadow-xs rounded-xl"
+                  referrerPolicy="no-referrer"
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={isLoggingIn}
-                className="w-full py-3.5 bg-[#0056D2] hover:bg-blue-600 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                {isLoggingIn ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                    <span>Signing in...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Sign In to Dashboard &rarr;</span>
-                  </>
-                )}
-              </button>
-            </form>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center space-y-1">
+                <span className="text-[9px] text-slate-400 uppercase font-semibold block tracking-wider">Manual Entry Code</span>
+                <code className="text-xs font-mono font-bold bg-white px-2 py-1 select-all border border-slate-150 rounded text-slate-800 block cursor-default break-all">
+                  {mfaSetupData.secret}
+                </code>
+              </div>
+
+              <form onSubmit={handleVerifyAndCompleteSignup} className="space-y-4">
+                <div className="space-y-1.5 focus-within:ring-0">
+                  <label className="text-xs font-bold text-slate-700 block text-left">6-Digit Authenticator Code</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    placeholder="e.g. 123456"
+                    value={mfaSetupToken}
+                    onChange={(e) => setMfaSetupToken(e.target.value.replace(/\D/g, ""))}
+                    className="w-full text-center text-xl font-mono tracking-widest p-3 bg-slate-50 border border-[#10B981]/30 text-slate-900 rounded-xl focus:outline-none focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] transition-all font-bold"
+                    autoFocus
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSigningUp}
+                  className="w-full py-3.5 bg-emerald-700 hover:bg-emerald-600 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSigningUp ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <span>Completing setup...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Verify & Register Admin &rarr;</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMfaSetupData(null);
+                    setMfaSetupToken("");
+                    setAdminAuthErr("");
+                  }}
+                  className="w-full text-center text-[10px] text-slate-400 hover:text-slate-655 transition-all font-medium py-1"
+                >
+                  Cancel and Edit Signup Details
+                </button>
+              </form>
+            </div>
           ) : (
-            <form onSubmit={handleAdminSignup} className="space-y-4 relative z-10 animate-in fade-in duration-200">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 block">Your Name</label>
-                <input
-                  type="text"
-                  required
-                  disabled={!!signedUpAdmin}
-                  placeholder="e.g. Chief Director"
-                  value={signupName}
-                  onChange={(e) => setSignupName(e.target.value)}
-                  className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
-                />
+            <>
+              <div className="space-y-1 relative z-10 w-full text-center">
+                <span className="text-[10px] font-sans font-bold text-[#0056D2] uppercase tracking-wider block">
+                  Ai -Online Business Portal
+                </span>
+                <h1 className="font-display text-2xl font-black tracking-tight text-slate-900 mb-1">
+                  Admin Login
+                </h1>
+                <p className="text-xs text-slate-500">
+                  Please enter your business credentials to manage lessons and view applications.
+                </p>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 block">Email Address</label>
-                <input
-                  type="email"
-                  required
+              {/* Dual authentication tabs */}
+              <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl relative z-10 border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("signin");
+                    setAdminAuthErr("");
+                  }}
+                  className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    authMode === "signin"
+                      ? "bg-white text-slate-900 shadow-xs border border-slate-200/50"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!signedUpAdmin) {
+                      setAuthMode("signup");
+                      setAdminAuthErr("");
+                    }
+                  }}
                   disabled={!!signedUpAdmin}
-                  placeholder="e.g. director@ai-onlinebusiness.com"
-                  value={signupEmail}
-                  onChange={(e) => setSignupEmail(e.target.value)}
-                  className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
-                />
+                  className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                    signedUpAdmin
+                      ? "opacity-35 cursor-not-allowed text-slate-400 bg-transparent"
+                      : authMode === "signup"
+                      ? "bg-white text-slate-900 shadow-xs border border-slate-200/50 cursor-pointer"
+                      : "text-slate-500 hover:text-slate-800 cursor-pointer"
+                  }`}
+                  title={signedUpAdmin ? "Only one admin account is allowed. Signup is closed." : "Register new admin account"}
+                >
+                  <span>{signedUpAdmin ? "🔒" : ""} Sign Up</span>
+                  {signedUpAdmin && (
+                    <span className="text-[8px] bg-slate-200 px-1 py-0.5 rounded font-mono text-slate-650">
+                      Closed
+                    </span>
+                  )}
+                </button>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 block">Create Password</label>
-                <input
-                  type="password"
-                  required
-                  disabled={!!signedUpAdmin}
-                  placeholder="••••••••••••••"
-                  value={signupPassword}
-                  onChange={(e) => setSignupPassword(e.target.value)}
-                  className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
-                />
-              </div>
+              {adminAuthErr && (
+                <div className="bg-rose-50 border border-rose-250 text-rose-800 p-3.5 rounded-2xl text-xs font-semibold flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <span>{adminAuthErr}</span>
+                </div>
+              )}
 
-              <button
-                type="submit"
-                disabled={isSigningUp || !!signedUpAdmin}
-                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
-              >
-                {isSigningUp ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                    <span>Creating Administrator Account...</span>
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4 text-emerald-20" />
-                    <span>Create Admin Account</span>
-                  </>
-                )}
-              </button>
-            </form>
+              {authMode === "signin" ? (
+                <form onSubmit={handleAdminLogin} className="space-y-4 relative z-10 animate-in fade-in duration-200">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="admin@ai-onlinebusiness.com"
+                      value={adminEmail}
+                      onChange={(e) => setAdminEmail(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-bold text-slate-700 block">Password</label>
+                    </div>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••••••••"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoggingIn}
+                    className="w-full py-3.5 bg-[#0056D2] hover:bg-blue-600 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {isLoggingIn ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                        <span>Signing in...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Sign In to Dashboard &rarr;</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleAdminSignup} className="space-y-4 relative z-10 animate-in fade-in duration-200">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">Your Name</label>
+                    <input
+                      type="text"
+                      required
+                      disabled={!!signedUpAdmin}
+                      placeholder="e.g. Chief Director"
+                      value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      disabled={!!signedUpAdmin}
+                      placeholder="e.g. director@ai-onlinebusiness.com"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">Create Password</label>
+                    <input
+                      type="password"
+                      required
+                      disabled={!!signedUpAdmin}
+                      placeholder="••••••••••••••"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSigningUp || !!signedUpAdmin}
+                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
+                  >
+                    {isSigningUp ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                        <span>Initializing MFA setup...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4 text-emerald-20" />
+                        <span>Configure Security & Sign Up</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </>
           )}
 
           <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-500">
@@ -4159,7 +4613,55 @@ CREATE POLICY "Admins full override enrollments" ON public.enrollments
 
 -- Students can read their own enrollment tokens
 CREATE POLICY "Students read own enrollments only" ON public.enrollments
-    FOR SELECT TO authenticated USING (user_id = auth.uid());`);
+    FOR SELECT TO authenticated USING (user_id = auth.uid());
+
+
+-- 6. ADMIN ACCOUNTS TABLE (Allows robust global admin persistence)
+CREATE TABLE IF NOT EXISTS public.admin_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    mfa_secret TEXT,
+    mfa_enabled BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS for admin_accounts
+ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read access to verify email exists or login
+CREATE POLICY "Allow public select on admin_accounts" ON public.admin_accounts
+    FOR SELECT USING (true);
+
+-- Allow inserting into admin_accounts ONLY if the current admin-count is 0 
+CREATE POLICY "Allow signup only if empty" ON public.admin_accounts
+    FOR INSERT WITH CHECK (
+        (SELECT count(*) FROM public.admin_accounts) = 0
+    );
+
+-- Allow public update and delete for maintenance and account synchronization
+CREATE POLICY "Allow public update on admin_accounts" ON public.admin_accounts
+    FOR UPDATE USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow public delete on admin_accounts" ON public.admin_accounts
+    FOR DELETE USING (true);
+
+-- Trigger-level constraint to guarantee a maximum of one row in the table
+CREATE OR REPLACE FUNCTION check_admin_limits()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (SELECT count(*) FROM public.admin_accounts) >= 1 THEN
+        RAISE EXCEPTION 'Administrative registration limit reached. Only one global account is authorized.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin_accounts;
+CREATE TRIGGER check_admin_limits_trigger
+BEFORE INSERT ON public.admin_accounts
+FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`);
                         triggerToast("SQL Schema and RLS policies copied to clipboard!");
                       }}
                       className="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 font-bold text-white px-3.5 py-1.5 rounded-lg text-[10px] uppercase cursor-pointer"

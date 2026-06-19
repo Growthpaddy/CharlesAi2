@@ -72,11 +72,23 @@ CREATE TABLE IF NOT EXISTS public.student_progress (
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Create admin accounts table for persistent admin accounts across sessions
+CREATE TABLE IF NOT EXISTS public.admin_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    mfa_secret TEXT,
+    mfa_enabled BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Set Row Level Security (RLS) policies for simulation parameters
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
 
 -- Allow anonymous inserts for Leads & Contact inquiries
 CREATE POLICY "Allow public insert to leads" ON public.leads FOR INSERT WITH CHECK (true);
@@ -88,6 +100,39 @@ CREATE POLICY "Allow public select of contact_messages" ON public.contact_messag
 -- Allow public access to enrollments for this educational simulation
 CREATE POLICY "Allow public read/write to enrollments" ON public.enrollments FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write to student_progress" ON public.student_progress FOR ALL USING (true) WITH CHECK (true);
+
+-- Allow public select on admin_accounts so registration and dynamic login verification work
+CREATE POLICY "Allow public select on admin_accounts" ON public.admin_accounts 
+    FOR SELECT USING (true);
+
+-- Allow inserting into admin_accounts ONLY if the current admin-count is 0 (first administrator registration)
+CREATE POLICY "Allow signup only if empty" ON public.admin_accounts 
+    FOR INSERT WITH CHECK (
+        (SELECT count(*) FROM public.admin_accounts) = 0
+    );
+
+-- Allow public update and delete for maintenance and account synchronization
+CREATE POLICY "Allow public update on admin_accounts" ON public.admin_accounts 
+    FOR UPDATE USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow public delete on admin_accounts" ON public.admin_accounts  
+    FOR DELETE USING (true);
+
+-- Trigger-level constraint to guarantee a maximum of one row in the table
+CREATE OR REPLACE FUNCTION check_admin_limits()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (SELECT count(*) FROM public.admin_accounts) >= 1 THEN
+        RAISE EXCEPTION 'Administrative registration limit reached. Only one global account is authorized.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin_accounts;
+CREATE TRIGGER check_admin_limits_trigger
+BEFORE INSERT ON public.admin_accounts
+FOR EACH ROW EXECUTE FUNCTION check_admin_limits();
 `;
 
 /**
