@@ -16,6 +16,7 @@ import * as OTPAuth from "otpauth";
 import { db, Course, CourseModule, Lesson, Category } from "../lib/db";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { useNavigation } from "../context/NavigationContext";
+import { AdminGuard } from "./AdminGuard";
 
 // Define Admin Tab type
 type AdminTab = 
@@ -241,6 +242,30 @@ export default function AdminDashboard() {
 
         if (error) {
           console.error("Failed to commit final admin record to Supabase:", error);
+          
+          // Check for custom PostgreSQL exception code 'ADM01'
+          if (error.code === "ADM01" || error.code === "P0001" || error.message?.includes("limit reached")) {
+            try {
+              // Retrieve the single existing globally authorized administrator
+              const { data: existing } = await supabase
+                .from("admin_accounts")
+                .select("id, name, email, password, mfa_secret, mfa_enabled")
+                .limit(1);
+              if (existing && existing.length > 0) {
+                setSignedUpAdmin(existing[0]);
+                localStorage.setItem("signed_up_admin", JSON.stringify(existing[0]));
+              }
+            } catch (err) {
+              console.error("Failed to fetch existing global administrator dynamically:", err);
+            }
+            
+            const feedback = "Administrative registration limit reached. Only one global account is authorized.";
+            setAdminAuthErr(feedback);
+            triggerToast("Registration Error: Only one administrator account is allowed globally.");
+            setIsSigningUp(false);
+            return;
+          }
+
           const feedback = "Administrative registration limit reached. Only one global account is authorized.";
           setAdminAuthErr(feedback);
           triggerToast("Registration Error: Only one administrator account is allowed globally.");
@@ -622,6 +647,13 @@ export default function AdminDashboard() {
       if (intervalId) clearInterval(intervalId);
     };
   }, [authMode, isAdminAuth]);
+
+  // Lock auth mode to signin when administrator is registered to prevent access to the signup view
+  useEffect(() => {
+    if (signedUpAdmin) {
+      setAuthMode("signin");
+    }
+  }, [signedUpAdmin]);
 
   const loadDatabase = () => {
     const cats = db.getCategories();
@@ -1863,64 +1895,89 @@ export default function AdminDashboard() {
                   </button>
                 </form>
               ) : (
-                <form onSubmit={handleAdminSignup} className="space-y-4 relative z-10 animate-in fade-in duration-200">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 block">Your Name</label>
-                    <input
-                      type="text"
-                      required
-                      disabled={!!signedUpAdmin}
-                      placeholder="e.g. Chief Director"
-                      value={signupName}
-                      onChange={(e) => setSignupName(e.target.value)}
-                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
-                    />
+                signedUpAdmin ? (
+                  <div className="space-y-4 relative z-10 animate-in fade-in duration-200 text-center py-4">
+                    <div className="mx-auto w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center border border-rose-100 shadow-xs mb-2">
+                      <Lock className="w-6 h-6 text-rose-500" />
+                    </div>
+                    <h3 className="text-sm font-bold text-slate-900">Registration Restricted</h3>
+                    <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                      An administrator account has already been registered globally. To maintain system integrity, no second administrator registrations are permitted.
+                    </p>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-left space-y-2 opacity-60 select-none pointer-events-none">
+                      <div className="space-y-1">
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">Active Global Admin</span>
+                        <span className="text-xs font-mono font-medium text-slate-800 block truncate">
+                          {signedUpAdmin?.email || "••••@••••.com"}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={true}
+                      className="w-full py-3 bg-slate-100 text-slate-400 text-xs font-bold rounded-xl border border-slate-200 cursor-not-allowed pointer-events-none flex items-center justify-center gap-2"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Signup Disabled & Locked</span>
+                    </button>
                   </div>
+                ) : (
+                  <form onSubmit={handleAdminSignup} className="space-y-4 relative z-10 animate-in fade-in duration-200">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 block">Your Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Chief Director"
+                        value={signupName}
+                        onChange={(e) => setSignupName(e.target.value)}
+                        className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 block">Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      disabled={!!signedUpAdmin}
-                      placeholder="e.g. director@ai-onlinebusiness.com"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
-                    />
-                  </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 block">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="e.g. director@ai-onlinebusiness.com"
+                        value={signupEmail}
+                        onChange={(e) => setSignupEmail(e.target.value)}
+                        className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 block">Create Password</label>
-                    <input
-                      type="password"
-                      required
-                      disabled={!!signedUpAdmin}
-                      placeholder="••••••••••••••"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
-                    />
-                  </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 block">Create Password</label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="••••••••••••••"
+                        value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)}
+                        className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      />
+                    </div>
 
-                  <button
-                    type="submit"
-                    disabled={isSigningUp || !!signedUpAdmin}
-                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
-                  >
-                    {isSigningUp ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                        <span>Initializing MFA setup...</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-4 h-4 text-emerald-20" />
-                        <span>Configure Security & Sign Up</span>
-                      </>
-                    )}
-                  </button>
-                </form>
+                    <button
+                      type="submit"
+                      disabled={isSigningUp}
+                      className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {isSigningUp ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                          <span>Initializing MFA setup...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4 text-emerald-20" />
+                          <span>Configure Security & Sign Up</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )
               )}
             </>
           )}
@@ -1947,7 +2004,8 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0C1E3E] antialiased">
+    <AdminGuard>
+      <div className="min-h-screen bg-[#F8FAFC] text-[#0C1E3E] antialiased">
       
       {/* PERSISTENT ADMIN HEADER WITH LOGOUT */}
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-xs px-4 sm:px-8 py-3.5 flex items-center justify-between">
@@ -4684,5 +4742,6 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`);
         </div> {/* grid */}
       </div> {/* max-w-7xl */}
     </div>
+    </AdminGuard>
   );
 }

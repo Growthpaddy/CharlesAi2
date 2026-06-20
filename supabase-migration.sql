@@ -55,7 +55,7 @@ RETURNS TRIGGER AS $$
 BEGIN
     -- If there is already at least one record in the admin_accounts table, block further inserts.
     IF (SELECT count(*) FROM public.admin_accounts) >= 1 THEN
-        RAISE EXCEPTION 'Administrative registration limit reached. Only one global account is authorized.';
+        RAISE EXCEPTION 'Administrative registration limit reached. Only one global account is authorized.' USING ERRCODE = 'ADM01';
     END IF;
     RETURN NEW;
 END;
