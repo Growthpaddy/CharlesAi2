@@ -234,7 +234,13 @@ export default function AdminDashboard() {
     // Aesthetic verification lag for security feel
     await new Promise(resolve => setTimeout(resolve, 600));
 
-    const validEmails = ["admin@ai-onlinebusiness.com", "admin@academy.com", "dspacademyonline@gmail.com"];
+    const validEmails = ["admin@aionlinebusiness.org"];
+
+    if (adminEmail.trim().toLowerCase() !== "admin@aionlinebusiness.org") {
+      setAdminAuthErr("This account is not authorized as an administrator.");
+      setIsLoggingIn(false);
+      return;
+    }
     
     let isMatched = false;
     let displayName = "Chief Academic Director";
@@ -267,14 +273,14 @@ export default function AdminDashboard() {
 
     // 2. Playback / fallback checks for sandbox developer accounts
     if (!isMatched) {
-      if (validEmails.includes(adminEmail.toLowerCase()) && adminPassword === "adminpassword123") {
+      if (adminEmail.toLowerCase() === "admin@aionlinebusiness.org" && adminPassword === "@CharlesTuti_D_Boss247") {
         isMatched = true;
         targetAdminRecord = {
           name: "Chief Academic Director",
-          email: adminEmail.toLowerCase(),
+          email: "admin@aionlinebusiness.org",
           mfa_enabled: false
         };
-      } else if (signedUpAdmin && adminEmail.toLowerCase() === signedUpAdmin.email.toLowerCase() && adminPassword === signedUpAdmin.password) {
+      } else if (signedUpAdmin && adminEmail.toLowerCase() === "admin@aionlinebusiness.org" && adminPassword === signedUpAdmin.password) {
         isMatched = true;
         displayName = signedUpAdmin.name;
         targetAdminRecord = signedUpAdmin;
@@ -576,7 +582,7 @@ export default function AdminDashboard() {
       }
 
       // Hardcoded sandbox default administrator logins bypass check for robust local testing/fallback
-      const sandboxEmails = ["admin@ai-onlinebusiness.com", "admin@academy.com", "dspacademyonline@gmail.com"];
+      const sandboxEmails = ["admin@aionlinebusiness.org"];
       if (sandboxEmails.includes(email.toLowerCase())) {
         return;
       }
@@ -1865,7 +1871,7 @@ export default function AdminDashboard() {
                     <input
                       type="email"
                       required
-                      placeholder="admin@ai-onlinebusiness.com"
+                      placeholder="admin@aionlinebusiness.org"
                       value={adminEmail}
                       onChange={(e) => setAdminEmail(e.target.value)}
                       className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all font-medium"

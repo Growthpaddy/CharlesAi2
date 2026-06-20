@@ -1,9 +1,10 @@
-import { supabase, isSupabaseConfigured, updateSupabaseClient } from "./supabase";
+import bcrypt from "bcryptjs";
+import { supabaseClient as supabase, isSupabaseConfigured, updateSupabaseClient } from "./supabaseClient";
 
 /**
- * Generates a SHA-256 hash of a password using the built-in browser Web Crypto API.
+ * Generates an SHA-256 fallback hash of a password using the built-in browser Web Crypto API.
  */
-export async function hashPassword(password: string): Promise<string> {
+export async function hashPasswordSha256(password: string): Promise<string> {
   try {
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
@@ -21,6 +22,46 @@ export async function hashPassword(password: string): Promise<string> {
     }
     return `fb_${hash.toString(16)}`;
   }
+}
+
+/**
+ * Generates a secure, salted bcrypt hash of a password.
+ */
+export async function hashPassword(password: string): Promise<string> {
+  try {
+    const salt = await bcrypt.genSalt(10);
+    return await bcrypt.hash(password, salt);
+  } catch (err) {
+    console.error("Bcrypt hashing failed, falling back to SHA-256", err);
+    return await hashPasswordSha256(password);
+  }
+}
+
+/**
+ * Verifies if a password is valid against a stored hash value (supports bcrypt, older SHA-256 hashes, and local plaintext passwords).
+ */
+export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  if (!password || !storedHash) {
+    return false;
+  }
+
+  // 1. If stored hash is formatted as a bcrypt string, use bcryptjs comparison
+  if (storedHash.startsWith("$2a$") || storedHash.startsWith("$2b$") || storedHash.startsWith("$2y$")) {
+    try {
+      return await bcrypt.compare(password, storedHash);
+    } catch (err) {
+      console.error("Bcrypt comparison error:", err);
+    }
+  }
+
+  // 2. Check older helper SHA-256 hash match
+  const fallbackSha = await hashPasswordSha256(password);
+  if (storedHash === fallbackSha) {
+    return true;
+  }
+
+  // 3. Fallback to raw plaintext match (e.g. for initial sandbox/manual entries)
+  return storedHash === password;
 }
 
 /**
@@ -147,11 +188,9 @@ export async function handleAdminLogin(
       return { success: false, error: "Invalid email address or unauthorized credentials." };
     }
 
-    // Hash the input password to check against the secure database hash
-    const inputHash = await hashPassword(password);
-
-    // Verify hashed password OR fallback plaintext password
-    if (user.password === inputHash || user.password === password) {
+    // Verify password securely using bcrypt (with legacy SHA-256 and plaintext fallbacks)
+    const isMatched = await verifyPassword(password, user.password);
+    if (isMatched) {
       return { success: true, data: user };
     }
 
@@ -176,22 +215,74 @@ export async function runSupabaseDiagnostics(): Promise<{
   error?: string;
   details?: any;
 }> {
+  console.log("[DIAGNOSTICS] Starting live Supabase connection assertion...");
+
+  // 1. Retrieve the URL & check configuration source
+  let rawUrl = "";
+  let urlSource = "";
+  try {
+    rawUrl = (import.meta as any).env?.VITE_SUPABASE_URL || "";
+    if (rawUrl) urlSource = "env variables (VITE_SUPABASE_URL)";
+  } catch (_) {}
+
+  if (!rawUrl) {
+    rawUrl = (window as any).__SUPABASE_URL__ || "";
+    if (rawUrl) urlSource = "window credentials (__SUPABASE_URL__)";
+  }
+
+  const urlVal = (typeof rawUrl === "string" ? rawUrl : "").trim();
+  const hasUrl = !!urlVal;
+
+  // 2. Retrieve the ANON KEY & check configuration source
+  let rawKey = "";
+  let keySource = "";
+  try {
+    rawKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "";
+    if (rawKey) keySource = "env variables (VITE_SUPABASE_ANON_KEY)";
+  } catch (_) {}
+
+  if (!rawKey) {
+    rawKey = (window as any).__SUPABASE_ANON_KEY__ || "";
+    if (rawKey) keySource = "window credentials (__SUPABASE_ANON_KEY__)";
+  }
+
+  const keyVal = (typeof rawKey === "string" ? rawKey : "").trim();
+  const hasKey = !!keyVal;
+
+  // URL validate helper
+  const isUrlFormatOk = hasUrl && !urlVal.includes("VITE_SUPABASE_URL") && !urlVal.startsWith("YOUR_") && (urlVal.startsWith("http://") || urlVal.startsWith("https://"));
+  const isKeyFormatOk = hasKey && !keyVal.includes("VITE_SUPABASE_ANON_KEY") && !keyVal.startsWith("YOUR_") && keyVal.length > 20;
+
+  // Mask key safely for secure logging
+  const maskedKey = isKeyFormatOk 
+    ? `${keyVal.substring(0, 8)}...[masked]...${keyVal.substring(keyVal.length - 8)}` 
+    : "(Missing or incomplete key)";
+
+  console.log("[DIAGNOSTICS] Credentials Assessment:");
+  console.log(` - Supabase URL: "${urlVal || "NONE"}" (Source: ${urlSource || "N/A"}) - Format check: ${isUrlFormatOk ? "VALID" : "INVALID"}`);
+  console.log(` - Supabase Anon Key: "${maskedKey}" (Source: ${keySource || "N/A"}) - Format check: ${isKeyFormatOk ? "VALID" : "INVALID"}`);
+
+  // Re-run dynamic initializer to make sure state is synchronized
   updateSupabaseClient();
   const configured = !!isSupabaseConfigured;
+
+  console.log(` - Final target status check: Client initialized? ${configured ? "YES" : "NO"}`);
+
   if (!configured) {
-    const err = "Supabase has not been configured in env or window credentials.";
-    console.warn("[DIAGNOSTICS] " + err);
+    const err = "Supabase has not been configured or carries invalid URL/Key formats.";
+    console.warn("[DIAGNOSTICS] Connection check aborted: " + err);
     return { configured: false, connected: false, count: null, error: err };
   }
 
   try {
+    console.log("[DIAGNOSTICS] Dispatching test query to table `admin_accounts`...");
     // Check connection and obtain exact count of admin records
     const { data, count, error } = await supabase
       .from("admin_accounts")
       .select("id", { count: "exact" });
 
     if (error) {
-      console.error("[DIAGNOSTICS] Table read failed:", error);
+      console.error("[DIAGNOSTICS] Table read failed on Supabase remote server:", error);
       return {
         configured: true,
         connected: false,
@@ -202,7 +293,7 @@ export async function runSupabaseDiagnostics(): Promise<{
     }
 
     const currentCount = count !== null ? count : (data ? data.length : 0);
-    console.log(`[DIAGNOSTICS] connection successful! Found ${currentCount} admin_accounts in Supabase.`);
+    console.log(`[DIAGNOSTICS] Connection assertion successful! Retrieved ${currentCount} admin_accounts from live dataset.`);
     return {
       configured: true,
       connected: true,
