@@ -21,9 +21,6 @@ const getSupabaseAnonKey = (): string => {
   return (typeof key === "string" ? key : "").trim();
 };
 
-const supabaseUrl = getSupabaseUrl();
-const supabaseAnonKey = getSupabaseAnonKey();
-
 // Ensure the URL is truthy, non-placeholder, and is a valid HTTP/HTTPS URL
 const isValidHttpUrl = (url: string): boolean => {
   if (!url || url.includes("VITE_SUPABASE_URL") || url.startsWith("YOUR_")) return false;
@@ -35,27 +32,57 @@ const isValidHttpUrl = (url: string): boolean => {
   }
 };
 
-// Graceful check for active credentials
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey && isValidHttpUrl(supabaseUrl));
+export let isSupabaseConfigured = false;
+export let supabase: any = null;
 
-let supabaseClient = null;
-if (isSupabaseConfigured) {
-  try {
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
+export const updateSupabaseClient = () => {
+  const url = getSupabaseUrl();
+  const key = getSupabaseAnonKey();
+  const configured = !!(url && key && isValidHttpUrl(url));
+  
+  if (configured !== isSupabaseConfigured || (configured && !supabase)) {
+    isSupabaseConfigured = configured;
+    if (configured) {
+      try {
+        supabase = createClient(url, key, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+          }
+        });
+        console.log("Supabase client initialized dynamically with URL:", url);
+      } catch (err) {
+        console.error("Failed to dynamically initialize Supabase client:", err);
+        supabase = null;
+        isSupabaseConfigured = false;
       }
-    });
-    console.log("Supabase client initialized successfully with URL:", supabaseUrl);
-  } catch (err) {
-    console.error("Failed to initialize Supabase client with active credentials:", err);
+    } else {
+      supabase = null;
+    }
   }
-} else {
-  console.warn("Supabase is not configured yet. Checked URL:", supabaseUrl || "(empty)");
-}
+};
 
-export const supabase = supabaseClient;
+// Retrieve config from server API endpoint to dynamically populate credentials if not yet set in browser
+export const fetchSupabaseConfigFromServer = async (): Promise<boolean> => {
+  try {
+    const res = await fetch("/api/config");
+    if (res.ok) {
+      const config = await res.json();
+      if (config.supabaseUrl && config.supabaseAnonKey) {
+        (window as any).__SUPABASE_URL__ = config.supabaseUrl;
+        (window as any).__SUPABASE_ANON_KEY__ = config.supabaseAnonKey;
+        updateSupabaseClient();
+        return isSupabaseConfigured;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to fetch dynamic configuration from API route:", err);
+  }
+  return false;
+};
+
+// Perform initial assessment
+updateSupabaseClient();
 
 // Clean SQL migration sequence to copy/paste directly in Supabase SQL Editor
 export const SUPABASE_SQL_藍圖 = `
@@ -126,21 +153,37 @@ CREATE POLICY "Allow public read/write to enrollments" ON public.enrollments FOR
 CREATE POLICY "Allow public read/write to student_progress" ON public.student_progress FOR ALL USING (true) WITH CHECK (true);
 
 -- Allow public select on admin_accounts so registration and dynamic login verification work
-CREATE POLICY "Allow public select on admin_accounts" ON public.admin_accounts 
-    FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public select on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public select on admin_accounts"
+ON public.admin_accounts
+FOR SELECT
+TO PUBLIC
+USING (true);
 
--- Allow inserting into admin_accounts ONLY if the current admin-count is 0 (first administrator registration)
-CREATE POLICY "Allow signup only if empty" ON public.admin_accounts 
-    FOR INSERT WITH CHECK (
-        (SELECT count(*) FROM public.admin_accounts) = 0
-    );
+-- Allow public insert on admin_accounts (limit restricted securely via check_admin_limits trigger)
+DROP POLICY IF EXISTS "Allow public insert on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public insert on admin_accounts"
+ON public.admin_accounts
+FOR INSERT
+TO PUBLIC
+WITH CHECK (true);
 
--- Allow public update and delete for maintenance and account synchronization
-CREATE POLICY "Allow public update on admin_accounts" ON public.admin_accounts 
-    FOR UPDATE USING (true) WITH CHECK (true);
+-- Allow public update on admin_accounts
+DROP POLICY IF EXISTS "Allow public update on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public update on admin_accounts"
+ON public.admin_accounts
+FOR UPDATE
+TO PUBLIC
+USING (true)
+WITH CHECK (true);
 
-CREATE POLICY "Allow public delete on admin_accounts" ON public.admin_accounts  
-    FOR DELETE USING (true);
+-- Allow public delete on admin_accounts
+DROP POLICY IF EXISTS "Allow public delete on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public delete on admin_accounts"
+ON public.admin_accounts
+FOR DELETE
+TO PUBLIC
+USING (true);
 
 -- Trigger-level constraint to guarantee a maximum of one row in the table
 CREATE OR REPLACE FUNCTION check_admin_limits()

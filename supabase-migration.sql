@@ -26,26 +26,35 @@ CREATE TABLE IF NOT EXISTS public.admin_accounts (
 -- 2. Turn on Row Level Security (RLS) policies for the database tables
 ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
 
--- 3. Create RLS Policies to allow lookup/select for authentication,
---    but restrict insertion and modify actions strictly.
+-- 3. Create RLS Policies using idempotent operations (refined by Supabase AI)
 DROP POLICY IF EXISTS "Allow public select on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public select on admin_accounts" ON public.admin_accounts 
-    FOR SELECT USING (true);
+CREATE POLICY "Allow public select on admin_accounts"
+ON public.admin_accounts
+FOR SELECT
+TO PUBLIC
+USING (true);
 
--- Allow signup/insert into admin_accounts ONLY if the current administrator count is 0
-DROP POLICY IF EXISTS "Allow signup only if empty" ON public.admin_accounts;
-CREATE POLICY "Allow signup only if empty" ON public.admin_accounts 
-    FOR INSERT WITH CHECK (
-        (SELECT count(*) FROM public.admin_accounts) = 0
-    );
+DROP POLICY IF EXISTS "Allow public insert on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public insert on admin_accounts"
+ON public.admin_accounts
+FOR INSERT
+TO PUBLIC
+WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow public update on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public update on admin_accounts" ON public.admin_accounts 
-    FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public update on admin_accounts"
+ON public.admin_accounts
+FOR UPDATE
+TO PUBLIC
+USING (true)
+WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow public delete on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public delete on admin_accounts" ON public.admin_accounts  
-    FOR DELETE USING (true);
+CREATE POLICY "Allow public delete on admin_accounts"
+ON public.admin_accounts
+FOR DELETE
+TO PUBLIC
+USING (true);
 
 
 -- 4. Create a robust database TRIGGER to strictly restrict the record limit

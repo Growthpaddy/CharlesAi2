@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import * as OTPAuth from "otpauth";
 import { db, Course, CourseModule, Lesson, Category } from "../lib/db";
-import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { supabase, isSupabaseConfigured, fetchSupabaseConfigFromServer, updateSupabaseClient } from "../lib/supabase";
 import { useNavigation } from "../context/NavigationContext";
 import { AdminGuard } from "./AdminGuard";
 
@@ -553,14 +553,85 @@ export default function AdminDashboard() {
     };
   }, [isAdminAuth]);
 
-  // Load all databases
+  // Load all databases and dynamically fetch Supabase connection config on mount
   useEffect(() => {
     loadDatabase();
+    
+    const initAndSyncConfig = async () => {
+      await fetchSupabaseConfigFromServer();
+    };
+    initAndSyncConfig();
   }, []);
+
+  // Active validation hook to verify user registration exists in remote 'admin_accounts' before rendering dashboard views
+  const [isValidatingSession, setIsValidatingSession] = useState(false);
+
+  useEffect(() => {
+    if (!isAdminAuth) return;
+
+    const verifyActiveSessionInDatabase = async () => {
+      const email = localStorage.getItem("admin_logged_in_email");
+      if (!email) {
+        handleAdminLogout();
+        return;
+      }
+
+      // Hardcoded sandbox default administrator logins bypass check for robust local testing/fallback
+      const sandboxEmails = ["admin@ai-onlinebusiness.com", "admin@academy.com", "dspacademyonline@gmail.com"];
+      if (sandboxEmails.includes(email.toLowerCase())) {
+        return;
+      }
+
+      // Ensure local state client has parsed credentials
+      updateSupabaseClient();
+
+      if (supabase && isSupabaseConfigured) {
+        setIsValidatingSession(true);
+        try {
+          const { data, error } = await supabase
+            .from("admin_accounts")
+            .select("email, name")
+            .eq("email", email.toLowerCase())
+            .maybeSingle();
+
+          if (error) {
+            console.error("Session database verification check encountered error:", error);
+            setIsValidatingSession(false);
+            return;
+          }
+
+          if (!data) {
+            console.warn(`Admin login session check failed. Email "${email}" does not exist in 'admin_accounts'.`);
+            triggerToast("Administrative account was removed from Database. Session terminated.");
+            handleAdminLogout();
+          } else {
+            // Synchronize name if changed in remote database
+            if (data.name && data.name !== localStorage.getItem("admin_logged_in_name")) {
+              localStorage.setItem("admin_logged_in_name", data.name);
+            }
+          }
+        } catch (err) {
+          console.error("Exception during session database validation:", err);
+        } finally {
+          setIsValidatingSession(false);
+        }
+      }
+    };
+
+    // Run active authorization check
+    verifyActiveSessionInDatabase();
+
+    // Check presence of admin registration periodically to handle changes and remote database deletions
+    const intervalId = setInterval(verifyActiveSessionInDatabase, 4000);
+    return () => clearInterval(intervalId);
+  }, [isAdminAuth]);
 
   // Check for globally registered admin on mount and when authentication mode changes with polling for incognito/multi-tab sync
   useEffect(() => {
     const fetchGlobalAdmin = async () => {
+      // Refresh database configuration
+      updateSupabaseClient();
+
       if (supabase && isSupabaseConfigured) {
         try {
           const { data, error } = await supabase
@@ -586,7 +657,7 @@ export default function AdminDashboard() {
     // If the operator session is NOT authenticated, poll periodically to capture registrations in separate tabs/browsers
     let intervalId: any;
     if (!isAdminAuth) {
-      intervalId = setInterval(fetchGlobalAdmin, 2000);
+      intervalId = setInterval(fetchGlobalAdmin, 2500);
     }
 
     return () => {
@@ -1884,7 +1955,7 @@ export default function AdminDashboard() {
                 <textarea 
                   readOnly 
                   onClick={(e) => (e.target as any).select()}
-                  value={`-- AI-ONLINE BUSINESS: ADMIN ACCOUNTS SCHEMAS & SECURE RLS POLICIES
+                  value={`-- AI-ONLINE BUSINESS: ADMIN ACCOUNTS SCHEMAS & SECURE RLS POLICIES (RLS policy fix)
 CREATE TABLE IF NOT EXISTS public.admin_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -1894,6 +1965,26 @@ CREATE TABLE IF NOT EXISTS public.admin_accounts (
     mfa_enabled BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Turn on Row Level Security (RLS)
+ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
+
+-- Idempotent policies
+DROP POLICY IF EXISTS "Allow public select on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public select on admin_accounts"
+ON public.admin_accounts FOR SELECT TO PUBLIC USING (true);
+
+DROP POLICY IF EXISTS "Allow public insert on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public insert on admin_accounts"
+ON public.admin_accounts FOR INSERT TO PUBLIC WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public update on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public update on admin_accounts"
+ON public.admin_accounts FOR UPDATE TO PUBLIC USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public delete on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public delete on admin_accounts"
+ON public.admin_accounts FOR DELETE TO PUBLIC USING (true);
 
 -- Active restriction trigger supporting exactly one administrator registration
 CREATE OR REPLACE FUNCTION check_admin_limits()
@@ -1909,14 +2000,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin_accounts;
 CREATE TRIGGER check_admin_limits_trigger
 BEFORE INSERT ON public.admin_accounts
-FOR EACH ROW EXECUTE FUNCTION check_admin_limits();
-
--- Allow public and signup operations
-ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public select on admin_accounts" ON public.admin_accounts FOR SELECT USING (true);
-CREATE POLICY "Allow public insert on admin_accounts" ON public.admin_accounts FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update on admin_accounts" ON public.admin_accounts FOR UPDATE USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public delete on admin_accounts" ON public.admin_accounts FOR DELETE USING (true);`}
+FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                   className="w-full h-28 text-[9px] font-mono p-2.5 bg-slate-950 text-emerald-400 rounded-xl border border-slate-800 focus:outline-none focus:ring-0 leading-relaxed select-all cursor-text"
                 />
                 <span className="text-[8.5px] text-slate-400 block text-right font-medium">Click code to highlight and copy</span>
@@ -4617,22 +4701,22 @@ CREATE TABLE IF NOT EXISTS public.admin_accounts (
 -- Enable RLS for admin_accounts
 ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
 
--- Allow public read access to verify email exists or login
-CREATE POLICY "Allow public select on admin_accounts" ON public.admin_accounts
-    FOR SELECT USING (true);
+-- Idempotent RLS Policies
+DROP POLICY IF EXISTS "Allow public select on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public select on admin_accounts"
+ON public.admin_accounts FOR SELECT TO PUBLIC USING (true);
 
--- Allow inserting into admin_accounts ONLY if the current admin-count is 0 
-CREATE POLICY "Allow signup only if empty" ON public.admin_accounts
-    FOR INSERT WITH CHECK (
-        (SELECT count(*) FROM public.admin_accounts) = 0
-    );
+DROP POLICY IF EXISTS "Allow public insert on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public insert on admin_accounts"
+ON public.admin_accounts FOR INSERT TO PUBLIC WITH CHECK (true);
 
--- Allow public update and delete for maintenance and account synchronization
-CREATE POLICY "Allow public update on admin_accounts" ON public.admin_accounts
-    FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public update on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public update on admin_accounts"
+ON public.admin_accounts FOR UPDATE TO PUBLIC USING (true) WITH CHECK (true);
 
-CREATE POLICY "Allow public delete on admin_accounts" ON public.admin_accounts
-    FOR DELETE USING (true);
+DROP POLICY IF EXISTS "Allow public delete on admin_accounts" ON public.admin_accounts;
+CREATE POLICY "Allow public delete on admin_accounts"
+ON public.admin_accounts FOR DELETE TO PUBLIC USING (true);
 
 -- Trigger-level constraint to guarantee a maximum of one row in the table
 CREATE OR REPLACE FUNCTION check_admin_limits()
