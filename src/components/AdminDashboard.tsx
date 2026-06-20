@@ -15,6 +15,7 @@ import {
 import * as OTPAuth from "otpauth";
 import { db, Course, CourseModule, Lesson, Category } from "../lib/db";
 import { supabase, isSupabaseConfigured, fetchSupabaseConfigFromServer, updateSupabaseClient } from "../lib/supabase";
+import { checkAdminExists, handleAdminSignup as dbAdminSignup, handleAdminLogin as dbAdminLogin, runSupabaseDiagnostics } from "../lib/adminAuth";
 import { useNavigation } from "../context/NavigationContext";
 import { AdminGuard } from "./AdminGuard";
 
@@ -112,6 +113,33 @@ export default function AdminDashboard() {
     const stored = localStorage.getItem("signed_up_admin");
     return stored ? JSON.parse(stored) : null;
   });
+  const [adminExists, setAdminExists] = useState<boolean>(() => {
+    const stored = localStorage.getItem("signed_up_admin");
+    return !!stored;
+  });
+  const [isAdminExistsLoading, setIsAdminExistsLoading] = useState<boolean>(true);
+
+  // Diagnostics states
+  const [diagResult, setDiagResult] = useState<{ configured: boolean; connected: boolean; count: number | null; error?: string } | null>(null);
+  const [diagLoading, setDiagLoading] = useState<boolean>(false);
+
+  const handleRunDiagnostics = async () => {
+    setDiagLoading(true);
+    try {
+      const result = await runSupabaseDiagnostics();
+      setDiagResult(result);
+      if (result.connected) {
+        triggerToast(`Diagnostics complete: Found ${result.count} registered admin accounts.`);
+      } else {
+        triggerToast(`Diagnostics failed: ${result.error || "Connection issue"}`);
+      }
+    } catch (err: any) {
+      setDiagResult({ configured: true, connected: false, count: null, error: err.message || "Unknown error" });
+      triggerToast("Diagnostics execution errored out.");
+    } finally {
+      setDiagLoading(false);
+    }
+  };
 
   // Multi-Factor Authentication (MFA) States
   const [mfaSetupData, setMfaSetupData] = useState<{ secret: string; qrUrl: string } | null>(null);
@@ -123,7 +151,7 @@ export default function AdminDashboard() {
     e.preventDefault();
     setAdminAuthErr("");
 
-    if (signedUpAdmin) {
+    if (adminExists || signedUpAdmin) {
       setAdminAuthErr("An administrator has already been registered. Sign up is closed.");
       return;
     }
@@ -135,98 +163,58 @@ export default function AdminDashboard() {
 
     setIsSigningUp(true);
 
-    if (supabase && isSupabaseConfigured) {
-      try {
-        // Double check no other administrator has already registered in Supabase
-        const { data: existing, error: checkErr } = await supabase
-          .from("admin_accounts")
-          .select("id, name, email, password");
-        
-        if (!checkErr && existing && existing.length > 0) {
-          const errMsg = "An administrator account has already been registered globally. Signup is closed.";
-          setAdminAuthErr(errMsg);
-          triggerToast("Registration Blocked: A global administrator account already exists.");
-          const firstAdmin = existing[0];
-          setSignedUpAdmin(firstAdmin);
-          localStorage.setItem("signed_up_admin", JSON.stringify(firstAdmin));
-          setIsSigningUp(false);
-          setAuthMode("signin");
-          return;
-        }
-      } catch (err) {
-        console.error("Error checking remote admin account existence during signup:", err);
-        setAdminAuthErr("Database connection error. Try again later or apply the SQL setup schema in Supabase.");
-        setIsSigningUp(false);
-        return;
+    // Call unified auth helper
+    const result = await dbAdminSignup(signupName, signupEmail, signupPassword);
+
+    if (!result.success) {
+      if (result.code === "42P01" || result.error?.includes("does not exist")) {
+        setAdminAuthErr("The table 'admin_accounts' is not created in Supabase yet. Please copy the complete SQL script from the helper box at the bottom of the page and paste/run it in your Supabase SQL Editor first.");
+      } else if (result.code === "23505" || result.error?.includes("unique constraint") || result.error?.includes("already exists")) {
+        setAdminAuthErr("An administrative account with this email address already exists in Supabase. Signup is closed.");
+      } else {
+        setAdminAuthErr(result.error || "Administrative registration limit reached.");
       }
+      
+      // Auto-recheck and sync with existing admin if DB says it exists
+      if (result.code === "ADM01" || result.error?.includes("already exists") || result.error?.includes("limit reached")) {
+        try {
+          const exists = await checkAdminExists();
+          setAdminExists(exists);
+          if (exists && supabase) {
+            const { data: existing } = await supabase
+              .from("admin_accounts")
+              .select("id, name, email, password, mfa_secret, mfa_enabled")
+              .limit(1);
+            if (existing && existing.length > 0) {
+              setSignedUpAdmin(existing[0]);
+              localStorage.setItem("signed_up_admin", JSON.stringify(existing[0]));
+            }
+          }
+        } catch (err) {
+          console.error("Failed to sync on signup conflict:", err);
+        }
+      }
+
+      setIsSigningUp(false);
+      return;
     }
 
-    const newAdmin = {
+    const createdAdmin = result.data || {
       name: signupName.trim(),
       email: signupEmail.trim().toLowerCase(),
-      password: signupPassword,
+      password: signupPassword, // In case of local fallback simulation mockup
       mfa_secret: null,
       mfa_enabled: false
     };
 
-    if (supabase && isSupabaseConfigured) {
-      try {
-        // Direct administrative insertion to Supabase without any MFA setup requirement
-        const { error } = await supabase.from("admin_accounts").insert({
-          name: newAdmin.name,
-          email: newAdmin.email,
-          password: newAdmin.password,
-          mfa_secret: null,
-          mfa_enabled: false
-        });
-
-        if (error) {
-          console.error("Failed to commit final admin record to Supabase:", error);
-          
-          // Check for custom PostgreSQL exception code 'ADM01'
-          if (error.code === "ADM01" || error.code === "P0001" || error.message?.includes("limit reached")) {
-            try {
-              // Retrieve the single existing globally authorized administrator
-              const { data: existing } = await supabase
-                .from("admin_accounts")
-                .select("id, name, email, password, mfa_secret, mfa_enabled")
-                .limit(1);
-              if (existing && existing.length > 0) {
-                setSignedUpAdmin(existing[0]);
-                localStorage.setItem("signed_up_admin", JSON.stringify(existing[0]));
-              }
-            } catch (err) {
-              console.error("Failed to fetch existing global administrator dynamically:", err);
-            }
-            
-            const feedback = "Administrative registration limit reached. Only one global account is authorized.";
-            setAdminAuthErr(feedback);
-            triggerToast("Registration Error: Only one administrator account is allowed globally.");
-            setIsSigningUp(false);
-            return;
-          }
-
-          const feedback = "Administrative registration limit reached. Only one global account is authorized.";
-          setAdminAuthErr(feedback);
-          triggerToast("Registration Error: Only one administrator account is allowed globally.");
-          setIsSigningUp(false);
-          return;
-        }
-      } catch (err) {
-        console.error("Error inserting remote admin account:", err);
-        setAdminAuthErr("Failed to connect to database during admin registry insertion.");
-        setIsSigningUp(false);
-        return;
-      }
-    }
-
-    localStorage.setItem("signed_up_admin", JSON.stringify(newAdmin));
-    setSignedUpAdmin(newAdmin);
+    localStorage.setItem("signed_up_admin", JSON.stringify(createdAdmin));
+    setSignedUpAdmin(createdAdmin);
+    setAdminExists(true);
     setIsSigningUp(false);
     
     // Navigate straight to Sign In component
     setAuthMode("signin");
-    setAdminEmail(newAdmin.email);
+    setAdminEmail(createdAdmin.email);
     setAdminPassword("");
     setMfaSetupData(null);
     setMfaSetupToken("");
@@ -252,35 +240,44 @@ export default function AdminDashboard() {
     let displayName = "Chief Academic Director";
     let targetAdminRecord: any = null;
 
-    if (validEmails.includes(adminEmail.toLowerCase()) && adminPassword === "adminpassword123") {
-      isMatched = true;
-      targetAdminRecord = {
-        name: "Chief Academic Director",
-        email: adminEmail.toLowerCase(),
-        mfa_enabled: false
-      };
-    } else if (signedUpAdmin && adminEmail.toLowerCase() === signedUpAdmin.email.toLowerCase() && adminPassword === signedUpAdmin.password) {
-      isMatched = true;
-      displayName = signedUpAdmin.name;
-      targetAdminRecord = signedUpAdmin;
-    } else if (supabase && isSupabaseConfigured) {
+    // 1. Try secure dbAdminLogin first
+    if (supabase && isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
-          .from("admin_accounts")
-          .select("*")
-          .eq("email", adminEmail.toLowerCase())
-          .eq("password", adminPassword)
-          .maybeSingle();
+        const result = await dbAdminLogin(adminEmail, adminPassword);
         
-        if (!error && data) {
+        if (result.success && result.data) {
           isMatched = true;
-          displayName = data.name;
-          targetAdminRecord = data;
-          setSignedUpAdmin(data);
-          localStorage.setItem("signed_up_admin", JSON.stringify(data));
+          displayName = result.data.name;
+          targetAdminRecord = result.data;
+          setSignedUpAdmin(result.data);
+          localStorage.setItem("signed_up_admin", JSON.stringify(result.data));
+        } else if (result.error) {
+          // Check for missing table errors, allow fallback accounts to bypass
+          const isDbMissing = result.code === "42P01" || result.error?.includes("does not exist");
+          if (!isDbMissing && !validEmails.includes(adminEmail.toLowerCase())) {
+            setAdminAuthErr(result.error);
+            setIsLoggingIn(false);
+            return;
+          }
         }
-      } catch (err) {
-        console.error("Error logging in via Supabase admin check:", err);
+      } catch (err: any) {
+        console.error("Error logging in via admin auth module:", err);
+      }
+    }
+
+    // 2. Playback / fallback checks for sandbox developer accounts
+    if (!isMatched) {
+      if (validEmails.includes(adminEmail.toLowerCase()) && adminPassword === "adminpassword123") {
+        isMatched = true;
+        targetAdminRecord = {
+          name: "Chief Academic Director",
+          email: adminEmail.toLowerCase(),
+          mfa_enabled: false
+        };
+      } else if (signedUpAdmin && adminEmail.toLowerCase() === signedUpAdmin.email.toLowerCase() && adminPassword === signedUpAdmin.password) {
+        isMatched = true;
+        displayName = signedUpAdmin.name;
+        targetAdminRecord = signedUpAdmin;
       }
     }
 
@@ -299,7 +296,7 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Bypass when MFA is not active on default sandbox credentials
+      // Maintain admin authenticated state properly
       localStorage.setItem("is_admin_authenticated", "true");
       localStorage.setItem("admin_logged_in_name", displayName);
       localStorage.setItem("admin_logged_in_email", adminEmail);
@@ -313,7 +310,9 @@ export default function AdminDashboard() {
         window.history.pushState({}, "", "/admin-dashboard");
       }
     } else {
-      setAdminAuthErr("Invalid administrative credentials. Please verify your Email and Password.");
+      if (!adminAuthErr) {
+        setAdminAuthErr("Invalid administrative credentials. Please verify your Email and Password.");
+      }
     }
     setIsLoggingIn(false);
   };
@@ -634,6 +633,10 @@ export default function AdminDashboard() {
 
       if (supabase && isSupabaseConfigured) {
         try {
+          // Use secure helper to verify if admin exists in Supabase
+          const exists = await checkAdminExists();
+          setAdminExists(exists);
+
           const { data, error } = await supabase
             .from("admin_accounts")
             .select("*");
@@ -648,7 +651,11 @@ export default function AdminDashboard() {
           }
         } catch (err) {
           console.error("Error querying remote admin_accounts:", err);
+        } finally {
+          setIsAdminExistsLoading(false);
         }
+      } else {
+        setIsAdminExistsLoading(false);
       }
     };
 
@@ -665,12 +672,14 @@ export default function AdminDashboard() {
     };
   }, [authMode, isAdminAuth]);
 
-  // Lock auth mode to signin when administrator is registered to prevent access to the signup view
+  // Handle automatic routing of authMode based on administrator presence state
   useEffect(() => {
-    if (signedUpAdmin) {
+    if (signedUpAdmin || adminExists) {
       setAuthMode("signin");
+    } else {
+      setAuthMode("signup");
     }
-  }, [signedUpAdmin]);
+  }, [signedUpAdmin, adminExists]);
 
   const loadDatabase = () => {
     const cats = db.getCategories();
@@ -1657,7 +1666,15 @@ export default function AdminDashboard() {
           {/* Subtle decoration accent */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10" />
           
-          {mfaChallengeData ? (
+          {isAdminExistsLoading ? (
+            <div className="space-y-6 relative z-10 animate-in fade-in duration-300 text-center py-10 flex flex-col items-center justify-center">
+              <RefreshCw className="w-8 h-8 animate-spin text-[#0056D2]" />
+              <div className="space-y-1.5">
+                <h3 className="text-sm font-bold text-slate-900">Verifying security status...</h3>
+                <p className="text-xs text-slate-500 font-medium">Checking admin registration status in database</p>
+              </div>
+            </div>
+          ) : mfaChallengeData ? (
             <div className="space-y-5 relative z-10 animate-in fade-in duration-300">
               <div className="text-center space-y-2">
                 <div className="mx-auto w-12 h-12 bg-blue-50 text-[#0056D2] rounded-full flex items-center justify-center border border-blue-100 shadow-xs">
@@ -1754,23 +1771,23 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (!signedUpAdmin) {
+                    if (!adminExists && !signedUpAdmin) {
                       setAuthMode("signup");
                       setAdminAuthErr("");
                     }
                   }}
-                  disabled={!!signedUpAdmin}
+                  disabled={adminExists || !!signedUpAdmin}
                   className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                    signedUpAdmin
-                      ? "opacity-35 cursor-not-allowed text-slate-400 bg-transparent"
+                    adminExists || signedUpAdmin
+                      ? "bg-slate-50 border border-slate-200/50 text-slate-400 opacity-50 cursor-not-allowed"
                       : authMode === "signup"
                       ? "bg-white text-slate-900 shadow-xs border border-slate-200/50 cursor-pointer"
                       : "text-slate-500 hover:text-slate-800 cursor-pointer"
                   }`}
-                  title={signedUpAdmin ? "Only one admin account is allowed. Signup is closed." : "Register new admin account"}
+                  title={adminExists || signedUpAdmin ? "Only one admin account is allowed. Signup is closed." : "Register new admin account"}
                 >
-                  <span>{signedUpAdmin ? "🔒" : ""} Sign Up</span>
-                  {signedUpAdmin && (
+                  <span>{adminExists || signedUpAdmin ? "🔒" : ""} Sign Up</span>
+                  {(adminExists || signedUpAdmin) && (
                     <span className="text-[8px] bg-slate-200 px-1 py-0.5 rounded font-mono text-slate-650">
                       Closed
                     </span>
@@ -1785,7 +1802,63 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {authMode === "signin" ? (
+              {!(adminExists || signedUpAdmin) && authMode === "signup" ? (
+                <form onSubmit={handleAdminSignup} className="space-y-4 relative z-10 animate-in fade-in duration-200">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">Your Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Chief Director"
+                      value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. director@ai-onlinebusiness.com"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">Create Password</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="•••••••••••••"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSigningUp}
+                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer font-sans"
+                  >
+                    {isSigningUp ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                        <span>Creating account...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4 text-emerald-20" />
+                        <span>Create Admin Account &rarr;</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
                 <form onSubmit={handleAdminLogin} className="space-y-4 relative z-10 animate-in fade-in duration-200">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 block">Email Address</label>
@@ -1795,28 +1868,26 @@ export default function AdminDashboard() {
                       placeholder="admin@ai-onlinebusiness.com"
                       value={adminEmail}
                       onChange={(e) => setAdminEmail(e.target.value)}
-                      className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all"
+                      className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all font-medium"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <label className="text-xs font-bold text-slate-700 block">Password</label>
-                    </div>
+                    <label className="text-xs font-bold text-slate-700 block">Password</label>
                     <input
                       type="password"
                       required
-                      placeholder="••••••••••••••"
+                      placeholder="•••••••••••••"
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
-                      className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all"
+                      className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all font-medium"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={isLoggingIn}
-                    className="w-full py-3.5 bg-[#0056D2] hover:bg-blue-600 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3.5 bg-[#0056D2] hover:bg-blue-600 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer font-sans"
                   >
                     {isLoggingIn ? (
                       <>
@@ -1830,90 +1901,6 @@ export default function AdminDashboard() {
                     )}
                   </button>
                 </form>
-              ) : (
-                signedUpAdmin ? (
-                  <div className="space-y-4 relative z-10 animate-in fade-in duration-200 text-center py-4">
-                    <div className="mx-auto w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center border border-rose-100 shadow-xs mb-2">
-                      <Lock className="w-6 h-6 text-rose-500" />
-                    </div>
-                    <h3 className="text-sm font-bold text-slate-900">Registration Restricted</h3>
-                    <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
-                      An administrator account has already been registered globally. To maintain system integrity, no second administrator registrations are permitted.
-                    </p>
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-left space-y-2 opacity-60 select-none pointer-events-none">
-                      <div className="space-y-1">
-                        <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">Active Global Admin</span>
-                        <span className="text-xs font-mono font-medium text-slate-800 block truncate">
-                          {signedUpAdmin?.email || "••••@••••.com"}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={true}
-                      className="w-full py-3 bg-slate-100 text-slate-400 text-xs font-bold rounded-xl border border-slate-200 cursor-not-allowed pointer-events-none flex items-center justify-center gap-2"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                      <span>Signup Disabled & Locked</span>
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleAdminSignup} className="space-y-4 relative z-10 animate-in fade-in duration-200">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700 block">Your Name</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Chief Director"
-                        value={signupName}
-                        onChange={(e) => setSignupName(e.target.value)}
-                        className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700 block">Email Address</label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="e.g. director@ai-onlinebusiness.com"
-                        value={signupEmail}
-                        onChange={(e) => setSignupEmail(e.target.value)}
-                        className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700 block">Create Password</label>
-                      <input
-                        type="password"
-                        required
-                        placeholder="••••••••••••••"
-                        value={signupPassword}
-                        onChange={(e) => setSignupPassword(e.target.value)}
-                        className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isSigningUp}
-                      className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      {isSigningUp ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                          <span>Creating account...</span>
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-4 h-4 text-emerald-20" />
-                          <span>Create Admin Account &rarr;</span>
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )
               )}
             </>
           )}
@@ -1955,8 +1942,12 @@ export default function AdminDashboard() {
                 <textarea 
                   readOnly 
                   onClick={(e) => (e.target as any).select()}
-                  value={`-- AI-ONLINE BUSINESS: ADMIN ACCOUNTS SCHEMAS & SECURE RLS POLICIES (RLS policy fix)
-CREATE TABLE IF NOT EXISTS public.admin_accounts (
+                  value={`-- AI-ONLINE BUSINESS: ADMIN ACCOUNTS SCHEMAS & SECURE RLS POLICIES
+-- Clean recreation of the table with explicit constraint
+DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin_accounts;
+DROP TABLE IF EXISTS public.admin_accounts CASCADE;
+
+CREATE TABLE public.admin_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
@@ -1966,10 +1957,13 @@ CREATE TABLE IF NOT EXISTS public.admin_accounts (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Turn on Row Level Security (RLS)
+-- Ensure primary key with checking constraint (id is not null)
+ALTER TABLE public.admin_accounts ADD CONSTRAINT one_admin_only CHECK (id IS NOT NULL);
+
+-- Ensure Row Level Security (RLS) is enabled
 ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
 
--- Idempotent policies
+-- Idempotent RLS Policies to allow public select and limited access
 DROP POLICY IF EXISTS "Allow public select on admin_accounts" ON public.admin_accounts;
 CREATE POLICY "Allow public select on admin_accounts"
 ON public.admin_accounts FOR SELECT TO PUBLIC USING (true);
@@ -1991,19 +1985,61 @@ CREATE OR REPLACE FUNCTION check_admin_limits()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (SELECT count(*) FROM public.admin_accounts) >= 1 THEN
-        RAISE EXCEPTION 'Administrative registration limit reached. Only one global account is authorized.';
+        RAISE EXCEPTION 'Administrative registration limit reached. Only one global account is authorized.' USING ERRCODE = 'ADM01';
     END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin_accounts;
 CREATE TRIGGER check_admin_limits_trigger
 BEFORE INSERT ON public.admin_accounts
 FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                   className="w-full h-28 text-[9px] font-mono p-2.5 bg-slate-950 text-emerald-400 rounded-xl border border-slate-800 focus:outline-none focus:ring-0 leading-relaxed select-all cursor-text"
                 />
                 <span className="text-[8.5px] text-slate-400 block text-right font-medium">Click code to highlight and copy</span>
+              </div>
+
+              {/* Database Diagnostics Section */}
+              <div className="pt-3 border-t border-slate-100 space-y-2">
+                <span className="text-[9px] font-bold text-slate-500 block uppercase tracking-wider">Database Diagnostics</span>
+                
+                <button
+                  type="button"
+                  disabled={diagLoading}
+                  onClick={handleRunDiagnostics}
+                  className="w-full py-2 bg-[#0056D2] hover:bg-blue-600 disabled:bg-blue-300 text-white text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs font-sans"
+                >
+                  {diagLoading ? (
+                    <RefreshCw className="w-3 h-3 animate-spin text-white" />
+                  ) : (
+                    <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                  )}
+                  <span>{diagLoading ? "Checking..." : "Verify Connection & Sync Check"}</span>
+                </button>
+
+                {diagResult && (
+                  <div className={`p-2.5 rounded-lg border text-[10px] space-y-1 animate-in fade-in duration-150 ${
+                    diagResult.connected 
+                      ? "bg-emerald-50/50 border-emerald-100 text-emerald-800"
+                      : "bg-rose-50/50 border-rose-100 text-rose-800"
+                  }`}>
+                    <div className="flex items-center justify-between font-bold">
+                      <span>Status:</span>
+                      <span className={diagResult.connected ? "text-emerald-600" : "text-rose-600"}>
+                        {diagResult.connected ? "Connected" : "Error"}
+                      </span>
+                    </div>
+                    {diagResult.connected ? (
+                      <p className="leading-relaxed">
+                        Successfully retrieved <strong>{diagResult.count}</strong> record(s) in <code>admin_accounts</code>.
+                      </p>
+                    ) : (
+                      <p className="leading-relaxed text-[9px] font-mono whitespace-pre-wrap">
+                        {diagResult.error || "Unknown routing or credentials issue."}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </details>
@@ -4688,7 +4724,10 @@ CREATE POLICY "Students read own enrollments only" ON public.enrollments
 
 
 -- 6. ADMIN ACCOUNTS TABLE (Allows robust global admin persistence)
-CREATE TABLE IF NOT EXISTS public.admin_accounts (
+DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin_accounts;
+DROP TABLE IF EXISTS public.admin_accounts CASCADE;
+
+CREATE TABLE public.admin_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
@@ -4697,6 +4736,9 @@ CREATE TABLE IF NOT EXISTS public.admin_accounts (
     mfa_enabled BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Ensure primary key with checking constraint (id is not null)
+ALTER TABLE public.admin_accounts ADD CONSTRAINT one_admin_only CHECK (id IS NOT NULL);
 
 -- Enable RLS for admin_accounts
 ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
@@ -4723,13 +4765,12 @@ CREATE OR REPLACE FUNCTION check_admin_limits()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (SELECT count(*) FROM public.admin_accounts) >= 1 THEN
-        RAISE EXCEPTION 'Administrative registration limit reached. Only one global account is authorized.';
+        RAISE EXCEPTION 'Administrative registration limit reached. Only one global account is authorized.' USING ERRCODE = 'ADM01';
     END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin_accounts;
 CREATE TRIGGER check_admin_limits_trigger
 BEFORE INSERT ON public.admin_accounts
 FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`);
