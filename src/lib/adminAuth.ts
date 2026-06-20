@@ -91,6 +91,15 @@ export async function verifyPassword(password: string, storedHash: string): Prom
 export async function checkAdminExists(): Promise<boolean> {
   updateSupabaseClient();
   if (!supabase || !isSupabaseConfigured) {
+    const localAdmins = localStorage.getItem("academy_admins");
+    if (localAdmins) {
+      try {
+        const parsed = JSON.parse(localAdmins);
+        return Array.isArray(parsed) && parsed.length > 0;
+      } catch (_) {
+        return false;
+      }
+    }
     return false;
   }
   try {
@@ -122,7 +131,37 @@ export async function handleAdminSignup(
 ): Promise<{ success: boolean; data?: any; error?: string; code?: string }> {
   updateSupabaseClient();
   if (!supabase || !isSupabaseConfigured) {
-    return { success: false, error: "Database client is not initialized or configured." };
+    // Local offline simulation fallback
+    try {
+      const exists = await checkAdminExists();
+      if (exists) {
+        return {
+          success: false,
+          error: "An administrator account has already been registered globally. Signup is closed.",
+          code: "ADM01",
+        };
+      }
+
+      const hashedPassword = await hashPassword(password);
+      const newAdmin = {
+        id: "offline-admin-id-" + Date.now(),
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password: hashedPassword,
+        mfa_secret: null,
+        mfa_enabled: false,
+        created_at: new Date().toISOString()
+      };
+
+      const admins = [newAdmin];
+      localStorage.setItem("academy_admins", JSON.stringify(admins));
+      return { success: true, data: newAdmin };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message || "An unexpected offline registration error occurred."
+      };
+    }
   }
 
   try {
@@ -182,7 +221,32 @@ export async function handleAdminLogin(
 ): Promise<{ success: boolean; data?: any; error?: string; code?: string }> {
   updateSupabaseClient();
   if (!supabase || !isSupabaseConfigured) {
-    return { success: false, error: "Database client is not initialized or configured." };
+    // Local offline simulation fallback
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const localAdmins = localStorage.getItem("academy_admins");
+      if (!localAdmins) {
+        return { success: false, error: "No administrator accounts registered locally. Please sign up first." };
+      }
+      const parsedAdmins = JSON.parse(localAdmins);
+      if (!Array.isArray(parsedAdmins)) {
+        return { success: false, error: "Corrupted local storage admin registry." };
+      }
+      const user = parsedAdmins.find(admin => admin.email === cleanEmail);
+      if (!user) {
+        return { success: false, error: "Invalid email address or unauthorized credentials." };
+      }
+      const isMatched = await verifyPassword(password, user.password);
+      if (isMatched) {
+        return { success: true, data: user };
+      }
+      return { success: false, error: "Invalid password. Access unauthorized." };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message || "An unexpected offline authentication error occurred during login."
+      };
+    }
   }
 
   try {

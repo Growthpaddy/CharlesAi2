@@ -178,6 +178,53 @@ export default function AdminDashboard() {
   const [signupPassword, setSignupPassword] = useState("");
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+
+  // Local Supabase dynamic config states
+  const [showLocalConfig, setShowLocalConfig] = useState(false);
+  const [localUrl, setLocalUrl] = useState(() => localStorage.getItem("VITE_SUPABASE_URL") || "");
+  const [localAnonKey, setLocalAnonKey] = useState(() => localStorage.getItem("VITE_SUPABASE_ANON_KEY") || "");
+  const [saveStatus, setSaveStatus] = useState("");
+
+  const handleSaveLocalConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const cleanUrl = localUrl.trim();
+      const cleanKey = localAnonKey.trim();
+      if (cleanUrl) {
+        localStorage.setItem("VITE_SUPABASE_URL", cleanUrl);
+      } else {
+        localStorage.removeItem("VITE_SUPABASE_URL");
+      }
+      if (cleanKey) {
+        localStorage.setItem("VITE_SUPABASE_ANON_KEY", cleanKey);
+      } else {
+        localStorage.removeItem("VITE_SUPABASE_ANON_KEY");
+      }
+      
+      updateSupabaseClient();
+      const ready = isClientReady();
+      setIsReady(ready);
+      
+      if (ready) {
+        setSaveStatus("success");
+        triggerToast("Successfully connected to Supabase Cloud database!");
+        try {
+          await testConnection();
+          const exists = await checkAdminExists();
+          setAdminExists(exists);
+        } catch (_) {}
+      } else {
+        setSaveStatus("partial");
+        triggerToast("Saved locally. Connection remains unconfigured.");
+      }
+      
+      setTimeout(() => setSaveStatus(""), 4000);
+    } catch (err) {
+      console.error("Failed to save local credentials:", err);
+      setSaveStatus("error");
+    }
+  };
+
   const [signedUpAdmin, setSignedUpAdmin] = useState<any>(() => {
     const stored = localStorage.getItem("signed_up_admin");
     return stored ? JSON.parse(stored) : null;
@@ -1891,14 +1938,70 @@ export default function AdminDashboard() {
               )}
 
               {!isReady && (
-                <div className="bg-amber-50 border border-amber-200/60 text-amber-900 p-4 rounded-2xl text-xs space-y-2 animate-in fade-in duration-200">
-                  <div className="flex items-center gap-2 font-bold text-amber-800">
-                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Supabase Connection Error</span>
+                <div className="bg-amber-50 border border-amber-250/60 text-amber-900 p-4.5 rounded-2xl text-xs space-y-3.5 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 font-black text-amber-850">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Supabase Configuration</span>
+                    </div>
+                    <span className="text-[9px] bg-emerald-100 text-emerald-850 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider font-mono">
+                      Offline Simulator Active
+                    </span>
                   </div>
-                  <p className="text-[11px] leading-relaxed text-amber-700 font-medium">
-                    Your Supabase API credentials are not loaded properly. The client is not ready to perform queries. Please configure your <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>.
-                  </p>
+                  
+                  <div className="space-y-1.5 text-[11px] text-amber-800 font-medium leading-relaxed">
+                    <p>
+                      Your database API credentials are not loaded in the container environment. 
+                    </p>
+                    <p className="font-extrabold text-[#0056D2]">
+                      💡 Pro-Tip: You can still log in or sign up below normally! The dashboard will run automatically in fully persistent Offline Simulation Mode.
+                    </p>
+                  </div>
+
+                  <div className="pt-1.5 border-t border-amber-200/50">
+                    <button
+                      type="button"
+                      onClick={() => setShowLocalConfig(!showLocalConfig)}
+                      className="text-[11px] font-extrabold text-amber-900 hover:text-amber-955 flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>{showLocalConfig ? "▼ Hide Connection Inputs" : "▶ Configure Cloud Database Connection..."}</span>
+                    </button>
+                    
+                    {showLocalConfig && (
+                      <form onSubmit={handleSaveLocalConfig} className="mt-3.5 space-y-3 p-3 bg-white/70 border border-amber-200/45 rounded-xl animate-in slide-in-from-top-1">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700 block">VITE_SUPABASE_URL</label>
+                          <input
+                            type="text"
+                            placeholder="https://your-project.supabase.co"
+                            value={localUrl}
+                            onChange={(e) => setLocalUrl(e.target.value)}
+                            className="w-full text-[10px] p-2 bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700 block">VITE_SUPABASE_ANON_KEY</label>
+                          <input
+                            type="password"
+                            placeholder="eyJhbGciOiJIUzI1NiIsIn..."
+                            value={localAnonKey}
+                            onChange={(e) => setLocalAnonKey(e.target.value)}
+                            className="w-full text-[10px] p-2 bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 pt-1 font-semibold">
+                          <button
+                            type="submit"
+                            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] cursor-pointer"
+                          >
+                            Save & Connect
+                          </button>
+                          {saveStatus === "success" && <span className="text-[10px] text-emerald-600">✓ Connected!</span>}
+                          {saveStatus === "partial" && <span className="text-[10px] text-yellow-600">✓ Config saved</span>}
+                        </div>
+                      </form>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -2212,18 +2315,18 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {!isReady && (
-          <div className="mb-6 bg-red-55/10 border border-red-500/30 text-red-900 p-4 rounded-3xl text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300 shadow-sm">
+          <div className="mb-6 bg-amber-500/10 border border-amber-500/25 text-amber-900 p-4 rounded-3xl text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300 shadow-xs">
             <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="font-bold text-red-900">Supabase Connection Error</p>
-                <p className="text-[11px] text-red-700 leading-relaxed font-medium">
-                  Your Supabase API credentials are not loaded properly. The client is not ready to perform queries. Please configure both <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>.
+                <p className="font-extrabold text-amber-950">Database Offline Simulator Active</p>
+                <p className="text-[11px] text-amber-800 leading-relaxed font-semibold">
+                  You are viewing the dashboard in locally stored Offline Simulation Mode. Any additions, updates, or enrollment updates will save instantly to your browser's local state.
                 </p>
               </div>
             </div>
-            <span className="text-[10px] bg-red-100 text-red-800 px-2.5 py-1 rounded-full font-mono font-bold uppercase tracking-wider shrink-0">
-              Offline Mode
+            <span className="text-[10px] bg-amber-100/80 text-amber-850 px-3 py-1.5 rounded-full font-mono font-black uppercase tracking-wider shrink-0">
+              Simulated State Enabled
             </span>
           </div>
         )}

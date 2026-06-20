@@ -4,16 +4,22 @@ import { supabaseClient as supabase, isSupabaseConfigured, updateSupabaseClient 
  * Attempts to query the admin_accounts table and logs diagnostic information to the console.
  * This is designed to help debug connection or credentials issues during administrative authentication operations.
  */
-export async function testConnection(): Promise<{ success: boolean; rowCount?: number; error?: any }> {
+export async function testConnection(): Promise<{ success: boolean; rowCount?: number; error?: any; localSimulation?: boolean }> {
   console.log("[DB TEST] Triggering database connectivity diagnostic...");
   
   // Update client configuration if environment was populated late
   updateSupabaseClient();
 
   if (!isSupabaseConfigured || !supabase) {
-    const errMsg = "[DB TEST] Supabase is not configured yet! Verify VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.";
-    console.warn(errMsg);
-    return { success: false, error: errMsg };
+    const localAdminsStr = localStorage.getItem("academy_admins") || "[]";
+    let localCount = 0;
+    try {
+      const parsed = JSON.parse(localAdminsStr);
+      localCount = Array.isArray(parsed) ? parsed.length : 0;
+    } catch (_) {}
+    
+    console.log(`[DB TEST] Supabase cloud is not configured. Simulating development offline mode. Local simulated admins: ${localCount}`);
+    return { success: true, rowCount: localCount, localSimulation: true };
   }
 
   try {

@@ -8,6 +8,9 @@ const getSupabaseUrl = (): string => {
   if (!url) {
     url = (window as any).__SUPABASE_URL__ || "";
   }
+  if (!url) {
+    url = localStorage.getItem("VITE_SUPABASE_URL") || "";
+  }
   return (typeof url === "string" ? url : "").trim();
 };
 
@@ -18,6 +21,9 @@ const getSupabaseAnonKey = (): string => {
   } catch (_) {}
   if (!key) {
     key = (window as any).__SUPABASE_ANON_KEY__ || "";
+  }
+  if (!key) {
+    key = localStorage.getItem("VITE_SUPABASE_ANON_KEY") || "";
   }
   return (typeof key === "string" ? key : "").trim();
 };
