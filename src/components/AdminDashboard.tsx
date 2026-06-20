@@ -161,83 +161,23 @@ export default function AdminDashboard() {
       }
     }
 
-    // Generate standard cryptographically secure TOTP Secret & configuration
-    try {
-      const tempSecret = new OTPAuth.Secret({ size: 20 });
-      const base32Str = tempSecret.base32;
-      const totpObj = new OTPAuth.TOTP({
-        issuer: "DSP Academy",
-        label: signupEmail.trim().toLowerCase(),
-        algorithm: "SHA1",
-        digits: 6,
-        period: 30,
-        secret: tempSecret
-      });
-      const uriStr = totpObj.toString();
-      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(uriStr)}`;
+    const newAdmin = {
+      name: signupName.trim(),
+      email: signupEmail.trim().toLowerCase(),
+      password: signupPassword,
+      mfa_secret: null,
+      mfa_enabled: false
+    };
 
-      setMfaSetupData({
-        secret: base32Str,
-        qrUrl: qrImageUrl
-      });
-      setMfaSetupToken("");
-      setIsSigningUp(false);
-      triggerToast("Scan the secure MFA QR Code using your Authenticator mobile app to bind.");
-    } catch (err) {
-      console.error("Failed to initialize system TOTP generator:", err);
-      setAdminAuthErr("Failed to initialize security key generator. Try again.");
-      setIsSigningUp(false);
-    }
-  };
-
-  const handleVerifyAndCompleteSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!mfaSetupData || !signupName.trim() || !signupEmail.trim() || !signupPassword) {
-      setAdminAuthErr("Signup state has expired. Please refresh and try again.");
-      return;
-    }
-
-    setAdminAuthErr("");
-    setIsSigningUp(true);
-
-    // Verify 6-digit TOTP token using otpauth
-    try {
-      const totpVerify = new OTPAuth.TOTP({
-        issuer: "DSP Academy",
-        label: signupEmail.trim().toLowerCase(),
-        algorithm: "SHA1",
-        digits: 6,
-        period: 30,
-        secret: OTPAuth.Secret.fromBase32(mfaSetupData.secret)
-      });
-
-      const delta = totpVerify.validate({
-        token: mfaSetupToken.trim(),
-        window: 1 // allows a 30-sec clock drift
-      });
-
-      if (delta === null) {
-        setAdminAuthErr("The verification security code is invalid. Please confirm your device clock matches UTC time and check your authenticator application.");
-        setIsSigningUp(false);
-        return;
-      }
-
-      const newAdmin = {
-        name: signupName.trim(),
-        email: signupEmail.trim().toLowerCase(),
-        password: signupPassword,
-        mfa_secret: mfaSetupData.secret,
-        mfa_enabled: true
-      };
-
-      if (supabase && isSupabaseConfigured) {
-        // Insert record into Supabase
+    if (supabase && isSupabaseConfigured) {
+      try {
+        // Direct administrative insertion to Supabase without any MFA setup requirement
         const { error } = await supabase.from("admin_accounts").insert({
           name: newAdmin.name,
           email: newAdmin.email,
           password: newAdmin.password,
-          mfa_secret: newAdmin.mfa_secret,
-          mfa_enabled: true
+          mfa_secret: null,
+          mfa_enabled: false
         });
 
         if (error) {
@@ -272,24 +212,30 @@ export default function AdminDashboard() {
           setIsSigningUp(false);
           return;
         }
+      } catch (err) {
+        console.error("Error inserting remote admin account:", err);
+        setAdminAuthErr("Failed to connect to database during admin registry insertion.");
+        setIsSigningUp(false);
+        return;
       }
-
-      localStorage.setItem("signed_up_admin", JSON.stringify(newAdmin));
-      setSignedUpAdmin(newAdmin);
-      setIsSigningUp(false);
-      
-      // Navigate to Sign In component
-      setAuthMode("signin");
-      setAdminEmail(newAdmin.email);
-      setAdminPassword("");
-      setMfaSetupData(null);
-      setMfaSetupToken("");
-      triggerToast("Administrator account successfully registered with active MFA. Sign in to access your academy.");
-    } catch (err) {
-      console.error("MFA Validation Error during user signup phase:", err);
-      setAdminAuthErr("Multi-Factor cryptographical check failed. Verify configuration and security codes.");
-      setIsSigningUp(false);
     }
+
+    localStorage.setItem("signed_up_admin", JSON.stringify(newAdmin));
+    setSignedUpAdmin(newAdmin);
+    setIsSigningUp(false);
+    
+    // Navigate straight to Sign In component
+    setAuthMode("signin");
+    setAdminEmail(newAdmin.email);
+    setAdminPassword("");
+    setMfaSetupData(null);
+    setMfaSetupToken("");
+    triggerToast("Administrator account successfully registered. Please sign in.");
+  };
+
+  const handleVerifyAndCompleteSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    triggerToast("System updated: Multi-factor verification is no longer required during registration.");
   };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
@@ -1701,87 +1647,6 @@ export default function AdminDashboard() {
                   className="w-full text-center text-[10px] text-slate-400 hover:text-slate-600 transition-all font-medium py-1"
                 >
                   Cancel and Sign In Again
-                </button>
-              </form>
-            </div>
-          ) : mfaSetupData ? (
-            <div className="space-y-5 relative z-10 animate-in fade-in duration-300">
-              <div className="text-center space-y-2">
-                <div className="mx-auto w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center border border-emerald-100 shadow-xs">
-                  <QrCode className="w-6 h-6 animate-pulse" />
-                </div>
-                <h1 className="font-display text-xl font-black text-slate-900">Secure Setup MFA</h1>
-                <p className="text-[11px] text-slate-500">
-                  Scan this QR code using Google Authenticator, Microsoft Authenticator, or generic TOTP app to authorize admin registration.
-                </p>
-              </div>
-
-              {adminAuthErr && (
-                <div className="bg-rose-50 border border-rose-250 text-rose-850 p-3.5 rounded-2xl text-xs font-semibold flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <span>{adminAuthErr}</span>
-                </div>
-              )}
-
-              <div className="flex justify-center p-3 bg-slate-50 border border-slate-205 rounded-2xl mx-auto w-fit">
-                <img
-                  src={mfaSetupData.qrUrl}
-                  alt="MFA QR Code"
-                  className="w-[170px] h-[170px] select-none shadow-xs rounded-xl"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center space-y-1">
-                <span className="text-[9px] text-slate-400 uppercase font-semibold block tracking-wider">Manual Entry Code</span>
-                <code className="text-xs font-mono font-bold bg-white px-2 py-1 select-all border border-slate-150 rounded text-slate-800 block cursor-default break-all">
-                  {mfaSetupData.secret}
-                </code>
-              </div>
-
-              <form onSubmit={handleVerifyAndCompleteSignup} className="space-y-4">
-                <div className="space-y-1.5 focus-within:ring-0">
-                  <label className="text-xs font-bold text-slate-700 block text-left">6-Digit Authenticator Code</label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    required
-                    placeholder="e.g. 123456"
-                    value={mfaSetupToken}
-                    onChange={(e) => setMfaSetupToken(e.target.value.replace(/\D/g, ""))}
-                    className="w-full text-center text-xl font-mono tracking-widest p-3 bg-slate-50 border border-[#10B981]/30 text-slate-900 rounded-xl focus:outline-none focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] transition-all font-bold"
-                    autoFocus
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSigningUp}
-                  className="w-full py-3.5 bg-emerald-700 hover:bg-emerald-600 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {isSigningUp ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                      <span>Completing setup...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="w-4 h-4" />
-                      <span>Verify & Register Admin &rarr;</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMfaSetupData(null);
-                    setMfaSetupToken("");
-                    setAdminAuthErr("");
-                  }}
-                  className="w-full text-center text-[10px] text-slate-400 hover:text-slate-655 transition-all font-medium py-1"
-                >
-                  Cancel and Edit Signup Details
                 </button>
               </form>
             </div>
