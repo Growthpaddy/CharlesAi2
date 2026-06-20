@@ -62,5 +62,16 @@ export const updateSupabaseClient = () => {
   }
 };
 
+/**
+ * Sync evaluation check. Logs the initialized URL and returns whether the client is ready for queries.
+ */
+export const isClientReady = (): boolean => {
+  updateSupabaseClient();
+  const ready = isSupabaseConfigured && supabaseClient !== null;
+  const url = getSupabaseUrl();
+  console.log(`[SUPABASE CONNECTIVITY CHECK] Client URL: "${url || "NOT CONFIGURED"}". Ready to query? ${ready}`);
+  return ready;
+};
+
 // Initial evaluation at module load
 updateSupabaseClient();

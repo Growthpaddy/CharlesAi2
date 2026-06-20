@@ -7,7 +7,7 @@ import React, { useState, useEffect } from "react";
 import { 
   LayoutGrid, BookOpen, Users, Receipt, ClipboardList, Sparkles, 
   Video, PenTool, MessageSquare, GraduationCap, BarChart3, Star,
-  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Eye, Trash2, Edit2, Check, X, 
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Eye, EyeOff, Trash2, Edit2, Check, X, 
   Search, Calendar, Mail, Phone, DollarSign, Clock, FileText, 
   Download, ArrowUpRight, CheckCircle2, AlertCircle, Heart, FolderPlus,
   Tv, Award, RefreshCw, Layers, UserPlus, LogOut, ShieldCheck, Key, QrCode, Lock, Shield
@@ -17,6 +17,7 @@ import { db, Course, CourseModule, Lesson, Category } from "../lib/db";
 import { supabase, isSupabaseConfigured, fetchSupabaseConfigFromServer, updateSupabaseClient } from "../lib/supabase";
 import { checkAdminExists, handleAdminSignup as dbAdminSignup, handleAdminLogin as dbAdminLogin, runSupabaseDiagnostics } from "../lib/adminAuth";
 import { useNavigation } from "../context/NavigationContext";
+import { isClientReady } from "../lib/supabaseClient";
 import { AdminGuard } from "./AdminGuard";
 
 // Define Admin Tab type
@@ -94,12 +95,25 @@ interface GradeRecord {
 export default function AdminDashboard() {
   const { navigateTo } = useNavigation();
 
+  // Supabase readiness state
+  const [isReady, setIsReady] = useState<boolean>(() => isClientReady());
+
+  useEffect(() => {
+    const checkReady = () => {
+      setIsReady(isClientReady());
+    };
+    checkReady();
+    const interval = setInterval(checkReady, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Gate authentication states
   const [isAdminAuth, setIsAdminAuth] = useState<boolean>(() => {
     return localStorage.getItem("is_admin_authenticated") === "true";
   });
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminAuthErr, setAdminAuthErr] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -108,6 +122,7 @@ export default function AdminDashboard() {
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [signedUpAdmin, setSignedUpAdmin] = useState<any>(() => {
     const stored = localStorage.getItem("signed_up_admin");
@@ -1808,6 +1823,18 @@ export default function AdminDashboard() {
                 </div>
               )}
 
+              {!isReady && (
+                <div className="bg-amber-50 border border-amber-200/60 text-amber-900 p-4 rounded-2xl text-xs space-y-2 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2 font-bold text-amber-800">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Supabase Connection Error</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-amber-700 font-medium">
+                    Your Supabase API credentials are not loaded properly. The client is not ready to perform queries. Please configure your <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>.
+                  </p>
+                </div>
+              )}
+
               {!(adminExists || signedUpAdmin) && authMode === "signup" ? (
                 <form onSubmit={handleAdminSignup} className="space-y-4 relative z-10 animate-in fade-in duration-200">
                   <div className="space-y-1.5">
@@ -1836,14 +1863,23 @@ export default function AdminDashboard() {
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 block">Create Password</label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="•••••••••••••"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showSignupPassword ? "text" : "password"}
+                        required
+                        placeholder="•••••••••••••"
+                        value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)}
+                        className="w-full text-xs p-3 pr-10 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSignupPassword(!showSignupPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                      >
+                        {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <button
@@ -1880,14 +1916,23 @@ export default function AdminDashboard() {
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 block">Password</label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="•••••••••••••"
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      className="w-full text-xs p-3 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all font-medium"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showAdminPassword ? "text" : "password"}
+                        required
+                        placeholder="•••••••••••••"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        className="w-full text-xs p-3 pr-10 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition-all font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                      >
+                        {showAdminPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <button
@@ -2099,6 +2144,23 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
       {/* CENTRALIZED GRID WORKSPACE CONTAINER */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
+        {!isReady && (
+          <div className="mb-6 bg-red-55/10 border border-red-500/30 text-red-900 p-4 rounded-3xl text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300 shadow-sm">
+            <div className="flex gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-bold text-red-900">Supabase Connection Error</p>
+                <p className="text-[11px] text-red-700 leading-relaxed font-medium">
+                  Your Supabase API credentials are not loaded properly. The client is not ready to perform queries. Please configure both <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>.
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] bg-red-100 text-red-800 px-2.5 py-1 rounded-full font-mono font-bold uppercase tracking-wider shrink-0">
+              Offline Mode
+            </span>
+          </div>
+        )}
+
         {/* Dynamic State Toast Indicator */}
         {toastMsg && (
           <div className="fixed top-20 right-6 bg-[#08142B] text-white border border-white/10 px-5 py-3 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-top-4 duration-300 max-w-sm flex items-start gap-3">

@@ -45,23 +45,43 @@ export async function verifyPassword(password: string, storedHash: string): Prom
     return false;
   }
 
+  // Trim the stored hash to handle copy-paste or database string padding robustly
+  const cleanStoredHash = storedHash.trim();
+
   // 1. If stored hash is formatted as a bcrypt string, use bcryptjs comparison
-  if (storedHash.startsWith("$2a$") || storedHash.startsWith("$2b$") || storedHash.startsWith("$2y$")) {
+  const isBcryptStyle = cleanStoredHash.startsWith("$2a$") || 
+                        cleanStoredHash.startsWith("$2b$") || 
+                        cleanStoredHash.startsWith("$2y$") || 
+                        cleanStoredHash.startsWith("$2x$") ||
+                        /^\$2[abxy]?\$\d+\$[./A-Za-z0-9]{53}$/.test(cleanStoredHash);
+
+  if (isBcryptStyle) {
     try {
-      return await bcrypt.compare(password, storedHash);
+      // Perform the secure bcrypt compare. It is asynchronous and returns a promise.
+      const match = await bcrypt.compare(password, cleanStoredHash);
+      if (match) {
+        return true;
+      }
     } catch (err) {
-      console.error("Bcrypt comparison error:", err);
+      console.error("[verifyPassword] Bcrypt comparison error:", err);
+      // Fallback in case comparison fails due to unexpected environment constraints
     }
   }
 
   // 2. Check older helper SHA-256 hash match
   const fallbackSha = await hashPasswordSha256(password);
-  if (storedHash === fallbackSha) {
+  if (cleanStoredHash === fallbackSha) {
+    console.log("[verifyPassword] SHA-256 fallback hash matches successfully.");
     return true;
   }
 
   // 3. Fallback to raw plaintext match (e.g. for initial sandbox/manual entries)
-  return storedHash === password;
+  if (cleanStoredHash === password) {
+    console.warn("[verifyPassword] Security warning: Plaintext password match occurred. Consider updating password to direct bcrypt hashing.");
+    return true;
+  }
+
+  return false;
 }
 
 /**
