@@ -19,6 +19,8 @@ import { checkAdminExists, handleAdminSignup as dbAdminSignup, handleAdminLogin 
 import { useNavigation } from "../context/NavigationContext";
 import { isClientReady } from "../lib/supabaseClient";
 import { AdminGuard } from "./AdminGuard";
+import { createJWT, verifyJWT } from "../lib/jwt";
+import { testConnection } from "../lib/dbTest";
 
 // Define Admin Tab type
 type AdminTab = 
@@ -107,10 +109,62 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // Run database connectivity diagnostics on load
+  useEffect(() => {
+    const runDiagnostics = async () => {
+      try {
+        await testConnection();
+      } catch (err) {
+        console.error("Connectivity diagnostic crashed:", err);
+      }
+    };
+    runDiagnostics();
+  }, []);
+
   // Gate authentication states
   const [isAdminAuth, setIsAdminAuth] = useState<boolean>(() => {
     return localStorage.getItem("is_admin_authenticated") === "true";
   });
+
+  // Automatically verify JWT Session Token on mount and ensure no unwanted logouts across refreshes
+  useEffect(() => {
+    const runJwtValidation = async () => {
+      const storedToken = localStorage.getItem("admin_session_token");
+      if (!storedToken) {
+        // If they have standard state but no JWT token (e.g. legacy/transitional logins), issue one immediately
+        if (localStorage.getItem("is_admin_authenticated") === "true") {
+          const email = localStorage.getItem("admin_logged_in_email") || "admin@aionlinebusiness.org";
+          const name = localStorage.getItem("admin_logged_in_name") || "Chief Academic Director";
+          try {
+            const token = await createJWT({ email, name });
+            localStorage.setItem("admin_session_token", token);
+          } catch (err) {
+            console.error("Failed to generate transitional session JWT:", err);
+          }
+        }
+        return;
+      }
+
+      try {
+        const payload = await verifyJWT(storedToken);
+        if (!payload) {
+          console.warn("[JWT Security] Session token is invalid or has expired.");
+          handleAdminLogout();
+        } else {
+          // Keep the session alive and in absolute synchronization
+          localStorage.setItem("is_admin_authenticated", "true");
+          localStorage.setItem("admin_logged_in_name", payload.name);
+          localStorage.setItem("admin_logged_in_email", payload.email);
+          setIsAdminAuth(true);
+        }
+      } catch (err) {
+        console.error("Error during automatic JWT verification:", err);
+        handleAdminLogout();
+      }
+    };
+
+    runJwtValidation();
+  }, []);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminPassword, setShowAdminPassword] = useState(false);
@@ -317,7 +371,13 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Maintain admin authenticated state properly
+      // Maintain admin authenticated state properly with secure JWT
+      try {
+        const token = await createJWT({ email: adminEmail, name: displayName });
+        localStorage.setItem("admin_session_token", token);
+      } catch (err) {
+        console.error("JWT signing failed during login:", err);
+      }
       localStorage.setItem("is_admin_authenticated", "true");
       localStorage.setItem("admin_logged_in_name", displayName);
       localStorage.setItem("admin_logged_in_email", adminEmail);
@@ -369,7 +429,13 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Valid token! Grant auth access
+      // Valid token! Grant auth access with secure JWT
+      try {
+        const token = await createJWT({ email: mfaChallengeData.email, name: mfaChallengeData.name });
+        localStorage.setItem("admin_session_token", token);
+      } catch (err) {
+        console.error("[MFA] JWT signing failed:", err);
+      }
       localStorage.setItem("is_admin_authenticated", "true");
       localStorage.setItem("admin_logged_in_name", mfaChallengeData.name);
       localStorage.setItem("admin_logged_in_email", mfaChallengeData.email);
@@ -400,6 +466,7 @@ export default function AdminDashboard() {
     localStorage.removeItem("is_admin_authenticated");
     localStorage.removeItem("admin_logged_in_name");
     localStorage.removeItem("admin_logged_in_email");
+    localStorage.removeItem("admin_session_token");
     setIsAdminAuth(false);
     triggerToast("Logged out of the administration console securely.");
     navigateTo("admin");
