@@ -5,8 +5,24 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || "").trim();
-const supabaseAnonKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "").trim();
+const getSupabaseUrl = (): string => {
+  const url = 
+    (import.meta as any).env?.VITE_SUPABASE_URL || 
+    (window as any).__SUPABASE_URL__ || 
+    "";
+  return (typeof url === "string" ? url : "").trim();
+};
+
+const getSupabaseAnonKey = (): string => {
+  const key = 
+    (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 
+    (window as any).__SUPABASE_ANON_KEY__ || 
+    "";
+  return (typeof key === "string" ? key : "").trim();
+};
+
+const supabaseUrl = getSupabaseUrl();
+const supabaseAnonKey = getSupabaseAnonKey();
 
 // Ensure the URL is truthy, non-placeholder, and is a valid HTTP/HTTPS URL
 const isValidHttpUrl = (url: string): boolean => {
@@ -25,10 +41,18 @@ export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey && isValid
 let supabaseClient = null;
 if (isSupabaseConfigured) {
   try {
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    });
+    console.log("Supabase client initialized successfully with URL:", supabaseUrl);
   } catch (err) {
     console.error("Failed to initialize Supabase client with active credentials:", err);
   }
+} else {
+  console.warn("Supabase is not configured yet. Checked URL:", supabaseUrl || "(empty)");
 }
 
 export const supabase = supabaseClient;

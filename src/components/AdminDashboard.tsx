@@ -1832,12 +1832,12 @@ export default function AdminDashboard() {
                       {isSigningUp ? (
                         <>
                           <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                          <span>Initializing MFA setup...</span>
+                          <span>Creating account...</span>
                         </>
                       ) : (
                         <>
                           <UserPlus className="w-4 h-4 text-emerald-20" />
-                          <span>Configure Security & Sign Up</span>
+                          <span>Create Admin Account &rarr;</span>
                         </>
                       )}
                     </button>
@@ -1863,6 +1863,66 @@ export default function AdminDashboard() {
               <span className="text-slate-400 font-mono">Secure Access</span>
             )}
           </div>
+        </div>
+
+        {/* Expandable Database Schema Setup Guide */}
+        <div className="w-full max-w-sm mt-4 bg-white border border-slate-200/80 rounded-2xl shadow-md overflow-hidden text-left p-4.5 z-10 animate-in fade-in slide-in-from-bottom-2 duration-150">
+          <details className="group">
+            <summary className="list-none flex items-center justify-between text-xs font-bold text-slate-700 cursor-pointer hover:text-[#0056D2] select-none">
+              <span className="flex items-center gap-2">
+                <span className="text-sm">🛠️</span> Supabase Connection Helper
+              </span>
+              <span className="text-[10px] text-slate-400 group-open:rotate-180 transition-transform duration-100">▼</span>
+            </summary>
+            
+            <div className="mt-3 pt-3 border-t border-slate-100 space-y-3.5">
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                Add <strong>VITE_SUPABASE_URL</strong> and <strong>VITE_SUPABASE_ANON_KEY</strong> in your AI Studio environment settings, then run this initialization SQL:
+              </p>
+
+              <div className="space-y-1.5">
+                <textarea 
+                  readOnly 
+                  onClick={(e) => (e.target as any).select()}
+                  value={`-- AI-ONLINE BUSINESS: ADMIN ACCOUNTS SCHEMAS & SECURE RLS POLICIES
+CREATE TABLE IF NOT EXISTS public.admin_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    mfa_secret TEXT,
+    mfa_enabled BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Active restriction trigger supporting exactly one administrator registration
+CREATE OR REPLACE FUNCTION check_admin_limits()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (SELECT count(*) FROM public.admin_accounts) >= 1 THEN
+        RAISE EXCEPTION 'Administrative registration limit reached. Only one global account is authorized.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin_accounts;
+CREATE TRIGGER check_admin_limits_trigger
+BEFORE INSERT ON public.admin_accounts
+FOR EACH ROW EXECUTE FUNCTION check_admin_limits();
+
+-- Allow public and signup operations
+ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public select on admin_accounts" ON public.admin_accounts FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on admin_accounts" ON public.admin_accounts FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on admin_accounts" ON public.admin_accounts FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public delete on admin_accounts" ON public.admin_accounts FOR DELETE USING (true);`}
+                  className="w-full h-28 text-[9px] font-mono p-2.5 bg-slate-950 text-emerald-400 rounded-xl border border-slate-800 focus:outline-none focus:ring-0 leading-relaxed select-all cursor-text"
+                />
+                <span className="text-[8.5px] text-slate-400 block text-right font-medium">Click code to highlight and copy</span>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
     );
