@@ -457,7 +457,7 @@ export default function AdminDashboard() {
 
     try {
       const totpVerify = new OTPAuth.TOTP({
-        issuer: "DSP Academy",
+        issuer: "Ai Academy",
         label: mfaChallengeData.email,
         algorithm: "SHA1",
         digits: 6,
@@ -536,6 +536,9 @@ export default function AdminDashboard() {
   // Sidebar fold/unfold layout state (Collapsible)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+  const [isAcademicExpanded, setIsAcademicExpanded] = useState(true);
+  const [isOpsExpanded, setIsOpsExpanded] = useState(true);
+  const [isEngageExpanded, setIsEngageExpanded] = useState(true);
 
   // Core LMS states
   const [categories, setCategories] = useState<Category[]>([]);
@@ -2606,31 +2609,123 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
               </div>
 
               {/* Side navigation menu: Scrollable with a fixed height */}
-              <div className="h-[432px] overflow-y-auto pr-1 space-y-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-                <nav className="space-y-1" aria-label="Admin Navigation Panel">
-                  {menuItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          setActiveTab(item.id as AdminTab);
-                          setSearchQuery(""); // Clear lookup filters
-                        }}
-                        className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all group cursor-pointer ${
-                          isActive 
-                            ? "bg-[#EEF6FF] text-[#0056D2] font-black shadow-xs-soft" 
-                            : "text-slate-650 hover:bg-slate-50 hover:text-slate-900 font-bold text-xs"
-                        }`}
-                      >
-                        <Icon className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-105 ${
-                          isActive ? "text-[#0056D2]" : "text-slate-400 group-hover:text-slate-600"
-                        }`} />
-                        <span className="text-xs tracking-tight truncate">{item.label}</span>
-                      </button>
-                    );
-                  })}
+              <div className="h-[432px] overflow-y-auto pr-1 space-y-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent text-left">
+                <nav className="space-y-4" aria-label="Admin Navigation Panel">
+                  
+                  {/* Category A: Academic Desk */}
+                  <div className="space-y-1">
+                    <div 
+                      onClick={() => setIsAcademicExpanded(!isAcademicExpanded)}
+                      className="flex items-center justify-between text-[10px] font-mono font-black text-slate-400 hover:text-[#0056D2] uppercase tracking-widest py-1.5 px-1 cursor-pointer select-none transition-colors"
+                    >
+                      <span>Academic Desk</span>
+                      {isAcademicExpanded ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-[#0056D2] animate-pulse" />}
+                    </div>
+                    {isAcademicExpanded && (
+                      <div className="space-y-0.5 pl-1 animate-in fade-in duration-200">
+                        {menuItems.filter(item => ["dashboard", "courses", "students", "live", "grading", "analytics"].includes(item.id)).map((item) => {
+                          const Icon = item.icon;
+                          const isActive = activeTab === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => {
+                                setActiveTab(item.id as AdminTab);
+                                setSearchQuery(""); // Clear lookup filters
+                              }}
+                              className={`w-full flex items-center gap-3 py-2 px-2.5 rounded-xl text-left transition-all group cursor-pointer ${
+                                isActive 
+                                  ? "bg-[#EEF6FF] text-[#0056D2] font-black shadow-xs-soft" 
+                                  : "text-slate-650 hover:bg-slate-50 hover:text-slate-900 font-bold text-xs"
+                              }`}
+                            >
+                              <Icon className={`w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-105 ${
+                                isActive ? "text-[#0056D2]" : "text-slate-400 group-hover:text-slate-600"
+                              }`} />
+                              <span className="text-xs tracking-tight truncate">{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Category B: Operations & Finance */}
+                  <div className="space-y-1">
+                    <div 
+                      onClick={() => setIsOpsExpanded(!isOpsExpanded)}
+                      className="flex items-center justify-between text-[10px] font-mono font-black text-slate-400 hover:text-[#0056D2] uppercase tracking-widest py-1.5 px-1 cursor-pointer select-none transition-colors"
+                    >
+                      <span>Operations & Finance</span>
+                      {isOpsExpanded ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-[#0056D2] animate-pulse" />}
+                    </div>
+                    {isOpsExpanded && (
+                      <div className="space-y-0.5 pl-1 animate-in fade-in duration-200">
+                        {menuItems.filter(item => ["invoices", "survey"].includes(item.id)).map((item) => {
+                          const Icon = item.icon;
+                          const isActive = activeTab === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => {
+                                setActiveTab(item.id as AdminTab);
+                                setSearchQuery(""); // Clear lookup filters
+                              }}
+                              className={`w-full flex items-center gap-3 py-2 px-2.5 rounded-xl text-left transition-all group cursor-pointer ${
+                                isActive 
+                                  ? "bg-[#EEF6FF] text-[#0056D2] font-black shadow-xs-soft" 
+                                  : "text-slate-650 hover:bg-slate-50 hover:text-slate-900 font-bold text-xs"
+                              }`}
+                            >
+                              <Icon className={`w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-105 ${
+                                isActive ? "text-[#0056D2]" : "text-slate-400 group-hover:text-slate-600"
+                              }`} />
+                              <span className="text-xs tracking-tight truncate">{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Category C: Engagement & Growth */}
+                  <div className="space-y-1">
+                    <div 
+                      onClick={() => setIsEngageExpanded(!isEngageExpanded)}
+                      className="flex items-center justify-between text-[10px] font-mono font-black text-slate-400 hover:text-[#0056D2] uppercase tracking-widest py-1.5 px-1 cursor-pointer select-none transition-colors"
+                    >
+                      <span>Engagement Hub</span>
+                      {isEngageExpanded ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-[#0056D2] animate-pulse" />}
+                    </div>
+                    {isEngageExpanded && (
+                      <div className="space-y-0.5 pl-1 animate-in fade-in duration-200">
+                        {menuItems.filter(item => ["leads", "blog", "kb", "testimonials"].includes(item.id)).map((item) => {
+                          const Icon = item.icon;
+                          const isActive = activeTab === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => {
+                                setActiveTab(item.id as AdminTab);
+                                setSearchQuery(""); // Clear lookup filters
+                              }}
+                              className={`w-full flex items-center gap-3 py-2 px-2.5 rounded-xl text-left transition-all group cursor-pointer ${
+                                isActive 
+                                  ? "bg-[#EEF6FF] text-[#0056D2] font-black shadow-xs-soft" 
+                                  : "text-slate-650 hover:bg-slate-50 hover:text-slate-900 font-bold text-xs"
+                              }`}
+                            >
+                              <Icon className={`w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-105 ${
+                                isActive ? "text-[#0056D2]" : "text-slate-400 group-hover:text-slate-600"
+                              }`} />
+                              <span className="text-xs tracking-tight truncate">{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
                 </nav>
               </div>
 

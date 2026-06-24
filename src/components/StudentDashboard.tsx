@@ -94,6 +94,8 @@ export default function StudentDashboard() {
 
   // Tab selection for Sidebar
   const [activeTab, setActiveTab] = useState<"enrolled" | "catalog">("enrolled");
+  const [isCloudSyncExpanded, setIsCloudSyncExpanded] = useState(true);
+  const [isActiveDeskExpanded, setIsActiveDeskExpanded] = useState(true);
 
   // Load state and authenticate session
   const checkAuthAndLoadData = () => {
@@ -884,7 +886,7 @@ export default function StudentDashboard() {
             <div className="text-left space-y-0.5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold text-[#2D7FF9] uppercase tracking-wider font-mono">
-                  DSP Study Portal
+                  Ai Study Portal
                 </span>
                 {isAdminPreview ? (
                   <span className="bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[9px] font-mono font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
@@ -969,11 +971,19 @@ export default function StudentDashboard() {
             </div>
 
             {/* Supabase 'user_lessons' Progress Widget */}
-            <div id="supabase-user-lessons-progress" className="bg-white border border-gray-150 rounded-2xl p-4.5 shadow-sm text-left space-y-3.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-black text-[#0B1B3D] uppercase tracking-wider flex items-center gap-1.5">
+            <div id="supabase-user-lessons-progress" className="bg-white border border-gray-150 rounded-2xl p-4.5 shadow-sm text-left space-y-3.5 transition-all">
+              <div 
+                className="flex items-center justify-between cursor-pointer select-none group"
+                onClick={() => setIsCloudSyncExpanded(!isCloudSyncExpanded)}
+              >
+                <span className="text-xs font-mono font-black text-[#0B1B3D] uppercase tracking-wider flex items-center gap-1.5 group-hover:text-emerald-600 transition-colors">
                   <Database className="w-4 h-4 text-emerald-500" />
                   Cloud Progress Sync
+                  {isCloudSyncExpanded ? (
+                    <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 animate-pulse" />
+                  )}
                 </span>
                 <span className="text-[9px] font-mono bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold border border-emerald-100 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -981,76 +991,105 @@ export default function StudentDashboard() {
                 </span>
               </div>
               
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-xs font-bold text-slate-700">
-                  <span>Supabase Completion</span>
-                  <span className="text-emerald-600 font-mono font-black text-sm">
-                    {getSupabaseGlobalProgressPct()}%
-                  </span>
-                </div>
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden relative">
-                  <div 
-                    className="h-full bg-emerald-500 transition-all duration-500 rounded-full"
-                    style={{ width: `${getSupabaseGlobalProgressPct()}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-[9px] font-medium text-slate-400 leading-normal">
-                    Verified live in <code className="font-mono bg-slate-50 text-slate-600 px-1 py-0.5 rounded text-[8px]">user_lessons</code>
-                  </p>
-                  <button 
-                    onClick={() => fetchUserLessons()}
-                    className="text-[9px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline cursor-pointer"
+              <AnimatePresence initial={false}>
+                {isCloudSyncExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden space-y-3.5 pt-1"
                   >
-                    <RefreshCw className="w-2.5 h-2.5 animate-spin-hover" />
-                    Force Reload
-                  </button>
-                </div>
-              </div>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-xs font-bold text-slate-700">
+                        <span>Supabase Completion</span>
+                        <span className="text-emerald-600 font-mono font-black text-sm">
+                          {getSupabaseGlobalProgressPct()}%
+                        </span>
+                      </div>
+                      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden relative">
+                        <div 
+                          className="h-full bg-emerald-500 transition-all duration-500 rounded-full"
+                          style={{ width: `${getSupabaseGlobalProgressPct()}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[9px] font-medium text-slate-400 leading-normal">
+                          Verified live in <code className="font-mono bg-slate-50 text-slate-600 px-1 py-0.5 rounded text-[8px]">user_lessons</code>
+                        </p>
+                        <button 
+                          onClick={() => fetchUserLessons()}
+                          className="text-[9px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline cursor-pointer"
+                        >
+                          <RefreshCw className="w-2.5 h-2.5 animate-spin-hover" />
+                          Force Reload
+                        </button>
+                      </div>
+                    </div>
 
-              {/* Course-wise breakdown based on user_lessons in Supabase */}
-              {enrolledCoursesList.length > 0 && (
-                <div className="pt-3 border-t border-gray-100 space-y-2.5">
-                  <span className="text-[9px] font-mono text-slate-400 uppercase font-black block tracking-wider">
-                    Course Completion Breakdown
-                  </span>
-                  <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
-                    {enrolledCoursesList.map(c => {
-                      const pct = getSupabaseCourseProgressPct(c.id);
-                      return (
-                        <div key={c.id} className="space-y-1">
-                          <div className="flex justify-between items-center text-[10.5px] font-bold text-slate-600">
-                            <span className="truncate max-w-[190px]">{c.title}</span>
-                            <span className="text-emerald-600 font-mono font-bold text-[10px] shrink-0 bg-emerald-50 px-1.5 py-0.5 rounded">
-                              {pct}%
-                            </span>
-                          </div>
-                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-emerald-400 transition-all duration-300"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
+                    {/* Course-wise breakdown based on user_lessons in Supabase */}
+                    {enrolledCoursesList.length > 0 && (
+                      <div className="pt-3 border-t border-gray-100 space-y-2.5">
+                        <span className="text-[9px] font-mono text-slate-400 uppercase font-black block tracking-wider">
+                          Course Completion Breakdown
+                        </span>
+                        <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
+                          {enrolledCoursesList.map(c => {
+                            const pct = getSupabaseCourseProgressPct(c.id);
+                            return (
+                              <div key={c.id} className="space-y-1">
+                                <div className="flex justify-between items-center text-[10.5px] font-bold text-slate-600">
+                                  <span className="truncate max-w-[190px]">{c.title}</span>
+                                  <span className="text-emerald-600 font-mono font-bold text-[10px] shrink-0 bg-emerald-50 px-1.5 py-0.5 rounded">
+                                    {pct}%
+                                  </span>
+                                </div>
+                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-emerald-400 transition-all duration-300"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Collapsible Course Selector Console */}
             <div className="bg-white border border-gray-150 rounded-2xl shadow-sm text-left overflow-hidden">
-              <div className="p-4 bg-gray-50 border-b border-gray-150/60 flex items-center justify-between">
-                <span className="text-xs font-mono font-black text-[#0B1B3D] uppercase tracking-wider flex items-center gap-1.5">
+              <div 
+                className="p-4 bg-gray-50 border-b border-gray-150/60 flex items-center justify-between cursor-pointer select-none group"
+                onClick={() => setIsActiveDeskExpanded(!isActiveDeskExpanded)}
+              >
+                <span className="text-xs font-mono font-black text-[#0B1B3D] uppercase tracking-wider flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">
                   <BookOpen className="w-4 h-4 text-[#2D7FF9]" />
                   Active Study Desk
+                  {isActiveDeskExpanded ? (
+                    <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 animate-pulse" />
+                  )}
                 </span>
                 {isSyncing && <RefreshCw className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
               </div>
 
-              {/* Sidebar Tabs */}
-              <div className="flex border-b border-gray-100 bg-white">
+              <AnimatePresence initial={false}>
+                {isActiveDeskExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    {/* Sidebar Tabs */}
+                    <div className="flex border-b border-gray-100 bg-white">
                 <button
                   onClick={() => {
                     setActiveTab("enrolled");
@@ -1229,7 +1268,10 @@ export default function StudentDashboard() {
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
             {/* Instructors Widget */}
             <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm text-left space-y-3.5">
@@ -1408,7 +1450,7 @@ export default function StudentDashboard() {
                     
                     {/* Brand Watermark Overlay */}
                     <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded text-[8.5px] font-mono tracking-widest text-blue-300 border border-white/10 uppercase leading-none">
-                      DSP ONLINE ACADEMY
+                      AI ONLINE ACADEMY
                     </div>
                   </div>
 
@@ -1485,7 +1527,7 @@ export default function StudentDashboard() {
                 >
                   <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm">
                     <h2 className="font-display text-xl font-black text-[#0B1B3D] tracking-tight">
-                      DSP Academy Course Catalog
+                      Ai Academy Course Catalog
                     </h2>
                     <p className="text-xs text-slate-500 mt-1">
                       Explore our top accredited AI Business modules and unlock immediate lifetime learning access.
@@ -1504,7 +1546,7 @@ export default function StudentDashboard() {
 
                         <div className="p-5 flex-grow flex flex-col justify-between space-y-4">
                           <div className="space-y-2">
-                            <span className="text-[9px] font-mono font-black text-[#2D7FF9] uppercase tracking-wider block">DSP ONLINE</span>
+                            <span className="text-[9px] font-mono font-black text-[#2D7FF9] uppercase tracking-wider block">AI ONLINE</span>
                             <h3 className="font-display font-extrabold text-sm sm:text-base text-[#0B1B3D] leading-tight line-clamp-1">{c.title}</h3>
                             <p className="text-[11.5px] text-slate-500 leading-relaxed line-clamp-2">{c.description}</p>
                           </div>
