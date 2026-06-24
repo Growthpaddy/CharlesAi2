@@ -693,6 +693,7 @@ export default function AdminDashboard() {
     
     const initAndSyncConfig = async () => {
       await fetchSupabaseConfigFromServer();
+      setIsReady(isClientReady());
     };
     initAndSyncConfig();
   }, []);
@@ -816,6 +817,98 @@ export default function AdminDashboard() {
     }
   }, [signedUpAdmin, adminExists]);
 
+  const mapSupabaseCourse = (row: any): Course => ({
+    id: row.id,
+    title: row.title || "",
+    description: row.description || "",
+    overview: row.overview || row.description || "",
+    thumbnail: row.thumbnail_url || row.thumbnail || "",
+    categoryId: row.category || row.category_id || row.categoryId || "",
+    level: row.level || "Beginner",
+    duration: row.duration || "",
+    studentCount: row.student_count || row.studentCount || "0",
+    rating: row.rating || "4.8",
+    instructorName: row.instructor_name || row.instructorName || "Sandra Cole",
+    instructorAvatar: row.instructor_avatar || row.instructorAvatar || "",
+    skills: Array.isArray(row.skills) ? row.skills : (row.skills ? JSON.parse(row.skills) : []),
+    outcomes: Array.isArray(row.outcomes) ? row.outcomes : (row.outcomes ? JSON.parse(row.outcomes) : []),
+    price: row.price || "₦45,000"
+  });
+
+  const mapSupabaseModule = (row: any): CourseModule => ({
+    id: row.id,
+    courseId: row.course_id || row.courseId || "",
+    title: row.title || "",
+    sortOrder: Number(row.sort_order || row.order_index || row.sortOrder || 0)
+  });
+
+  const mapSupabaseLesson = (row: any): Lesson => ({
+    id: row.id,
+    moduleId: row.module_id || row.moduleId || "",
+    courseId: row.course_id || row.courseId || "",
+    title: row.title || "",
+    duration: row.duration || "",
+    content: row.content || "",
+    videoUrl: row.video_url || row.videoUrl || "",
+    sortOrder: Number(row.sort_order || row.order_index || row.sortOrder || 0)
+  });
+
+  const mapSupabaseInvoice = (row: any): Invoice => ({
+    id: row.id,
+    studentName: row.student_name || row.studentName || "",
+    studentEmail: row.student_email || row.studentEmail || "",
+    courseTitle: row.course_title || row.courseTitle || "",
+    amount: Number(row.amount || 0),
+    status: row.status || "Pending",
+    issuedAt: row.issued_at || row.issuedAt || new Date().toISOString()
+  });
+
+  const mapSupabaseSurvey = (row: any): SurveyResponse => ({
+    id: row.id,
+    studentName: row.student_name || row.studentName || "",
+    rating: Number(row.rating || 5),
+    feedback: row.feedback || "",
+    category: row.category || "",
+    submittedAt: row.submitted_at || row.submittedAt || new Date().toISOString()
+  });
+
+  const mapSupabaseLiveClass = (row: any): LiveClass => ({
+    id: row.id,
+    title: row.title || "",
+    date: row.date || "",
+    time: row.time || "",
+    instructor: row.instructor || "Staff Mentor",
+    classUrl: row.class_url || row.classUrl || ""
+  });
+
+  const mapSupabaseBlogPost = (row: any): BlogPost => ({
+    id: row.id,
+    title: row.title || "",
+    excerpt: row.excerpt || "",
+    author: row.author || "Academy Admin Desk",
+    publishedAt: row.published_at || row.publishedAt || "",
+    category: row.category || ""
+  });
+
+  const mapSupabaseKBArticle = (row: any): KBArticle => ({
+    id: row.id,
+    title: row.title || "",
+    excerpt: row.excerpt || "",
+    category: row.category || "",
+    author: row.author || ""
+  });
+
+  const mapSupabaseGradeRecord = (row: any): GradeRecord => ({
+    id: row.id,
+    studentName: row.student_name || row.studentName || "",
+    courseTitle: row.course_title || row.courseTitle || "",
+    lessonTitle: row.lesson_title || row.lessonTitle || "",
+    submittedAt: row.submitted_at || row.submittedAt || "",
+    status: row.status || "Pending",
+    grade: row.grade || "",
+    feedback: row.feedback || ""
+  });
+
   const loadDatabase = () => {
     const cats = db.getCategories();
     const crs = db.getCourses();
@@ -934,15 +1027,52 @@ export default function AdminDashboard() {
       setDbEnrollments(defaultEnrollments);
     }
 
-    // Attempt to pull direct live leads from Supabase if active
+    // Attempt to pull direct live data from Supabase if active
     if (supabase && isSupabaseConfigured) {
+      supabase
+        .from("courses")
+        .select("*")
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const mappedCourses = data.map(mapSupabaseCourse);
+            setCourses(mappedCourses);
+            localStorage.setItem("courses", JSON.stringify(mappedCourses));
+            if (mappedCourses.length > 0) {
+              setModuleCourseId(mappedCourses[0].id);
+              setLessonCourseId(mappedCourses[0].id);
+              setInvFormCourse(mappedCourses[0].title);
+            }
+          }
+        });
+
+      supabase
+        .from("modules")
+        .select("*")
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const mappedModules = data.map(mapSupabaseModule);
+            setModules(mappedModules);
+            localStorage.setItem("course_modules", JSON.stringify(mappedModules));
+          }
+        });
+
+      supabase
+        .from("lessons")
+        .select("*")
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const mappedLessons = data.map(mapSupabaseLesson);
+            setLessons(mappedLessons);
+            localStorage.setItem("lessons", JSON.stringify(mappedLessons));
+          }
+        });
+
       supabase
         .from("leads")
         .select("*")
         .order("created_at", { ascending: false })
         .then(({ data, error }) => {
           if (!error && data) {
-            // Merge or assign live leads
             setLeads(data);
             localStorage.setItem("academy_leads", JSON.stringify(data));
           }
@@ -965,6 +1095,82 @@ export default function AdminDashboard() {
           if (!error && data && data.length > 0) {
             setDbEnrollments(data);
             localStorage.setItem("admin_enrollments", JSON.stringify(data));
+          }
+        });
+
+      supabase
+        .from("invoices")
+        .select("*")
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const mapped = data.map(mapSupabaseInvoice);
+            setInvoices(mapped);
+            localStorage.setItem("admin_invoices", JSON.stringify(mapped));
+          }
+        });
+
+      supabase
+        .from("surveys")
+        .select("*")
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const mapped = data.map(mapSupabaseSurvey);
+            setSurveys(mapped);
+            localStorage.setItem("admin_surveys", JSON.stringify(mapped));
+          }
+        });
+
+      supabase
+        .from("live_classes")
+        .select("*")
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const mapped = data.map(mapSupabaseLiveClass);
+            setLiveClasses(mapped);
+            localStorage.setItem("admin_live_classes", JSON.stringify(mapped));
+          }
+        });
+
+      supabase
+        .from("blog_posts")
+        .select("*")
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const mapped = data.map(mapSupabaseBlogPost);
+            setBlogPosts(mapped);
+            localStorage.setItem("admin_blogs", JSON.stringify(mapped));
+          }
+        });
+
+      supabase
+        .from("kb_articles")
+        .select("*")
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const mapped = data.map(mapSupabaseKBArticle);
+            setKbArticles(mapped);
+            localStorage.setItem("admin_kb_articles", JSON.stringify(mapped));
+          }
+        });
+
+      supabase
+        .from("grades")
+        .select("*")
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const mapped = data.map(mapSupabaseGradeRecord);
+            setGrades(mapped);
+            localStorage.setItem("admin_grades", JSON.stringify(mapped));
+          }
+        });
+
+      supabase
+        .from("testimonials")
+        .select("*")
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            setTestimonials(data);
+            localStorage.setItem("admin_testimonials", JSON.stringify(data));
           }
         });
     }
@@ -1545,6 +1751,20 @@ export default function AdminDashboard() {
     localStorage.setItem("admin_invoices", JSON.stringify(updatedI));
     setInvoices(updatedI);
 
+    if (supabase && isSupabaseConfigured) {
+      supabase.from("invoices").insert({
+        id: newInv.id,
+        student_name: newInv.studentName,
+        student_email: newInv.studentEmail,
+        course_title: newInv.courseTitle,
+        amount: newInv.amount,
+        status: newInv.status,
+        issued_at: newInv.issuedAt
+      }).then(({ error }) => {
+        if (error) console.warn("Supabase invoice insert failed:", error);
+      });
+    }
+
     setInvFormStudent("");
     setInvFormEmail("");
     setShowAddInvoice(false);
@@ -1571,6 +1791,19 @@ export default function AdminDashboard() {
     const updatedL = [newClass, ...liveClasses];
     localStorage.setItem("admin_live_classes", JSON.stringify(updatedL));
     setLiveClasses(updatedL);
+
+    if (supabase && isSupabaseConfigured) {
+      supabase.from("live_classes").insert({
+        id: newClass.id,
+        title: newClass.title,
+        date: newClass.date,
+        time: newClass.time,
+        instructor: newClass.instructor,
+        class_url: newClass.classUrl
+      }).then(({ error }) => {
+        if (error) console.warn("Supabase live class insert failed:", error);
+      });
+    }
 
     setLiveTitle("");
     setLiveDate("");
@@ -1600,6 +1833,19 @@ export default function AdminDashboard() {
     localStorage.setItem("admin_blogs", JSON.stringify(updatedB));
     setBlogPosts(updatedB);
 
+    if (supabase && isSupabaseConfigured) {
+      supabase.from("blog_posts").insert({
+        id: newPost.id,
+        title: newPost.title,
+        excerpt: newPost.excerpt,
+        author: newPost.author,
+        published_at: newPost.publishedAt,
+        category: newPost.category
+      }).then(({ error }) => {
+        if (error) console.warn("Supabase blog post insert failed:", error);
+      });
+    }
+
     setBlogTitle("");
     setBlogExcerpt("");
     setShowAddBlog(false);
@@ -1625,6 +1871,18 @@ export default function AdminDashboard() {
     const updatedT = [newTesti, ...testimonials];
     localStorage.setItem("admin_testimonials", JSON.stringify(updatedT));
     setTestimonials(updatedT);
+
+    if (supabase && isSupabaseConfigured) {
+      supabase.from("testimonials").insert({
+        id: newTesti.id,
+        name: newTesti.name,
+        role: newTesti.role,
+        quote: newTesti.quote,
+        rating: newTesti.rating
+      }).then(({ error }) => {
+        if (error) console.warn("Supabase testimonial insert failed:", error);
+      });
+    }
 
     setTestiName("");
     setTestiQuote("");
@@ -1652,6 +1910,25 @@ export default function AdminDashboard() {
     localStorage.setItem("admin_grades", JSON.stringify(updatedG));
     setGrades(updatedG);
     
+    if (supabase && isSupabaseConfigured) {
+      const targetGrade = updatedG.find(g => g.id === activeGradeId);
+      if (targetGrade) {
+        supabase.from("grades").upsert({
+          id: targetGrade.id,
+          student_name: targetGrade.studentName,
+          student_email: targetGrade.studentEmail,
+          course_title: targetGrade.courseTitle,
+          lesson_title: targetGrade.lessonTitle,
+          submitted_at: targetGrade.submittedAt,
+          status: targetGrade.status,
+          grade: targetGrade.grade,
+          feedback: targetGrade.feedback
+        }).then(({ error }) => {
+          if (error) console.warn("Supabase grade update failed:", error);
+        });
+      }
+    }
+
     setActiveGradeId(null);
     setGradeFeedback("");
     triggerToast("Lesson project graded successfully! Notification dispatched to Student study portal.");
@@ -1705,26 +1982,56 @@ export default function AdminDashboard() {
       const filtered = invoices.filter(inv => inv.id !== id);
       localStorage.setItem("admin_invoices", JSON.stringify(filtered));
       setInvoices(filtered);
+
+      if (supabase && isSupabaseConfigured) {
+        supabase.from("invoices").delete().eq("id", id).then(({ error }) => {
+          if (error) console.error("Could not delete invoice from Supabase:", error);
+        });
+      }
       triggerToast(`Invoice record removed.`);
     } else if (tableName === "leads") {
       const filtered = leads.filter(l => l.id !== id);
       localStorage.setItem("academy_leads", JSON.stringify(filtered));
       setLeads(filtered);
+
+      if (supabase && isSupabaseConfigured) {
+        supabase.from("leads").delete().eq("id", id).then(({ error }) => {
+          if (error) console.error("Could not delete lead from Supabase:", error);
+        });
+      }
       triggerToast(`Opt-in lead deleted.`);
     } else if (tableName === "live") {
       const filtered = liveClasses.filter(c => c.id !== id);
       localStorage.setItem("admin_live_classes", JSON.stringify(filtered));
       setLiveClasses(filtered);
+
+      if (supabase && isSupabaseConfigured) {
+        supabase.from("live_classes").delete().eq("id", id).then(({ error }) => {
+          if (error) console.error("Could not delete live class from Supabase:", error);
+        });
+      }
       triggerToast(`Live class entry canceled.`);
     } else if (tableName === "blog") {
       const filtered = blogPosts.filter(b => b.id !== id);
       localStorage.setItem("admin_blogs", JSON.stringify(filtered));
       setBlogPosts(filtered);
+
+      if (supabase && isSupabaseConfigured) {
+        supabase.from("blog_posts").delete().eq("id", id).then(({ error }) => {
+          if (error) console.error("Could not delete blog post from Supabase:", error);
+        });
+      }
       triggerToast(`Blog post deleted.`);
     } else if (tableName === "testimonials") {
       const filtered = testimonials.filter(t => t.id !== id);
       localStorage.setItem("admin_testimonials", JSON.stringify(filtered));
       setTestimonials(filtered);
+
+      if (supabase && isSupabaseConfigured) {
+        supabase.from("testimonials").delete().eq("id", id).then(({ error }) => {
+          if (error) console.error("Could not delete testimonial from Supabase:", error);
+        });
+      }
       triggerToast(`Testimonial removed from frontend view.`);
     }
   };
@@ -1737,6 +2044,13 @@ export default function AdminDashboard() {
     });
     localStorage.setItem("admin_invoices", JSON.stringify(updated));
     setInvoices(updated);
+
+    if (supabase && isSupabaseConfigured) {
+      supabase.from("invoices").update({ status: "Paid" }).eq("id", id).then(({ error }) => {
+        if (error) console.error("Could not mark invoice as paid on Supabase:", error);
+      });
+    }
+
     triggerToast("Invoice status flag set to PAID.");
   };
 
@@ -1937,73 +2251,7 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {!isReady && (
-                <div className="bg-amber-50 border border-amber-250/60 text-amber-900 p-4.5 rounded-2xl text-xs space-y-3.5 animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 font-black text-amber-850">
-                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span>Supabase Configuration</span>
-                    </div>
-                    <span className="text-[9px] bg-emerald-100 text-emerald-850 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider font-mono">
-                      Offline Simulator Active
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-1.5 text-[11px] text-amber-800 font-medium leading-relaxed">
-                    <p>
-                      Your database API credentials are not loaded in the container environment. 
-                    </p>
-                    <p className="font-extrabold text-[#0056D2]">
-                      💡 Pro-Tip: You can still log in or sign up below normally! The dashboard will run automatically in fully persistent Offline Simulation Mode.
-                    </p>
-                  </div>
 
-                  <div className="pt-1.5 border-t border-amber-200/50">
-                    <button
-                      type="button"
-                      onClick={() => setShowLocalConfig(!showLocalConfig)}
-                      className="text-[11px] font-extrabold text-amber-900 hover:text-amber-955 flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>{showLocalConfig ? "▼ Hide Connection Inputs" : "▶ Configure Cloud Database Connection..."}</span>
-                    </button>
-                    
-                    {showLocalConfig && (
-                      <form onSubmit={handleSaveLocalConfig} className="mt-3.5 space-y-3 p-3 bg-white/70 border border-amber-200/45 rounded-xl animate-in slide-in-from-top-1">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700 block">VITE_SUPABASE_URL</label>
-                          <input
-                            type="text"
-                            placeholder="https://your-project.supabase.co"
-                            value={localUrl}
-                            onChange={(e) => setLocalUrl(e.target.value)}
-                            className="w-full text-[10px] p-2 bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:border-amber-500"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700 block">VITE_SUPABASE_ANON_KEY</label>
-                          <input
-                            type="password"
-                            placeholder="eyJhbGciOiJIUzI1NiIsIn..."
-                            value={localAnonKey}
-                            onChange={(e) => setLocalAnonKey(e.target.value)}
-                            className="w-full text-[10px] p-2 bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:border-amber-500"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2 pt-1 font-semibold">
-                          <button
-                            type="submit"
-                            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] cursor-pointer"
-                          >
-                            Save & Connect
-                          </button>
-                          {saveStatus === "success" && <span className="text-[10px] text-emerald-600">✓ Connected!</span>}
-                          {saveStatus === "partial" && <span className="text-[10px] text-yellow-600">✓ Config saved</span>}
-                        </div>
-                      </form>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {!(adminExists || signedUpAdmin) && authMode === "signup" ? (
                 <form onSubmit={handleAdminSignup} className="space-y-4 relative z-10 animate-in fade-in duration-200">
@@ -2314,22 +2562,7 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
       {/* CENTRALIZED GRID WORKSPACE CONTAINER */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {!isReady && (
-          <div className="mb-6 bg-amber-500/10 border border-amber-500/25 text-amber-900 p-4 rounded-3xl text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300 shadow-xs">
-            <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-extrabold text-amber-950">Database Offline Simulator Active</p>
-                <p className="text-[11px] text-amber-800 leading-relaxed font-semibold">
-                  You are viewing the dashboard in locally stored Offline Simulation Mode. Any additions, updates, or enrollment updates will save instantly to your browser's local state.
-                </p>
-              </div>
-            </div>
-            <span className="text-[10px] bg-amber-100/80 text-amber-850 px-3 py-1.5 rounded-full font-mono font-black uppercase tracking-wider shrink-0">
-              Simulated State Enabled
-            </span>
-          </div>
-        )}
+
 
         {/* Dynamic State Toast Indicator */}
         {toastMsg && (

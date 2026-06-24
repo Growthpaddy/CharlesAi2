@@ -18,9 +18,11 @@ async function startServer() {
 
   // Expose configuration variables
   app.get("/api/config", (req, res) => {
+    const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
     res.json({
-      supabaseUrl: process.env.VITE_SUPABASE_URL || "",
-      supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY || "",
+      supabaseUrl: url,
+      supabaseAnonKey: key,
     });
   });
 
@@ -44,10 +46,12 @@ async function startServer() {
         if (fs.existsSync(indexPath)) {
           let html = fs.readFileSync(indexPath, "utf8");
           // Inject credentials as global variables at request-time so client can retrieve them immediately
+          const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+          const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
           const configScript = `
   <script id="supabase-runtime-config">
-    window.__SUPABASE_URL__ = ${JSON.stringify(process.env.VITE_SUPABASE_URL || "")};
-    window.__SUPABASE_ANON_KEY__ = ${JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || "")};
+    window.__SUPABASE_URL__ = ${JSON.stringify(url)};
+    window.__SUPABASE_ANON_KEY__ = ${JSON.stringify(key)};
   </script>`;
           if (html.includes("<head>")) {
             html = html.replace("<head>", `<head>${configScript}`);

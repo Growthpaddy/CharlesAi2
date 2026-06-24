@@ -8,13 +8,15 @@ import { createClient } from "@supabase/supabase-js";
 const getSupabaseUrl = (): string => {
   let url = "";
   try {
-    url = (import.meta as any).env?.VITE_SUPABASE_URL || "";
+    url = (import.meta as any).env?.VITE_SUPABASE_URL || 
+          (import.meta as any).env?.SUPABASE_URL || 
+          (import.meta as any).env?.NEXT_PUBLIC_SUPABASE_URL || "";
   } catch (_) {}
   if (!url) {
     url = (window as any).__SUPABASE_URL__ || "";
   }
   if (!url) {
-    url = localStorage.getItem("VITE_SUPABASE_URL") || "";
+    url = localStorage.getItem("VITE_SUPABASE_URL") || localStorage.getItem("SUPABASE_URL") || "";
   }
   return (typeof url === "string" ? url : "").trim();
 };
@@ -22,13 +24,15 @@ const getSupabaseUrl = (): string => {
 const getSupabaseAnonKey = (): string => {
   let key = "";
   try {
-    key = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "";
+    key = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 
+          (import.meta as any).env?.SUPABASE_ANON_KEY || 
+          (import.meta as any).env?.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
   } catch (_) {}
   if (!key) {
     key = (window as any).__SUPABASE_ANON_KEY__ || "";
   }
   if (!key) {
-    key = localStorage.getItem("VITE_SUPABASE_ANON_KEY") || "";
+    key = localStorage.getItem("VITE_SUPABASE_ANON_KEY") || localStorage.getItem("SUPABASE_ANON_KEY") || "";
   }
   return (typeof key === "string" ? key : "").trim();
 };
