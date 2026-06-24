@@ -30,7 +30,6 @@ export default function StudentDashboard() {
   const [authName, setAuthName] = useState("");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
-  const [authLocation, setAuthLocation] = useState("");
   const [authPhone, setAuthPhone] = useState("");
   const [authAppliedCourse, setAuthAppliedCourse] = useState("");
   const [studentStatus, setStudentStatus] = useState("active");
@@ -307,7 +306,7 @@ export default function StudentDashboard() {
         password: authPassword, 
         role: "student",
         status: "pending", // Starts in Pending Mode awaiting admin approval
-        location: authLocation.trim() || "Nigeria",
+        location: "",
         phone: authPhone.trim() || "",
         applied_course: authAppliedCourse || "",
         createdAt: new Date().toISOString()
@@ -367,7 +366,6 @@ export default function StudentDashboard() {
         setAuthName("");
         setAuthEmail("");
         setAuthPassword("");
-        setAuthLocation("");
         setAuthPhone("");
         setAuthAppliedCourse("");
       }, 1500);
@@ -595,7 +593,7 @@ export default function StudentDashboard() {
   // 1. RENDER AUTHENTICATION LOCK SCREEN IF NOT LOGGED IN
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-50 pt-24 pb-16 flex items-center justify-center px-4 relative">
+      <div className="min-h-screen bg-slate-50 pt-36 sm:pt-40 pb-16 flex items-center justify-center px-4 relative">
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
         
         <div className="w-full max-w-lg bg-white border border-slate-100 rounded-3xl p-6 sm:p-10 shadow-xl text-left relative z-10 space-y-6">
@@ -754,37 +752,21 @@ export default function StudentDashboard() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Course Applied for</label>
-                    <select
-                      required
-                      value={authAppliedCourse}
-                      onChange={(e) => setAuthAppliedCourse(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-semibold text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all cursor-pointer"
-                    >
-                      <option value="">-- Choose Applied Course --</option>
-                      {courses.map((c) => (
-                        <option key={c.id} value={c.title}>
-                          {c.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Location (State or City)</label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4.5 h-4.5" />
-                      <input
-                        type="text"
-                        placeholder="e.g. Lagos, Abuja"
-                        value={authLocation}
-                        onChange={(e) => setAuthLocation(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-xs font-semibold text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all placeholder:text-slate-400"
-                      />
-                    </div>
-                  </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Course Applied for</label>
+                  <select
+                    required
+                    value={authAppliedCourse}
+                    onChange={(e) => setAuthAppliedCourse(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-semibold text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all cursor-pointer"
+                  >
+                    <option value="">-- Choose Applied Course --</option>
+                    {courses.map((c) => (
+                      <option key={c.id} value={c.title}>
+                        {c.title}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <button
@@ -831,7 +813,7 @@ export default function StudentDashboard() {
   // 1.5 RENDER PENDING APPROVAL SCREEN IF PENDING
   if (isAuthenticated && studentStatus === "pending" && !isAdminPreview) {
     return (
-      <div className="min-h-screen bg-slate-50 pt-24 pb-16 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-slate-50 pt-36 sm:pt-40 pb-16 flex items-center justify-center px-4">
         <div className="w-full max-w-md bg-white border border-slate-100 rounded-3xl p-8 shadow-xl text-center space-y-6">
           <div className="mx-auto w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center border border-amber-200">
             <Hourglass className="w-8 h-8 text-amber-500 animate-spin" />
@@ -886,7 +868,7 @@ export default function StudentDashboard() {
 
   // 2. MAIN REDESIGNED LAYOUT FOR LOGGED IN USERS
   return (
-    <div id="student-workspace" className="min-h-screen bg-[#F3F5F9] pt-20 pb-12">
+    <div id="student-workspace" className="min-h-screen bg-[#F3F5F9] pt-28 sm:pt-32 pb-12">
       
       {/* 2.1 HIGH LEVEL HEADER STRIP */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">

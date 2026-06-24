@@ -2121,7 +2121,7 @@ export default function AdminDashboard() {
 
   if (!isAdminAuth) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col items-center justify-center p-4 antialiased pt-24 selection:bg-[#0056D2]/20 selection:text-[#0056D2] w-full">
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col items-center justify-center p-4 antialiased pt-36 sm:pt-40 selection:bg-[#0056D2]/20 selection:text-[#0056D2] w-full">
         {toastMsg && (
           <div className="fixed top-20 right-6 bg-[#08142B] text-white border border-white/10 px-5 py-3 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-top-4 duration-300 max-w-sm flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
@@ -2537,10 +2537,10 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
 
   return (
     <AdminGuard>
-      <div className="min-h-screen bg-[#F8FAFC] text-[#0C1E3E] antialiased">
+      <div className="min-h-screen bg-[#F8FAFC] text-[#0C1E3E] antialiased pt-16 sm:pt-20">
       
       {/* PERSISTENT ADMIN HEADER WITH LOGOUT */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-xs px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="sticky top-16 sm:top-20 z-40 bg-white border-b border-gray-200 shadow-xs px-4 sm:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0056D2] to-[#2D7FF9] flex items-center justify-center text-white font-black text-sm shadow-md">
             AI
