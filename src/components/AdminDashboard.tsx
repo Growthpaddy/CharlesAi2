@@ -557,6 +557,8 @@ export default function AdminDashboard() {
   const [editingProfileLocation, setEditingProfileLocation] = useState<string>("");
   const [editingProfileRole, setEditingProfileRole] = useState<string>("student");
   const [editingProfileStatus, setEditingProfileStatus] = useState<string>("active");
+  const [editingProfilePhone, setEditingProfilePhone] = useState<string>("");
+  const [editingProfileAppliedCourse, setEditingProfileAppliedCourse] = useState<string>("");
 
   // Simulated tables state
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -1568,7 +1570,14 @@ export default function AdminDashboard() {
   const handleToggleUserAccess = async (profileId: string) => {
     const updated = profiles.map(p => {
       if (p.id === profileId) {
-        const nextStatus = p.status === "suspended" ? "active" : "suspended";
+        let nextStatus = "active";
+        if (p.status === "active") {
+          nextStatus = "suspended";
+        } else if (p.status === "suspended") {
+          nextStatus = "active";
+        } else if (p.status === "pending") {
+          nextStatus = "active";
+        }
         triggerToast(`Access status for ${p.full_name} changed to ${nextStatus.toUpperCase()}`);
         return { ...p, status: nextStatus };
       }
@@ -1585,7 +1594,9 @@ export default function AdminDashboard() {
             id: prof.id,
             full_name: prof.full_name,
             role: prof.role || "student",
-            status: prof.status
+            status: prof.status,
+            phone: prof.phone || null,
+            applied_course: prof.applied_course || null
           });
         }
       } catch (err) {
@@ -1600,7 +1611,9 @@ export default function AdminDashboard() {
     updatedEmail: string, 
     updatedLocation: string, 
     updatedRole: string,
-    updatedStatus: string
+    updatedStatus: string,
+    updatedPhone?: string,
+    updatedAppliedCourse?: string
   ) => {
     if (!updatedName.trim()) {
       alert("Student name cannot be empty.");
@@ -1619,7 +1632,9 @@ export default function AdminDashboard() {
           email: updatedEmail.trim().toLowerCase(),
           location: updatedLocation.trim(),
           role: updatedRole,
-          status: updatedStatus 
+          status: updatedStatus,
+          phone: updatedPhone !== undefined ? updatedPhone.trim() : p.phone,
+          applied_course: updatedAppliedCourse !== undefined ? updatedAppliedCourse.trim() : p.applied_course
         };
       }
       return p;
@@ -1630,13 +1645,16 @@ export default function AdminDashboard() {
 
     if (supabase && isSupabaseConfigured) {
       try {
+        const prof = updated.find(p => p.id === profileId);
         await supabase.from("profiles").upsert({
           id: profileId,
           full_name: updatedName.trim(),
           email: updatedEmail.trim().toLowerCase(),
           location: updatedLocation.trim(),
           role: updatedRole,
-          status: updatedStatus
+          status: updatedStatus,
+          phone: prof?.phone || null,
+          applied_course: prof?.applied_course || null
         });
       } catch (err) {
         console.warn("Could not sync updated profile to Supabase:", err);
@@ -3552,6 +3570,11 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                                       Access blocked
                                     </span>
                                   )}
+                                  {p.status === "pending" && (
+                                    <span className="text-[8px] bg-amber-100 text-amber-800 font-black px-1.5 py-0.2 rounded uppercase shrink-0 animate-pulse">
+                                      Pending Approval
+                                    </span>
+                                  )}
                                 </div>
                                 <span className="block text-[10px] text-slate-400 font-normal mt-0.5">
                                   {p.email} {p.location ? `| Location: ${p.location}` : ""} {p.created_at ? `| Joined: ${new Date(p.created_at).toLocaleDateString()}` : ""}
@@ -3563,12 +3586,14 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                                   className={`inline-flex items-center gap-1 text-[9px] font-extrabold px-2.5 py-1 rounded-full cursor-pointer transition-all border ${
                                     p.status === "active"
                                       ? "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100"
+                                      : p.status === "pending"
+                                      ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-150"
                                       : "bg-red-50 text-red-700 border-red-100 hover:bg-red-100"
                                   }`}
                                   title="Toggle active vs suspended access"
                                 >
                                   <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                                  <span>{p.status === "suspended" ? "suspended" : "active"}</span>
+                                  <span>{p.status === "pending" ? "Approve" : p.status || "active"}</span>
                                 </button>
                               </td>
                               <td className="px-4 py-3.5">
@@ -3620,6 +3645,8 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                                               setEditingProfileLocation(p.location || "");
                                               setEditingProfileRole(p.role || "student");
                                               setEditingProfileStatus(p.status || "active");
+                                               setEditingProfilePhone(p.phone || "");
+                                               setEditingProfileAppliedCourse(p.applied_course || "");
                                             }
                                           }}
                                           className={`text-[10px] font-black px-3 py-1 rounded-lg transition-all cursor-pointer ${
@@ -3675,7 +3702,7 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                                                 <option value="student">Student</option>
                                                 <option value="cohort graduate">Cohort Graduate</option>
                                                 <option value="instructor">Instructor</option>
-                                                <option value="admin">Admin</option>
+                                                <option value="admin">Admin</option></select></div></div><div className="grid grid-cols-2 gap-2"><div className="space-y-1"><label className="text-[10px] font-bold text-slate-500 block">Phone Number</label><input type="text" value={editingProfilePhone} onChange={(e) => setEditingProfilePhone(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-gray-200 bg-white font-medium focus:outline-none focus:border-indigo-500" placeholder="+234..." /></div><div className="space-y-1"><label className="text-[10px] font-bold text-slate-500 block">Applied Course</label><select value={editingProfileAppliedCourse} onChange={(e) => setEditingProfileAppliedCourse(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-gray-200 bg-white font-medium focus:outline-none" ><option value="">-- No Applied Course --</option>{courses.map(c => (<option key={c.id} value={c.title}>{c.title}</option>))}</select></div></div><div className="hidden"><div><select><option></option>
                                               </select>
                                             </div>
                                           </div>
@@ -3687,6 +3714,7 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                                               className="w-full text-xs p-2.5 rounded-xl border border-gray-200 bg-white font-medium focus:outline-none"
                                             >
                                               <option value="active">Active (Granted)</option>
+                                               <option value="pending">Pending Approval</option>
                                               <option value="suspended">Suspended (Restricted)</option>
                                             </select>
                                           </div>
@@ -3700,7 +3728,9 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                                                 editingProfileEmail,
                                                 editingProfileLocation,
                                                 editingProfileRole,
-                                                editingProfileStatus
+                                                editingProfileStatus,
+                                                editingProfilePhone,
+                                                editingProfileAppliedCourse
                                               )}
                                               className="w-full py-2.5 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition shadow-sm cursor-pointer border border-indigo-600/30 text-center"
                                             >
@@ -3727,6 +3757,20 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                                               <div>
                                                 <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Academic Role</span>
                                                 <span className="font-extrabold text-[10px] text-[#0056D2] capitalize">{p.role || "student"}</span>
+                                               </div>
+                                             </div>
+                                             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-150">
+                                               <div>
+                                                 <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Phone Number</span>
+                                                 <span className="font-semibold text-slate-700 font-mono text-[10px]">{p.phone || "N/A"}</span>
+                                               </div>
+                                               <div>
+                                                 <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Course Applied For</span>
+                                                 <span className="font-extrabold text-[10px] text-indigo-600 block truncate" title={p.applied_course || ""}>{p.applied_course || "N/A"}</span>
+                                               </div>
+                                             </div>
+                                             <div className="hidden">
+                                               <div>
                                               </div>
                                             </div>
                                             <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-1">
@@ -3737,7 +3781,7 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                                               <div className="text-right">
                                                 <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">System Status</span>
                                                 <span className={`inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded ${
-                                                  p.status === "suspended" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
+                                                  p.status === "suspended" ? "bg-red-50 text-red-700" : p.status === "pending" ? "bg-amber-50 border border-amber-200 text-amber-700 animate-pulse" : "bg-emerald-50 text-emerald-700"
                                                 }`}>
                                                   {p.status || "active"}
                                                 </span>

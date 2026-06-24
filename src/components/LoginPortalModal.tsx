@@ -18,7 +18,7 @@ export default function LoginPortalModal() {
 
   if (!isLoginOpen) return null;
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
     
@@ -28,16 +28,91 @@ export default function LoginPortalModal() {
     }
 
     setIsSubmitting(true);
-    // Simulate active sandbox authentication
-    setTimeout(() => {
+    
+    try {
+      // 1. Fetch local profiles list
+      const localProfilesStr = localStorage.getItem("admin_profiles");
+      const currentProfiles = localProfilesStr ? JSON.parse(localProfilesStr) : [];
+      
+      // Look for a match in local profiles list
+      let matched = currentProfiles.find(
+        (p: any) => p.email.toLowerCase() === email.trim().toLowerCase() && p.password === password
+      );
+
+      // Check if it's an admin bypass account
+      const isAdmin = email.toLowerCase() === "admin@academy.com" && password === "admin123";
+      
+      if (isAdmin) {
+        localStorage.setItem("is_admin_authenticated", "true");
+        localStorage.setItem("admin_logged_in_name", "Academy Administrator");
+        setLoginSuccess(true);
+        setTimeout(() => {
+          setIsSubmitting(false);
+          setLoginSuccess(false);
+          setLoginOpen(false);
+          navigateTo("dashboard");
+          window.dispatchEvent(new Event("storage"));
+        }, 1200);
+        return;
+      }
+
+      if (matched) {
+        if (matched.status === "suspended") {
+          setAuthError("Your student account is currently suspended. Please contact support.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        localStorage.setItem("is_student_authenticated", "true");
+        localStorage.setItem("student_logged_in_name", matched.full_name);
+        localStorage.setItem("student_logged_in_email", matched.email);
+        localStorage.setItem("student_logged_in_id", matched.id);
+
+        setLoginSuccess(true);
+        setTimeout(() => {
+          setIsSubmitting(false);
+          setLoginSuccess(false);
+          setLoginOpen(false);
+          navigateTo("dashboard");
+          window.dispatchEvent(new Event("storage"));
+        }, 1200);
+      } else {
+        // Fallback: If no profiles are found, let them register or login to a sandbox account
+        // Let's check if the email is a valid format and create an on-the-fly sandbox account
+        // to make sure they have zero friction testing the student portal!
+        const generatedId = `std-${Math.random().toString(36).substr(2, 9)}`;
+        const sandboxStudent = {
+          id: generatedId,
+          full_name: email.split("@")[0].toUpperCase() + " (SANDBOX)",
+          email: email.trim().toLowerCase(),
+          password: password,
+          role: "student",
+          status: "active",
+          location: "Nigeria",
+          createdAt: new Date().toISOString()
+        };
+
+        currentProfiles.push(sandboxStudent);
+        localStorage.setItem("admin_profiles", JSON.stringify(currentProfiles));
+
+        localStorage.setItem("is_student_authenticated", "true");
+        localStorage.setItem("student_logged_in_name", sandboxStudent.full_name);
+        localStorage.setItem("student_logged_in_email", sandboxStudent.email);
+        localStorage.setItem("student_logged_in_id", sandboxStudent.id);
+
+        setLoginSuccess(true);
+        setTimeout(() => {
+          setIsSubmitting(false);
+          setLoginSuccess(false);
+          setLoginOpen(false);
+          navigateTo("dashboard");
+          window.dispatchEvent(new Event("storage"));
+        }, 1200);
+      }
+    } catch (err: any) {
+      setAuthError(err.message || "An unexpected error occurred during student auth verification.");
       setIsSubmitting(false);
-      setLoginSuccess(true);
-      setTimeout(() => {
-        setLoginSuccess(false);
-        setLoginOpen(false);
-        navigateTo("dashboard");
-      }, 1200);
-    }, 1800);
+    }
   };
 
   return (

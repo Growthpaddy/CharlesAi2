@@ -123,6 +123,20 @@ CREATE TABLE IF NOT EXISTS public.contact_messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Create student profiles table
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id TEXT PRIMARY KEY,
+    full_name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    role TEXT DEFAULT 'student' NOT NULL,
+    status TEXT DEFAULT 'pending' NOT NULL,
+    location TEXT,
+    phone TEXT,
+    applied_course TEXT,
+    password TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Create student enrollment registries
 CREATE TABLE IF NOT EXISTS public.enrollments (
     id TEXT PRIMARY KEY,
@@ -133,6 +147,16 @@ CREATE TABLE IF NOT EXISTS public.enrollments (
 -- Create student lesson completion registries
 CREATE TABLE IF NOT EXISTS public.student_progress (
     id TEXT PRIMARY KEY,
+    course_id TEXT NOT NULL,
+    lesson_id TEXT NOT NULL,
+    completed BOOLEAN DEFAULT true NOT NULL,
+    completed_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Create student user_lessons registries for user tracking
+CREATE TABLE IF NOT EXISTS public.user_lessons (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
     course_id TEXT NOT NULL,
     lesson_id TEXT NOT NULL,
     completed BOOLEAN DEFAULT true NOT NULL,
@@ -160,8 +184,10 @@ ALTER TABLE public.admin_accounts ADD CONSTRAINT one_admin_only CHECK (id IS NOT
 -- Set Row Level Security (RLS) policies for simulation parameters
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_lessons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
 
 -- Allow anonymous inserts for Leads & Contact inquiries
@@ -171,9 +197,13 @@ CREATE POLICY "Allow public select of leads" ON public.leads FOR SELECT USING (t
 CREATE POLICY "Allow public insert to contact_messages" ON public.contact_messages FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public select of contact_messages" ON public.contact_messages FOR SELECT USING (true);
 
+-- Allow public read/write to student profiles
+CREATE POLICY "Allow public read/write to profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
+
 -- Allow public access to enrollments for this educational simulation
 CREATE POLICY "Allow public read/write to enrollments" ON public.enrollments FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write to student_progress" ON public.student_progress FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read/write to user_lessons" ON public.user_lessons FOR ALL USING (true) WITH CHECK (true);
 
 -- Allow public select on admin_accounts so registration and dynamic login verification work
 DROP POLICY IF EXISTS "Allow public select on admin_accounts" ON public.admin_accounts;
@@ -275,16 +305,31 @@ export async function syncLocalStorageToSupabase() {
 
     // 3. Sync Student Progress
     const localProgress = localStorage.getItem("student_progress");
+    const loggedStudentId = localStorage.getItem("student_logged_in_id") || "sandbox-student";
     if (localProgress) {
       const progresses = JSON.parse(localProgress);
       if (Array.isArray(progresses) && progresses.length > 0) {
         for (const prog of progresses) {
+          // Upsert to standard student_progress
           await supabase.from("student_progress").upsert({
             id: prog.id,
             course_id: prog.courseId,
             lesson_id: prog.lessonId,
             completed: prog.completed,
             completed_at: prog.completedAt || new Date().toISOString()
+          });
+
+          // Also upsert to user_lessons
+          const userLessonId = `${loggedStudentId}_${prog.lessonId}`;
+          await supabase.from("user_lessons").upsert({
+            id: userLessonId,
+            user_id: loggedStudentId,
+            course_id: prog.courseId,
+            lesson_id: prog.lessonId,
+            completed: prog.completed,
+            completed_at: prog.completedAt || new Date().toISOString()
+          }).catch(err => {
+            console.warn("Could not sync to user_lessons table:", err);
           });
         }
       }

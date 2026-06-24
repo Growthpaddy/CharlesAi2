@@ -1,10 +1,10 @@
 -- ====================================================================
--- SUPABASE RESET RLS POLICIES FOR ADMIN_ACCOUNTS
+-- SUPABASE RESET RLS POLICIES FOR ALL SCHEMAS
 -- ====================================================================
--- This script resets all Row Level Security (RLS) policies on the
--- 'admin_accounts' table to be completely permissive (USING true / WITH CHECK true).
--- This handles testing/verification of connectivity issues or 
--- "Invalid Administrative credentials" errors.
+-- This script resets all Row Level Security (RLS) policies on all tables
+-- to be completely permissive (USING true / WITH CHECK true) to guarantee
+-- that there are no "Missing or insufficient permissions" or connectivity
+-- issues between the Admin & Student dashboards and Supabase.
 --
 -- RUNNING THIS SCRIPT:
 -- 1. Go to your Supabase Dashboard (https://supabase.com)
@@ -13,10 +13,38 @@
 -- 4. Paste this entire script and run it.
 -- ====================================================================
 
--- 1. Ensure Row Level Security is enabled (required for active policies)
+-- 1. Enable RLS on all tables
+ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_lessons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
 
--- 2. Clean out any previous policies to prevent overlapping conflicts
+-- 2. Clean out previous policies to prevent overlapping conflicts
+DROP POLICY IF EXISTS "Allow public insert to leads" ON public.leads;
+DROP POLICY IF EXISTS "Allow public select of leads" ON public.leads;
+DROP POLICY IF EXISTS "Allow public insert to contact_messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Allow public select of contact_messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Allow public read/write to profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Allow public read/write to enrollments" ON public.enrollments;
+DROP POLICY IF EXISTS "Allow public read/write to student_progress" ON public.student_progress;
+DROP POLICY IF EXISTS "Allow public read/write to user_lessons" ON public.user_lessons;
+
+-- 3. Create fully permissive policies
+CREATE POLICY "Allow public insert to leads" ON public.leads FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public select of leads" ON public.leads FOR SELECT USING (true);
+
+CREATE POLICY "Allow public insert to contact_messages" ON public.contact_messages FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public select of contact_messages" ON public.contact_messages FOR SELECT USING (true);
+
+CREATE POLICY "Allow public read/write to profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read/write to enrollments" ON public.enrollments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read/write to student_progress" ON public.student_progress FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read/write to user_lessons" ON public.user_lessons FOR ALL USING (true) WITH CHECK (true);
+
+-- 4. Clean out admin_accounts policies
 DROP POLICY IF EXISTS "Allow public select on admin_accounts" ON public.admin_accounts;
 DROP POLICY IF EXISTS "Allow public insert on admin_accounts" ON public.admin_accounts;
 DROP POLICY IF EXISTS "Allow public update on admin_accounts" ON public.admin_accounts;
@@ -28,34 +56,11 @@ DROP POLICY IF EXISTS "admin_accounts_permissive_insert" ON public.admin_account
 DROP POLICY IF EXISTS "admin_accounts_permissive_update" ON public.admin_accounts;
 DROP POLICY IF EXISTS "admin_accounts_permissive_delete" ON public.admin_accounts;
 
--- 3. Create permissive SELECT policy to allow administrative lookups during login
-CREATE POLICY "admin_accounts_permissive_select"
-ON public.admin_accounts
-FOR SELECT
-TO PUBLIC
-USING (true);
+-- 5. Set admin_accounts permissive policies
+CREATE POLICY "admin_accounts_permissive_select" ON public.admin_accounts FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "admin_accounts_permissive_insert" ON public.admin_accounts FOR INSERT TO PUBLIC WITH CHECK (true);
+CREATE POLICY "admin_accounts_permissive_update" ON public.admin_accounts FOR UPDATE TO PUBLIC USING (true) WITH CHECK (true);
+CREATE POLICY "admin_accounts_permissive_delete" ON public.admin_accounts FOR DELETE TO PUBLIC USING (true);
 
--- 4. Create permissive INSERT policy to allow initial setup of admin accounts
-CREATE POLICY "admin_accounts_permissive_insert"
-ON public.admin_accounts
-FOR INSERT
-TO PUBLIC
-WITH CHECK (true);
-
--- 5. Create permissive UPDATE policy to support settings and edits
-CREATE POLICY "admin_accounts_permissive_update"
-ON public.admin_accounts
-FOR UPDATE
-TO PUBLIC
-USING (true)
-WITH CHECK (true);
-
--- 6. Create permissive DELETE policy
-CREATE POLICY "admin_accounts_permissive_delete"
-ON public.admin_accounts
-FOR DELETE
-TO PUBLIC
-USING (true);
-
--- 7. Log validation notice
-SELECT 'Permissive Row-Level Security policies successfully reset on Table public.admin_accounts' AS status_report;
+-- 6. Log success notice
+SELECT 'Permissive Row-Level Security policies successfully configured for all active dashboards.' AS status_report;
