@@ -109,12 +109,84 @@ export async function checkAdminExists(): Promise<boolean> {
       .limit(1);
 
     if (error) {
-      console.error("Error in checkAdminExists query:", error);
+      if (error.code === "42P01" || error.message?.includes("does not exist")) {
+        console.warn("Table 'admin_accounts' does not exist in Supabase yet. Falling back to local storage admin verification.");
+        const localAdmins = localStorage.getItem("academy_admins");
+        if (localAdmins) {
+          try {
+            const parsed = JSON.parse(localAdmins);
+            return Array.isArray(parsed) && parsed.length > 0;
+          } catch (_) {
+            return false;
+          }
+        }
+      } else {
+        console.error("Error in checkAdminExists query:", error);
+      }
       return false;
     }
     return !!(data && data.length > 0);
   } catch (err) {
     console.error("Exception in checkAdminExists:", err);
+    return false;
+  }
+}
+
+/**
+ * Checks if at least one administrator account with is_owner = true exists in the database.
+ * Returns true if such an admin exists, false otherwise.
+ */
+export async function checkAdminOwnerExists(): Promise<boolean> {
+  updateSupabaseClient();
+  if (!supabase || !isSupabaseConfigured) {
+    const localAdmins = localStorage.getItem("academy_admins");
+    if (localAdmins) {
+      try {
+        const parsed = JSON.parse(localAdmins);
+        if (Array.isArray(parsed)) {
+          return parsed.some(admin => admin.is_owner === true || admin.is_owner === "true");
+        }
+      } catch (_) {
+        return false;
+      }
+    }
+    return false;
+  }
+  try {
+    const { data, error } = await supabase
+      .from("admin_accounts")
+      .select("id")
+      .eq("is_owner", true)
+      .limit(1);
+
+    if (error) {
+      if (error.code === "42P01" || error.message?.includes("does not exist") || error.code === "42703") {
+        console.warn("Table or column is_owner does not exist in Supabase yet. Falling back to general existence check.");
+        const localAdmins = localStorage.getItem("academy_admins");
+        if (localAdmins) {
+          try {
+            const parsed = JSON.parse(localAdmins);
+            if (Array.isArray(parsed)) {
+              return parsed.some(admin => admin.is_owner === true || admin.is_owner === "true" || parsed.length > 0);
+            }
+          } catch (_) {}
+        }
+        // General existence check fallback
+        const { data: generalData, error: generalErr } = await supabase
+          .from("admin_accounts")
+          .select("id")
+          .limit(1);
+        if (!generalErr && generalData && generalData.length > 0) {
+          return true;
+        }
+      } else {
+        console.error("Error in checkAdminOwnerExists query:", error);
+      }
+      return false;
+    }
+    return !!(data && data.length > 0);
+  } catch (err) {
+    console.error("Exception in checkAdminOwnerExists:", err);
     return false;
   }
 }
@@ -133,11 +205,11 @@ export async function handleAdminSignup(
   if (!supabase || !isSupabaseConfigured) {
     // Local offline simulation fallback
     try {
-      const exists = await checkAdminExists();
+      const exists = await checkAdminOwnerExists();
       if (exists) {
         return {
           success: false,
-          error: "An administrator account has already been registered globally. Signup is closed.",
+          error: "Administrator account already exists. Please sign in.",
           code: "ADM01",
         };
       }
@@ -150,6 +222,7 @@ export async function handleAdminSignup(
         password: hashedPassword,
         mfa_secret: null,
         mfa_enabled: false,
+        is_owner: true,
         created_at: new Date().toISOString()
       };
 
@@ -165,12 +238,12 @@ export async function handleAdminSignup(
   }
 
   try {
-    // 1. Verify existence check first to prevent duplicate signups before insert attempt
-    const exists = await checkAdminExists();
+    // 1. Verify owner existence check first to prevent duplicate signups before insert attempt
+    const exists = await checkAdminOwnerExists();
     if (exists) {
       return {
         success: false,
-        error: "An administrator account has already been registered globally. Signup is closed.",
+        error: "Administrator account already exists. Please sign in.",
         code: "ADM01",
       };
     }
@@ -179,17 +252,32 @@ export async function handleAdminSignup(
     const hashedPassword = await hashPassword(password);
 
     // 3. Store in Supabase
-    const { data, error } = await supabase
+    let insertObj: any = {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password: hashedPassword, // Store secure hash
+      mfa_secret: null,
+      mfa_enabled: false,
+      is_owner: true,
+    };
+
+    let { data, error } = await supabase
       .from("admin_accounts")
-      .insert({
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        password: hashedPassword, // Store secure hash
-        mfa_secret: null,
-        mfa_enabled: false,
-      })
+      .insert(insertObj)
       .select()
       .maybeSingle();
+
+    if (error && (error.code === "42703" || error.message?.includes("is_owner"))) {
+      console.warn("is_owner column does not exist in remote table, retrying insert without is_owner");
+      delete insertObj.is_owner;
+      const retryResult = await supabase
+        .from("admin_accounts")
+        .insert(insertObj)
+        .select()
+        .maybeSingle();
+      data = retryResult.data;
+      error = retryResult.error;
+    }
 
     if (error) {
       console.error("Error inserting remote admin account in signup:", error);

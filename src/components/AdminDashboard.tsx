@@ -15,7 +15,7 @@ import {
 import * as OTPAuth from "otpauth";
 import { db, Course, CourseModule, Lesson, Category } from "../lib/db";
 import { supabase, isSupabaseConfigured, fetchSupabaseConfigFromServer, updateSupabaseClient } from "../lib/supabase";
-import { checkAdminExists, handleAdminSignup as dbAdminSignup, handleAdminLogin as dbAdminLogin, runSupabaseDiagnostics } from "../lib/adminAuth";
+import { checkAdminExists, checkAdminOwnerExists, handleAdminSignup as dbAdminSignup, handleAdminLogin as dbAdminLogin, runSupabaseDiagnostics } from "../lib/adminAuth";
 import { useNavigation } from "../context/NavigationContext";
 import { isClientReady } from "../lib/supabaseClient";
 import { AdminGuard } from "./AdminGuard";
@@ -233,6 +233,7 @@ export default function AdminDashboard() {
     const stored = localStorage.getItem("signed_up_admin");
     return !!stored;
   });
+  const [ownerExists, setOwnerExists] = useState<boolean>(false);
   const [isAdminExistsLoading, setIsAdminExistsLoading] = useState<boolean>(true);
 
   // Diagnostics states
@@ -267,8 +268,11 @@ export default function AdminDashboard() {
     e.preventDefault();
     setAdminAuthErr("");
 
-    if (adminExists || signedUpAdmin) {
-      setAdminAuthErr("An administrator has already been registered. Sign up is closed.");
+    // Query admin table for any record where is_owner = true before creating account
+    const currentOwnerExists = await checkAdminOwnerExists();
+    if (currentOwnerExists) {
+      setAdminAuthErr("Administrator account already exists. Please sign in.");
+      setOwnerExists(true);
       return;
     }
 
@@ -287,28 +291,29 @@ export default function AdminDashboard() {
         setAdminAuthErr("The table 'admin_accounts' is not created in Supabase yet. Please copy the complete SQL script from the helper box at the bottom of the page and paste/run it in your Supabase SQL Editor first.");
       } else if (result.code === "23505" || result.error?.includes("unique constraint") || result.error?.includes("already exists")) {
         setAdminAuthErr("An administrative account with this email address already exists in Supabase. Signup is closed.");
+      } else if (result.error?.includes("already exists") || result.error?.includes("Please sign in")) {
+        setAdminAuthErr("Administrator account already exists. Please sign in.");
       } else {
         setAdminAuthErr(result.error || "Administrative registration limit reached.");
       }
       
       // Auto-recheck and sync with existing admin if DB says it exists
-      if (result.code === "ADM01" || result.error?.includes("already exists") || result.error?.includes("limit reached")) {
-        try {
-          const exists = await checkAdminExists();
-          setAdminExists(exists);
-          if (exists && supabase) {
-            const { data: existing } = await supabase
-              .from("admin_accounts")
-              .select("id, name, email, password, mfa_secret, mfa_enabled")
-              .limit(1);
-            if (existing && existing.length > 0) {
-              setSignedUpAdmin(existing[0]);
-              localStorage.setItem("signed_up_admin", JSON.stringify(existing[0]));
-            }
+      try {
+        const oExists = await checkAdminOwnerExists();
+        setOwnerExists(oExists);
+        if (oExists && supabase) {
+          const { data: existing } = await supabase
+            .from("admin_accounts")
+            .select("id, name, email, password, mfa_secret, mfa_enabled")
+            .eq("is_owner", true)
+            .limit(1);
+          if (existing && existing.length > 0) {
+            setSignedUpAdmin(existing[0]);
+            localStorage.setItem("signed_up_admin", JSON.stringify(existing[0]));
           }
-        } catch (err) {
-          console.error("Failed to sync on signup conflict:", err);
         }
+      } catch (err) {
+        console.error("Failed to sync on signup conflict:", err);
       }
 
       setIsSigningUp(false);
@@ -320,11 +325,13 @@ export default function AdminDashboard() {
       email: signupEmail.trim().toLowerCase(),
       password: signupPassword, // In case of local fallback simulation mockup
       mfa_secret: null,
-      mfa_enabled: false
+      mfa_enabled: false,
+      is_owner: true,
     };
 
     localStorage.setItem("signed_up_admin", JSON.stringify(createdAdmin));
     setSignedUpAdmin(createdAdmin);
+    setOwnerExists(true);
     setAdminExists(true);
     setIsSigningUp(false);
     
@@ -772,6 +779,13 @@ export default function AdminDashboard() {
       // Refresh database configuration
       updateSupabaseClient();
 
+      try {
+        const oExists = await checkAdminOwnerExists();
+        setOwnerExists(oExists);
+      } catch (err) {
+        console.error("Error checking checkAdminOwnerExists:", err);
+      }
+
       if (supabase && isSupabaseConfigured) {
         try {
           // Use secure helper to verify if admin exists in Supabase
@@ -796,6 +810,10 @@ export default function AdminDashboard() {
           setIsAdminExistsLoading(false);
         }
       } else {
+        try {
+          const exists = await checkAdminExists();
+          setAdminExists(exists);
+        } catch (_) {}
         setIsAdminExistsLoading(false);
       }
     };
@@ -813,14 +831,14 @@ export default function AdminDashboard() {
     };
   }, [authMode, isAdminAuth]);
 
-  // Handle automatic routing of authMode based on administrator presence state
+  // Handle automatic routing of authMode based on owner presence state
   useEffect(() => {
-    if (signedUpAdmin || adminExists) {
+    if (ownerExists) {
       setAuthMode("signin");
     } else {
       setAuthMode("signup");
     }
-  }, [signedUpAdmin, adminExists]);
+  }, [ownerExists]);
 
   const mapSupabaseCourse = (row: any): Course => ({
     id: row.id,
@@ -2241,23 +2259,23 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (!adminExists && !signedUpAdmin) {
+                    if (!ownerExists) {
                       setAuthMode("signup");
                       setAdminAuthErr("");
                     }
                   }}
-                  disabled={adminExists || !!signedUpAdmin}
+                  disabled={ownerExists}
                   className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                    adminExists || signedUpAdmin
+                    ownerExists
                       ? "bg-slate-50 border border-slate-200/50 text-slate-400 opacity-50 cursor-not-allowed"
                       : authMode === "signup"
                       ? "bg-white text-slate-900 shadow-xs border border-slate-200/50 cursor-pointer"
                       : "text-slate-500 hover:text-slate-800 cursor-pointer"
                   }`}
-                  title={adminExists || signedUpAdmin ? "Only one admin account is allowed. Signup is closed." : "Register new admin account"}
+                  title={ownerExists ? "Only one owner account is allowed. Signup is closed." : "Register owner admin account"}
                 >
-                  <span>{adminExists || signedUpAdmin ? "🔒" : ""} Sign Up</span>
-                  {(adminExists || signedUpAdmin) && (
+                  <span>{ownerExists ? "🔒" : ""} Sign Up</span>
+                  {ownerExists && (
                     <span className="text-[8px] bg-slate-200 px-1 py-0.5 rounded font-mono text-slate-650">
                       Closed
                     </span>
@@ -2274,7 +2292,7 @@ export default function AdminDashboard() {
 
 
 
-              {!(adminExists || signedUpAdmin) && authMode === "signup" ? (
+              {!ownerExists && authMode === "signup" ? (
                 <form onSubmit={handleAdminSignup} className="space-y-4 relative z-10 animate-in fade-in duration-200">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 block">Your Name</label>
@@ -2444,6 +2462,7 @@ CREATE TABLE public.admin_accounts (
     password TEXT NOT NULL,
     mfa_secret TEXT,
     mfa_enabled BOOLEAN DEFAULT false,
+    is_owner BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -5344,6 +5363,7 @@ CREATE TABLE public.admin_accounts (
     password TEXT NOT NULL,
     mfa_secret TEXT,
     mfa_enabled BOOLEAN DEFAULT false,
+    is_owner BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

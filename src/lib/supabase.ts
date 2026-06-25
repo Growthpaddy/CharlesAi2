@@ -175,6 +175,7 @@ CREATE TABLE public.admin_accounts (
     password TEXT NOT NULL,
     mfa_secret TEXT,
     mfa_enabled BOOLEAN DEFAULT false,
+    is_owner BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -321,16 +322,18 @@ export async function syncLocalStorageToSupabase() {
 
           // Also upsert to user_lessons
           const userLessonId = `${loggedStudentId}_${prog.lessonId}`;
-          await supabase.from("user_lessons").upsert({
-            id: userLessonId,
-            user_id: loggedStudentId,
-            course_id: prog.courseId,
-            lesson_id: prog.lessonId,
-            completed: prog.completed,
-            completed_at: prog.completedAt || new Date().toISOString()
-          }).catch(err => {
+          try {
+            await supabase.from("user_lessons").upsert({
+              id: userLessonId,
+              user_id: loggedStudentId,
+              course_id: prog.courseId,
+              lesson_id: prog.lessonId,
+              completed: prog.completed,
+              completed_at: prog.completedAt || new Date().toISOString()
+            });
+          } catch (err) {
             console.warn("Could not sync to user_lessons table:", err);
-          });
+          }
         }
       }
     }
