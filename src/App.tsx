@@ -41,6 +41,7 @@ import CourseDetailPage from "./components/CourseDetailPage";
 import ThankYouPage from "./components/ThankYouPage";
 import CheckoutPage from "./components/CheckoutPage";
 import { NavigationProvider, useNavigation, ViewType } from "./context/NavigationContext";
+import { AdminProvider } from "./context/AdminContext";
 import { initDB } from "./lib/db";
 
 export default function App() {
@@ -50,7 +51,9 @@ export default function App() {
 
   return (
     <NavigationProvider>
-      <AppContent />
+      <AdminProvider>
+        <AppContent />
+      </AdminProvider>
     </NavigationProvider>
   );
 }

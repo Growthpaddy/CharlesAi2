@@ -10,17 +10,18 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Eye, EyeOff, Trash2, Edit2, Check, X, 
   Search, Calendar, Mail, Phone, DollarSign, Clock, FileText, 
   Download, ArrowUpRight, CheckCircle2, AlertCircle, Heart, FolderPlus,
-  Tv, Award, RefreshCw, Layers, UserPlus, LogOut, ShieldCheck, Key, QrCode, Lock, Shield
+  Tv, Award, RefreshCw, Layers, UserPlus, LogOut, ShieldCheck, Key, QrCode, Lock, Shield, ShieldAlert
 } from "lucide-react";
 import * as OTPAuth from "otpauth";
 import { db, Course, CourseModule, Lesson, Category } from "../lib/db";
 import { supabase, isSupabaseConfigured, fetchSupabaseConfigFromServer, updateSupabaseClient } from "../lib/supabase";
-import { checkAdminExists, checkAdminOwnerExists, handleAdminSignup as dbAdminSignup, handleAdminLogin as dbAdminLogin, runSupabaseDiagnostics } from "../lib/adminAuth";
+import { checkAdminExists, checkAdminOwnerExists, runSupabaseDiagnostics } from "../lib/adminAuth";
 import { useNavigation } from "../context/NavigationContext";
 import { isClientReady } from "../lib/supabaseClient";
 import { AdminGuard } from "./AdminGuard";
 import { createJWT, verifyJWT } from "../lib/jwt";
 import { testConnection } from "../lib/dbTest";
+import { useAdmin } from "../context/AdminContext";
 
 // Define Admin Tab type
 type AdminTab = 
@@ -96,6 +97,7 @@ interface GradeRecord {
 
 export default function AdminDashboard() {
   const { navigateTo } = useNavigation();
+  const { logout: contextLogout, checkAuth, loading: contextLoading } = useAdmin();
 
   // Supabase readiness state
   const [isReady, setIsReady] = useState<boolean>(() => isClientReady());
@@ -125,6 +127,32 @@ export default function AdminDashboard() {
   const [isAdminAuth, setIsAdminAuth] = useState<boolean>(() => {
     return localStorage.getItem("is_admin_authenticated") === "true";
   });
+  const [isOwner, setIsOwner] = useState<boolean>(false);
+  const [isOwnerLoading, setIsOwnerLoading] = useState<boolean>(true);
+
+  // Authenticate and verify owner authorization status dynamically
+  useEffect(() => {
+    if (!isAdminAuth) {
+      setIsOwner(false);
+      setIsOwnerLoading(false);
+      return;
+    }
+
+    const checkOwnerStatus = async () => {
+      setIsOwnerLoading(true);
+      try {
+        const ownerResult = await checkAuth();
+        setIsOwner(ownerResult);
+      } catch (err) {
+        console.error("Error checking owner status:", err);
+        setIsOwner(false);
+      } finally {
+        setIsOwnerLoading(false);
+      }
+    };
+
+    checkOwnerStatus();
+  }, [isAdminAuth, checkAuth]);
 
   // Automatically verify JWT Session Token on mount and ensure no unwanted logouts across refreshes
   useEffect(() => {
@@ -268,14 +296,6 @@ export default function AdminDashboard() {
     e.preventDefault();
     setAdminAuthErr("");
 
-    // Query admin table for any record where is_owner = true before creating account
-    const currentOwnerExists = await checkAdminOwnerExists();
-    if (currentOwnerExists) {
-      setAdminAuthErr("Administrator account already exists. Please sign in.");
-      setOwnerExists(true);
-      return;
-    }
-
     if (!signupName.trim() || !signupEmail.trim() || !signupPassword) {
       setAdminAuthErr("Name, email and password are required.");
       return;
@@ -283,65 +303,89 @@ export default function AdminDashboard() {
 
     setIsSigningUp(true);
 
-    // Call unified auth helper
-    const result = await dbAdminSignup(signupName, signupEmail, signupPassword);
+    try {
+      // 1. Double check if owner already exists
+      const { data: owners, error: ownerError } = await supabase
+        .from("admin")
+        .select("id")
+        .eq("is_owner", true)
+        .limit(1);
 
-    if (!result.success) {
-      if (result.code === "42P01" || result.error?.includes("does not exist")) {
-        setAdminAuthErr("The table 'admin_accounts' is not created in Supabase yet. Please copy the complete SQL script from the helper box at the bottom of the page and paste/run it in your Supabase SQL Editor first.");
-      } else if (result.code === "23505" || result.error?.includes("unique constraint") || result.error?.includes("already exists")) {
-        setAdminAuthErr("An administrative account with this email address already exists in Supabase. Signup is closed.");
-      } else if (result.error?.includes("already exists") || result.error?.includes("Please sign in")) {
+      if (owners && owners.length > 0) {
         setAdminAuthErr("Administrator account already exists. Please sign in.");
-      } else {
-        setAdminAuthErr(result.error || "Administrative registration limit reached.");
+        setOwnerExists(true);
+        setAuthMode("signin");
+        setIsSigningUp(false);
+        return;
       }
-      
-      // Auto-recheck and sync with existing admin if DB says it exists
+
+      // 2. Create user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: signupEmail.trim().toLowerCase(),
+        password: signupPassword,
+      });
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      const authUser = authData?.user;
+      if (!authUser) {
+        throw new Error("Could not create authentication user. Check connection or credentials format.");
+      }
+
+      // 3. Insert into public.admin table (no password columns!)
+      const { error: insertError } = await supabase
+        .from("admin")
+        .insert({
+          id: authUser.id,
+          full_name: signupName.trim(),
+          email: signupEmail.trim().toLowerCase(),
+          role: "admin",
+          is_owner: true,
+          is_active: true,
+          mfa_enabled: false,
+          mfa_secret: null,
+          created_at: new Date().toISOString()
+        });
+
+      if (insertError) {
+        console.error("Database registration failed:", insertError);
+        throw new Error(`Database registration failed: ${insertError.message}`);
+      }
+
+      // 4. On successful signup: set local and global auth states to redirect straight to /admin-dashboard
+      const displayName = signupName.trim();
+      const userEmail = signupEmail.trim().toLowerCase();
+
+      // Sign JWT session token
       try {
-        const oExists = await checkAdminOwnerExists();
-        setOwnerExists(oExists);
-        if (oExists && supabase) {
-          const { data: existing } = await supabase
-            .from("admin_accounts")
-            .select("id, name, email, password, mfa_secret, mfa_enabled")
-            .eq("is_owner", true)
-            .limit(1);
-          if (existing && existing.length > 0) {
-            setSignedUpAdmin(existing[0]);
-            localStorage.setItem("signed_up_admin", JSON.stringify(existing[0]));
-          }
-        }
+        const token = await createJWT({ email: userEmail, name: displayName });
+        localStorage.setItem("admin_session_token", token);
       } catch (err) {
-        console.error("Failed to sync on signup conflict:", err);
+        console.error("JWT signing failed during signup:", err);
       }
 
+      localStorage.setItem("is_admin_authenticated", "true");
+      localStorage.setItem("admin_logged_in_name", displayName);
+      localStorage.setItem("admin_logged_in_email", userEmail);
+
+      setIsAdminAuth(true);
+      setIsOwner(true);
+      setOwnerExists(true);
+      setAdminExists(true);
+      setActiveTab("dashboard");
+      triggerToast(`Administrator account successfully registered. Welcome, ${displayName}!`);
+
+      // Update URL routes cleanly
+      window.location.hash = "admin-dashboard";
+      window.history.pushState({}, "", "/admin-dashboard");
+    } catch (err: any) {
+      console.error("Signup process failed:", err);
+      setAdminAuthErr(err.message || "An unexpected error occurred during administrative signup.");
+    } finally {
       setIsSigningUp(false);
-      return;
     }
-
-    const createdAdmin = result.data || {
-      name: signupName.trim(),
-      email: signupEmail.trim().toLowerCase(),
-      password: signupPassword, // In case of local fallback simulation mockup
-      mfa_secret: null,
-      mfa_enabled: false,
-      is_owner: true,
-    };
-
-    localStorage.setItem("signed_up_admin", JSON.stringify(createdAdmin));
-    setSignedUpAdmin(createdAdmin);
-    setOwnerExists(true);
-    setAdminExists(true);
-    setIsSigningUp(false);
-    
-    // Navigate straight to Sign In component
-    setAuthMode("signin");
-    setAdminEmail(createdAdmin.email);
-    setAdminPassword("");
-    setMfaSetupData(null);
-    setMfaSetupToken("");
-    triggerToast("Administrator account successfully registered. Please sign in.");
   };
 
   const handleVerifyAndCompleteSignup = async (e: React.FormEvent) => {
@@ -353,103 +397,78 @@ export default function AdminDashboard() {
     e.preventDefault();
     setAdminAuthErr("");
     setIsLoggingIn(true);
-    
-    // Aesthetic verification lag for security feel
-    await new Promise(resolve => setTimeout(resolve, 600));
 
-    const validEmails = ["admin@aionlinebusiness.org"];
-
-    if (adminEmail.trim().toLowerCase() !== "admin@aionlinebusiness.org") {
-      setAdminAuthErr("This account is not authorized as an administrator.");
+    if (!adminEmail.trim() || !adminPassword) {
+      setAdminAuthErr("Email and password are required.");
       setIsLoggingIn(false);
       return;
     }
-    
-    let isMatched = false;
-    let displayName = "Chief Academic Director";
-    let targetAdminRecord: any = null;
 
-    // 1. Try secure dbAdminLogin first
-    if (supabase && isSupabaseConfigured) {
+    try {
+      // 1. Authenticate with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: adminEmail.trim().toLowerCase(),
+        password: adminPassword,
+      });
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      const authUser = authData?.user;
+      if (!authUser) {
+        throw new Error("Login failed. No authenticated user session returned.");
+      }
+
+      // 2. Query admin profile metadata from public.admin using the authenticated user id
+      const { data: adminProfile, error: profileError } = await supabase
+        .from("admin")
+        .select("*")
+        .eq("id", authUser.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("Error fetching admin profile metadata:", profileError);
+        // Explicit logout if user exists in auth but lacks metadata or fails query
+        await supabase.auth.signOut();
+        throw new Error("Unauthorized access. Administrator metadata could not be fetched.");
+      }
+
+      // 3. Verify is_owner === true and is_active === true
+      if (!adminProfile || adminProfile.is_owner !== true || adminProfile.is_active !== true) {
+        await supabase.auth.signOut();
+        throw new Error("Unauthorized access.");
+      }
+
+      // 4. If valid, set local and global auth states and redirect to /admin-dashboard
+      const displayName = adminProfile.full_name || adminProfile.name || adminProfile.email.split("@")[0];
+      const userEmail = adminProfile.email;
+
       try {
-        const result = await dbAdminLogin(adminEmail, adminPassword);
-        
-        if (result.success && result.data) {
-          isMatched = true;
-          displayName = result.data.name;
-          targetAdminRecord = result.data;
-          setSignedUpAdmin(result.data);
-          localStorage.setItem("signed_up_admin", JSON.stringify(result.data));
-        } else if (result.error) {
-          // Check for missing table errors, allow fallback accounts to bypass
-          const isDbMissing = result.code === "42P01" || result.error?.includes("does not exist");
-          if (!isDbMissing && !validEmails.includes(adminEmail.toLowerCase())) {
-            setAdminAuthErr(result.error);
-            setIsLoggingIn(false);
-            return;
-          }
-        }
-      } catch (err: any) {
-        console.error("Error logging in via admin auth module:", err);
-      }
-    }
-
-    // 2. Playback / fallback checks for sandbox developer accounts
-    if (!isMatched) {
-      if (adminEmail.toLowerCase() === "admin@aionlinebusiness.org" && adminPassword === "@CharlesTuti_D_Boss247") {
-        isMatched = true;
-        targetAdminRecord = {
-          name: "Chief Academic Director",
-          email: "admin@aionlinebusiness.org",
-          mfa_enabled: false
-        };
-      } else if (signedUpAdmin && adminEmail.toLowerCase() === "admin@aionlinebusiness.org" && adminPassword === signedUpAdmin.password) {
-        isMatched = true;
-        displayName = signedUpAdmin.name;
-        targetAdminRecord = signedUpAdmin;
-      }
-    }
-
-    if (isMatched && targetAdminRecord) {
-      // Intercept login with Multi-Factor Authentication Challenge screen if configured
-      if (targetAdminRecord.mfa_enabled || targetAdminRecord.mfa_secret) {
-        setMfaChallengeData({
-          id: targetAdminRecord.id || "local",
-          email: targetAdminRecord.email,
-          name: targetAdminRecord.name,
-          mfaSecret: targetAdminRecord.mfa_secret
-        });
-        setMfaChallengeToken("");
-        setIsLoggingIn(false);
-        triggerToast("MFA verification code required to complete access.");
-        return;
-      }
-
-      // Maintain admin authenticated state properly with secure JWT
-      try {
-        const token = await createJWT({ email: adminEmail, name: displayName });
+        const token = await createJWT({ email: userEmail, name: displayName });
         localStorage.setItem("admin_session_token", token);
       } catch (err) {
         console.error("JWT signing failed during login:", err);
       }
+
       localStorage.setItem("is_admin_authenticated", "true");
       localStorage.setItem("admin_logged_in_name", displayName);
-      localStorage.setItem("admin_logged_in_email", adminEmail);
+      localStorage.setItem("admin_logged_in_email", userEmail);
+
       setIsAdminAuth(true);
+      setIsOwner(true);
       setActiveTab("dashboard");
       triggerToast(`Welcome back, ${displayName}! Access granted.`);
-      
-      // Redirect upon login to dashboard hash
+
+      // Update URL routes cleanly
       window.location.hash = "admin-dashboard";
-      if (window.location.pathname.includes("admin-login")) {
-        window.history.pushState({}, "", "/admin-dashboard");
-      }
-    } else {
-      if (!adminAuthErr) {
-        setAdminAuthErr("Invalid administrative credentials. Please verify your Email and Password.");
-      }
+      window.history.pushState({}, "", "/admin-dashboard");
+    } catch (err: any) {
+      console.error("Login process failed:", err);
+      setAdminAuthErr(err.message || "Invalid administrative credentials. Please verify your Email and Password.");
+    } finally {
+      setIsLoggingIn(false);
     }
-    setIsLoggingIn(false);
   };
 
   const handleVerifyMfaChallenge = async (e: React.FormEvent) => {
@@ -516,11 +535,12 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAdminLogout = () => {
-    localStorage.removeItem("is_admin_authenticated");
-    localStorage.removeItem("admin_logged_in_name");
-    localStorage.removeItem("admin_logged_in_email");
-    localStorage.removeItem("admin_session_token");
+  const handleAdminLogout = async () => {
+    try {
+      await contextLogout();
+    } catch (err) {
+      console.error("Error during admin context logout:", err);
+    }
     setIsAdminAuth(false);
     triggerToast("Logged out of the administration console securely.");
     navigateTo("admin");
@@ -710,7 +730,7 @@ export default function AdminDashboard() {
     initAndSyncConfig();
   }, []);
 
-  // Active validation hook to verify user registration exists in remote 'admin_accounts' before rendering dashboard views
+  // Active validation hook to verify user registration exists in remote 'admin' before rendering dashboard views
   const [isValidatingSession, setIsValidatingSession] = useState(false);
 
   useEffect(() => {
@@ -736,7 +756,7 @@ export default function AdminDashboard() {
         setIsValidatingSession(true);
         try {
           const { data, error } = await supabase
-            .from("admin_accounts")
+            .from("admin")
             .select("email, name")
             .eq("email", email.toLowerCase())
             .maybeSingle();
@@ -748,7 +768,7 @@ export default function AdminDashboard() {
           }
 
           if (!data) {
-            console.warn(`Admin login session check failed. Email "${email}" does not exist in 'admin_accounts'.`);
+            console.warn(`Admin login session check failed. Email "${email}" does not exist in 'admin'.`);
             triggerToast("Administrative account was removed from Database. Session terminated.");
             handleAdminLogout();
           } else {
@@ -793,8 +813,8 @@ export default function AdminDashboard() {
           setAdminExists(exists);
 
           const { data, error } = await supabase
-            .from("admin_accounts")
-            .select("*");
+            .from("admin")
+            .select("id, name, email");
           if (!error && data && data.length > 0) {
             // Find first or any admin account
             const firstAdmin = data[0];
@@ -805,7 +825,7 @@ export default function AdminDashboard() {
             localStorage.removeItem("signed_up_admin");
           }
         } catch (err) {
-          console.error("Error querying remote admin_accounts:", err);
+          console.error("Error querying remote admin:", err);
         } finally {
           setIsAdminExistsLoading(false);
         }
@@ -2452,50 +2472,47 @@ export default function AdminDashboard() {
                 <textarea 
                   readOnly 
                   onClick={(e) => (e.target as any).select()}
-                  value={`-- AI-ONLINE BUSINESS: ADMIN ACCOUNTS SCHEMAS & SECURE RLS POLICIES
+                  value={`-- AI-ONLINE BUSINESS: ADMIN SCHEMAS & SECURE RLS POLICIES
 -- Clean recreation of the table with explicit constraint
-DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin_accounts;
-DROP TABLE IF EXISTS public.admin_accounts CASCADE;
+DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin;
+DROP TABLE IF EXISTS public.admin CASCADE;
 
-CREATE TABLE public.admin_accounts (
+CREATE TABLE public.admin (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    mfa_secret TEXT,
-    mfa_enabled BOOLEAN DEFAULT false,
     is_owner BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- Ensure primary key with checking constraint (id is not null)
-ALTER TABLE public.admin_accounts ADD CONSTRAINT one_admin_only CHECK (id IS NOT NULL);
+ALTER TABLE public.admin ADD CONSTRAINT one_admin_only CHECK (id IS NOT NULL);
 
 -- Ensure Row Level Security (RLS) is enabled
-ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin ENABLE ROW LEVEL SECURITY;
 
 -- Idempotent RLS Policies to allow public select and limited access
-DROP POLICY IF EXISTS "Allow public select on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public select on admin_accounts"
-ON public.admin_accounts FOR SELECT TO PUBLIC USING (true);
+DROP POLICY IF EXISTS "Allow public select on admin" ON public.admin;
+CREATE POLICY "Allow public select on admin"
+ON public.admin FOR SELECT TO PUBLIC USING (true);
 
-DROP POLICY IF EXISTS "Allow public insert on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public insert on admin_accounts"
-ON public.admin_accounts FOR INSERT TO PUBLIC WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public insert on admin" ON public.admin;
+CREATE POLICY "Allow public insert on admin"
+ON public.admin FOR INSERT TO PUBLIC WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow public update on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public update on admin_accounts"
-ON public.admin_accounts FOR UPDATE TO PUBLIC USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public update on admin" ON public.admin;
+CREATE POLICY "Allow public update on admin"
+ON public.admin FOR UPDATE TO PUBLIC USING (true) WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow public delete on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public delete on admin_accounts"
-ON public.admin_accounts FOR DELETE TO PUBLIC USING (true);
+DROP POLICY IF EXISTS "Allow public delete on admin" ON public.admin;
+CREATE POLICY "Allow public delete on admin"
+ON public.admin FOR DELETE TO PUBLIC USING (true);
 
 -- Active restriction trigger supporting exactly one administrator registration
 CREATE OR REPLACE FUNCTION check_admin_limits()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF (SELECT count(*) FROM public.admin_accounts) >= 1 THEN
+    IF (SELECT count(*) FROM public.admin) >= 1 THEN
         RAISE EXCEPTION 'Administrative registration limit reached. Only one global account is authorized.' USING ERRCODE = 'ADM01';
     END IF;
     RETURN NEW;
@@ -2503,7 +2520,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE TRIGGER check_admin_limits_trigger
-BEFORE INSERT ON public.admin_accounts
+BEFORE INSERT ON public.admin
 FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                   className="w-full h-28 text-[9px] font-mono p-2.5 bg-slate-950 text-emerald-400 rounded-xl border border-slate-800 focus:outline-none focus:ring-0 leading-relaxed select-all cursor-text"
                 />
@@ -2516,16 +2533,19 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                 
                 <button
                   type="button"
-                  disabled={diagLoading}
+                  disabled={diagLoading || !isOwner}
                   onClick={handleRunDiagnostics}
-                  className="w-full py-2 bg-[#0056D2] hover:bg-blue-600 disabled:bg-blue-300 text-white text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs font-sans"
+                  className="w-full py-2 bg-[#0056D2] hover:bg-blue-600 disabled:bg-slate-250 disabled:text-slate-400 text-white text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs font-sans"
+                  title={isOwner ? "Run connectivity diagnostics" : "Owner privilege required to run database diagnostics"}
                 >
                   {diagLoading ? (
                     <RefreshCw className="w-3 h-3 animate-spin text-white" />
+                  ) : !isOwner ? (
+                    <Lock className="w-3.5 h-3.5 text-slate-400" />
                   ) : (
                     <ShieldCheck className="w-3.5 h-3.5 text-white" />
                   )}
-                  <span>{diagLoading ? "Checking..." : "Verify Connection & Sync Check"}</span>
+                  <span>{diagLoading ? "Checking..." : !isOwner ? "Diagnostics Locked (Owner Only)" : "Verify Connection & Sync Check"}</span>
                 </button>
 
                 {diagResult && (
@@ -2542,7 +2562,7 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                     </div>
                     {diagResult.connected ? (
                       <p className="leading-relaxed">
-                        Successfully retrieved <strong>{diagResult.count}</strong> record(s) in <code>admin_accounts</code>.
+                        Successfully retrieved <strong>{diagResult.count}</strong> record(s) in <code>admin</code>.
                       </p>
                     ) : (
                       <p className="leading-relaxed text-[9px] font-mono whitespace-pre-wrap">
@@ -2753,15 +2773,22 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
               {/* Sidebar Action Footer bar */}
               <div className="pt-3 border-t border-gray-150 space-y-1">
                 <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100 flex flex-col gap-1.5">
-                  <span className="text-[9px] font-mono font-bold text-slate-400 block uppercase tracking-wider">
+                  <span className="text-[9px] font-mono font-bold text-slate-400 block uppercase tracking-wider font-semibold">
                     OPERATOR SESSION
                   </span>
                   <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
-                    <span className="truncate max-w-[120px]">{getAdminDisplayName()}</span>
-                    <span className="text-emerald-600 font-normal flex items-center gap-1 font-mono text-[9px]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                      Active
-                    </span>
+                    <span className="truncate max-w-[110px]" title={getAdminDisplayName()}>{getAdminDisplayName()}</span>
+                    {isOwnerLoading ? (
+                      <span className="text-slate-400 font-mono text-[9px]">checking...</span>
+                    ) : isOwner ? (
+                      <span className="text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/50 font-normal flex items-center gap-1 font-mono text-[9px]" title="Primary Platform Owner with Full Access">
+                        🛡️ Owner
+                      </span>
+                    ) : (
+                      <span className="text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded font-normal flex items-center gap-1 font-mono text-[9px]" title="Staff Operator Session with Restricted Access">
+                        👤 Staff
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -4951,7 +4978,29 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
         {/* ======================================================== */}
         {activeTab === "supabase" && (
           <div className="space-y-6 animate-in fade-in duration-200 text-left">
-            <div className="bg-slate-900 text-slate-100 p-6 md:p-8 rounded-3xl space-y-4">
+            {!isOwner ? (
+              <div className="bg-white border border-amber-200 rounded-3xl p-8 shadow-sm space-y-6 text-center max-w-2xl mx-auto my-12">
+                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-amber-500 border border-amber-100">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-display font-black text-xl text-slate-900">Owner Access Required</h3>
+                  <p className="text-sm text-slate-500 leading-relaxed font-sans">
+                    This control panel contains database-level initialization schemas, security triggers, and environment configuration instructions.
+                  </p>
+                  <p className="text-xs text-slate-400 bg-slate-50 p-3 rounded-xl border border-slate-100 font-mono inline-block">
+                    Current Identity: {getAdminDisplayName()} • Status: Staff (Unprivileged)
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <p className="text-xs text-amber-600 font-bold font-sans">
+                    To access the Supabase Control Center, make sure your email is registered with <code>is_owner: true</code> in the <code>public.admin</code> table.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="bg-slate-900 text-slate-100 p-6 md:p-8 rounded-3xl space-y-4">
               <span className="text-[10px] uppercase font-mono font-black text-blue-400 bg-blue-950 px-2.5 py-1 rounded-md">
                 Production Deployment Guide & RLS Controls
               </span>
@@ -5354,49 +5403,46 @@ CREATE POLICY "Students read own enrollments only" ON public.enrollments
     FOR SELECT TO authenticated USING (user_id = auth.uid());
 
 
--- 6. ADMIN ACCOUNTS TABLE (Allows robust global admin persistence)
-DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin_accounts;
-DROP TABLE IF EXISTS public.admin_accounts CASCADE;
+-- 6. ADMIN TABLE (Allows robust global admin persistence)
+DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin;
+DROP TABLE IF EXISTS public.admin CASCADE;
 
-CREATE TABLE public.admin_accounts (
+CREATE TABLE public.admin (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    mfa_secret TEXT,
-    mfa_enabled BOOLEAN DEFAULT false,
     is_owner BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- Ensure primary key with checking constraint (id is not null)
-ALTER TABLE public.admin_accounts ADD CONSTRAINT one_admin_only CHECK (id IS NOT NULL);
+ALTER TABLE public.admin ADD CONSTRAINT one_admin_only CHECK (id IS NOT NULL);
 
--- Enable RLS for admin_accounts
-ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
+-- Enable RLS for admin
+ALTER TABLE public.admin ENABLE ROW LEVEL SECURITY;
 
 -- Idempotent RLS Policies
-DROP POLICY IF EXISTS "Allow public select on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public select on admin_accounts"
-ON public.admin_accounts FOR SELECT TO PUBLIC USING (true);
+DROP POLICY IF EXISTS "Allow public select on admin" ON public.admin;
+CREATE POLICY "Allow public select on admin"
+ON public.admin FOR SELECT TO PUBLIC USING (true);
 
-DROP POLICY IF EXISTS "Allow public insert on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public insert on admin_accounts"
-ON public.admin_accounts FOR INSERT TO PUBLIC WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public insert on admin" ON public.admin;
+CREATE POLICY "Allow public insert on admin"
+ON public.admin FOR INSERT TO PUBLIC WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow public update on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public update on admin_accounts"
-ON public.admin_accounts FOR UPDATE TO PUBLIC USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public update on admin" ON public.admin;
+CREATE POLICY "Allow public update on admin"
+ON public.admin FOR UPDATE TO PUBLIC USING (true) WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow public delete on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public delete on admin_accounts"
-ON public.admin_accounts FOR DELETE TO PUBLIC USING (true);
+DROP POLICY IF EXISTS "Allow public delete on admin" ON public.admin;
+CREATE POLICY "Allow public delete on admin"
+ON public.admin FOR DELETE TO PUBLIC USING (true);
 
 -- Trigger-level constraint to guarantee a maximum of one row in the table
 CREATE OR REPLACE FUNCTION check_admin_limits()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF (SELECT count(*) FROM public.admin_accounts) >= 1 THEN
+    IF (SELECT count(*) FROM public.admin) >= 1 THEN
         RAISE EXCEPTION 'Administrative registration limit reached. Only one global account is authorized.' USING ERRCODE = 'ADM01';
     END IF;
     RETURN NEW;
@@ -5404,7 +5450,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE TRIGGER check_admin_limits_trigger
-BEFORE INSERT ON public.admin_accounts
+BEFORE INSERT ON public.admin
 FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`);
                         triggerToast("SQL Schema and RLS policies copied to clipboard!");
                       }}
@@ -5417,6 +5463,8 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`);
               </div>
 
             </div>
+              </>
+            )}
           </div>
         )}
 

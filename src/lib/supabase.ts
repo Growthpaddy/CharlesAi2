@@ -163,24 +163,21 @@ CREATE TABLE IF NOT EXISTS public.user_lessons (
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Create admin accounts table for persistent admin accounts across sessions
-DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin_accounts;
-DROP TRIGGER IF EXISTS prevent_extra_admin ON public.admin_accounts;
-DROP TABLE IF EXISTS public.admin_accounts CASCADE;
+-- Create admin table for persistent admin accounts across sessions
+DROP TRIGGER IF EXISTS check_admin_limits_trigger ON public.admin;
+DROP TRIGGER IF EXISTS prevent_extra_admin ON public.admin;
+DROP TABLE IF EXISTS public.admin CASCADE;
 
-CREATE TABLE public.admin_accounts (
+CREATE TABLE public.admin (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    mfa_secret TEXT,
-    mfa_enabled BOOLEAN DEFAULT false,
     is_owner BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- Ensure primary key with checking constraint (id is not null)
-ALTER TABLE public.admin_accounts ADD CONSTRAINT one_admin_only CHECK (id IS NOT NULL);
+ALTER TABLE public.admin ADD CONSTRAINT one_admin_only CHECK (id IS NOT NULL);
 
 -- Set Row Level Security (RLS) policies for simulation parameters
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
@@ -189,7 +186,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_lessons ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin ENABLE ROW LEVEL SECURITY;
 
 -- Allow anonymous inserts for Leads & Contact inquiries
 CREATE POLICY "Allow public insert to leads" ON public.leads FOR INSERT WITH CHECK (true);
@@ -206,35 +203,35 @@ CREATE POLICY "Allow public read/write to enrollments" ON public.enrollments FOR
 CREATE POLICY "Allow public read/write to student_progress" ON public.student_progress FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write to user_lessons" ON public.user_lessons FOR ALL USING (true) WITH CHECK (true);
 
--- Allow public select on admin_accounts so registration and dynamic login verification work
-DROP POLICY IF EXISTS "Allow public select on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public select on admin_accounts"
-ON public.admin_accounts
+-- Allow public select on admin so registration and dynamic login verification work
+DROP POLICY IF EXISTS "Allow public select on admin" ON public.admin;
+CREATE POLICY "Allow public select on admin"
+ON public.admin
 FOR SELECT
 TO PUBLIC
 USING (true);
 
--- Allow public insert on admin_accounts (limit restricted securely via trigger)
-DROP POLICY IF EXISTS "Allow public insert on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public insert on admin_accounts"
-ON public.admin_accounts
+-- Allow public insert on admin (limit restricted securely via trigger)
+DROP POLICY IF EXISTS "Allow public insert on admin" ON public.admin;
+CREATE POLICY "Allow public insert on admin"
+ON public.admin
 FOR INSERT
 TO PUBLIC
 WITH CHECK (true);
 
--- Allow public update on admin_accounts
-DROP POLICY IF EXISTS "Allow public update on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public update on admin_accounts"
-ON public.admin_accounts
+-- Allow public update on admin
+DROP POLICY IF EXISTS "Allow public update on admin" ON public.admin;
+CREATE POLICY "Allow public update on admin"
+ON public.admin
 FOR UPDATE
 TO PUBLIC
 USING (true)
 WITH CHECK (true);
 
--- Allow public delete on admin_accounts
-DROP POLICY IF EXISTS "Allow public delete on admin_accounts" ON public.admin_accounts;
-CREATE POLICY "Allow public delete on admin_accounts"
-ON public.admin_accounts
+-- Allow public delete on admin
+DROP POLICY IF EXISTS "Allow public delete on admin" ON public.admin;
+CREATE POLICY "Allow public delete on admin"
+ON public.admin
 FOR DELETE
 TO PUBLIC
 USING (true);
@@ -243,7 +240,7 @@ USING (true);
 CREATE OR REPLACE FUNCTION check_admin_exists()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF (SELECT count(*) FROM public.admin_accounts) >= 1 THEN
+    IF (SELECT count(*) FROM public.admin) >= 1 THEN
         RAISE EXCEPTION 'Admin account already exists';
     END IF;
     RETURN NEW;
@@ -251,7 +248,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER prevent_extra_admin
-BEFORE INSERT ON public.admin_accounts
+BEFORE INSERT ON public.admin
 FOR EACH ROW EXECUTE FUNCTION check_admin_exists();
 `;
 

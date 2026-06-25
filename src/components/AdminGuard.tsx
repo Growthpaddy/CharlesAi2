@@ -31,23 +31,16 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
 
       if (supabase && isSupabaseConfigured) {
         try {
-          // Attempt query on the active admin table 'admin_accounts'
-          let { data, error } = await supabase
-            .from("admin_accounts")
-            .select("email, name")
-            .eq("email", loggedInEmail.trim());
+          // Verify with Supabase Auth session first
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          const targetEmail = authUser?.email || loggedInEmail;
 
-          // Fallback check for 'admins' table if table name differs
-          if (error && error.message?.includes("does not exist")) {
-            console.warn("AdminGuard: 'admin_accounts' table not found. Attempting query on 'admins' table.");
-            const fallbackQuery = await supabase
-              .from("admins")
-              .select("email, name")
-              .eq("email", loggedInEmail.trim());
-            
-            data = fallbackQuery.data;
-            error = fallbackQuery.error;
-          }
+          // Attempt query on the active admin table 'admin'
+          const { data, error } = await supabase
+            .from("admin")
+            .select("email, is_owner, is_active")
+            .eq("email", targetEmail.trim().toLowerCase())
+            .maybeSingle();
 
           if (error) {
             console.error("AdminGuard: Supabase verification error:", error);
@@ -60,18 +53,22 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
             return;
           }
 
-          if (data && data.length > 0) {
+          if (data && data.is_owner && data.is_active) {
             if (active) {
               setAuthorized(true);
               setChecking(false);
               if (onVerificationComplete) onVerificationComplete(true);
             }
           } else {
-            console.warn("AdminGuard: No matching Admin account found for email:", loggedInEmail);
+            console.warn("AdminGuard: No matching active Owner Admin account found for email:", targetEmail);
             // Session is unauthorized or was deleted from backend. Evict local credentials.
             localStorage.removeItem("is_admin_authenticated");
             localStorage.removeItem("admin_logged_in_name");
             localStorage.removeItem("admin_logged_in_email");
+            localStorage.removeItem("admin_session_token");
+            try {
+              await supabase.auth.signOut();
+            } catch (_) {}
             
             if (active) {
               setAuthorized(false);

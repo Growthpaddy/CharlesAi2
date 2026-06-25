@@ -1,88 +1,4 @@
-import bcrypt from "bcryptjs";
 import { supabaseClient as supabase, isSupabaseConfigured, updateSupabaseClient } from "./supabaseClient";
-
-/**
- * Generates an SHA-256 fallback hash of a password using the built-in browser Web Crypto API.
- */
-export async function hashPasswordSha256(password: string): Promise<string> {
-  try {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-  } catch (err) {
-    console.error("Web Crypto API hashing failed, falling back to simple hash", err);
-    // Simple fallback hash if running in environments lacking crypto.subtle
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-      const char = password.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return `fb_${hash.toString(16)}`;
-  }
-}
-
-/**
- * Generates a secure, salted bcrypt hash of a password.
- */
-export async function hashPassword(password: string): Promise<string> {
-  try {
-    const salt = await bcrypt.genSalt(10);
-    return await bcrypt.hash(password, salt);
-  } catch (err) {
-    console.error("Bcrypt hashing failed, falling back to SHA-256", err);
-    return await hashPasswordSha256(password);
-  }
-}
-
-/**
- * Verifies if a password is valid against a stored hash value (supports bcrypt, older SHA-256 hashes, and local plaintext passwords).
- */
-export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
-  if (!password || !storedHash) {
-    return false;
-  }
-
-  // Trim the stored hash to handle copy-paste or database string padding robustly
-  const cleanStoredHash = storedHash.trim();
-
-  // 1. If stored hash is formatted as a bcrypt string, use bcryptjs comparison
-  const isBcryptStyle = cleanStoredHash.startsWith("$2a$") || 
-                        cleanStoredHash.startsWith("$2b$") || 
-                        cleanStoredHash.startsWith("$2y$") || 
-                        cleanStoredHash.startsWith("$2x$") ||
-                        /^\$2[abxy]?\$\d+\$[./A-Za-z0-9]{53}$/.test(cleanStoredHash);
-
-  if (isBcryptStyle) {
-    try {
-      // Perform the secure bcrypt compare. It is asynchronous and returns a promise.
-      const match = await bcrypt.compare(password, cleanStoredHash);
-      if (match) {
-        return true;
-      }
-    } catch (err) {
-      console.error("[verifyPassword] Bcrypt comparison error:", err);
-      // Fallback in case comparison fails due to unexpected environment constraints
-    }
-  }
-
-  // 2. Check older helper SHA-256 hash match
-  const fallbackSha = await hashPasswordSha256(password);
-  if (cleanStoredHash === fallbackSha) {
-    console.log("[verifyPassword] SHA-256 fallback hash matches successfully.");
-    return true;
-  }
-
-  // 3. Fallback to raw plaintext match (e.g. for initial sandbox/manual entries)
-  if (cleanStoredHash === password) {
-    console.warn("[verifyPassword] Security warning: Plaintext password match occurred. Consider updating password to direct bcrypt hashing.");
-    return true;
-  }
-
-  return false;
-}
 
 /**
  * Checks if at least one administrator account exists in the database.
@@ -104,13 +20,13 @@ export async function checkAdminExists(): Promise<boolean> {
   }
   try {
     const { data, error } = await supabase
-      .from("admin_accounts")
+      .from("admin")
       .select("id")
       .limit(1);
 
     if (error) {
       if (error.code === "42P01" || error.message?.includes("does not exist")) {
-        console.warn("Table 'admin_accounts' does not exist in Supabase yet. Falling back to local storage admin verification.");
+        console.warn("Table 'admin' does not exist in Supabase yet. Falling back to local storage admin verification.");
         const localAdmins = localStorage.getItem("academy_admins");
         if (localAdmins) {
           try {
@@ -150,18 +66,25 @@ export async function checkAdminOwnerExists(): Promise<boolean> {
         return false;
       }
     }
+    const signedUp = localStorage.getItem("signed_up_admin");
+    if (signedUp) {
+      try {
+        const parsed = JSON.parse(signedUp);
+        return !!parsed && parsed.is_owner === true;
+      } catch (_) {}
+    }
     return false;
   }
   try {
     const { data, error } = await supabase
-      .from("admin_accounts")
+      .from("admin")
       .select("id")
       .eq("is_owner", true)
       .limit(1);
 
     if (error) {
       if (error.code === "42P01" || error.message?.includes("does not exist") || error.code === "42703") {
-        console.warn("Table or column is_owner does not exist in Supabase yet. Falling back to general existence check.");
+        console.warn("Table or column is_owner does not exist in Supabase yet. Falling back to local storage.");
         const localAdmins = localStorage.getItem("academy_admins");
         if (localAdmins) {
           try {
@@ -173,7 +96,7 @@ export async function checkAdminOwnerExists(): Promise<boolean> {
         }
         // General existence check fallback
         const { data: generalData, error: generalErr } = await supabase
-          .from("admin_accounts")
+          .from("admin")
           .select("id")
           .limit(1);
         if (!generalErr && generalData && generalData.length > 0) {
@@ -192,193 +115,7 @@ export async function checkAdminOwnerExists(): Promise<boolean> {
 }
 
 /**
- * Handle administrative registration/signup.
- * Ensures that no other administrator exists prior to registration to maintain the strict one-admin rule.
- * Hashes the password securely before insertion.
- */
-export async function handleAdminSignup(
-  name: string,
-  email: string,
-  password: string
-): Promise<{ success: boolean; data?: any; error?: string; code?: string }> {
-  updateSupabaseClient();
-  if (!supabase || !isSupabaseConfigured) {
-    // Local offline simulation fallback
-    try {
-      const exists = await checkAdminOwnerExists();
-      if (exists) {
-        return {
-          success: false,
-          error: "Administrator account already exists. Please sign in.",
-          code: "ADM01",
-        };
-      }
-
-      const hashedPassword = await hashPassword(password);
-      const newAdmin = {
-        id: "offline-admin-id-" + Date.now(),
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        password: hashedPassword,
-        mfa_secret: null,
-        mfa_enabled: false,
-        is_owner: true,
-        created_at: new Date().toISOString()
-      };
-
-      const admins = [newAdmin];
-      localStorage.setItem("academy_admins", JSON.stringify(admins));
-      return { success: true, data: newAdmin };
-    } catch (err: any) {
-      return {
-        success: false,
-        error: err.message || "An unexpected offline registration error occurred."
-      };
-    }
-  }
-
-  try {
-    // 1. Verify owner existence check first to prevent duplicate signups before insert attempt
-    const exists = await checkAdminOwnerExists();
-    if (exists) {
-      return {
-        success: false,
-        error: "Administrator account already exists. Please sign in.",
-        code: "ADM01",
-      };
-    }
-
-    // 2. Hash the password securely
-    const hashedPassword = await hashPassword(password);
-
-    // 3. Store in Supabase
-    let insertObj: any = {
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      password: hashedPassword, // Store secure hash
-      mfa_secret: null,
-      mfa_enabled: false,
-      is_owner: true,
-    };
-
-    let { data, error } = await supabase
-      .from("admin_accounts")
-      .insert(insertObj)
-      .select()
-      .maybeSingle();
-
-    if (error && (error.code === "42703" || error.message?.includes("is_owner"))) {
-      console.warn("is_owner column does not exist in remote table, retrying insert without is_owner");
-      delete insertObj.is_owner;
-      const retryResult = await supabase
-        .from("admin_accounts")
-        .insert(insertObj)
-        .select()
-        .maybeSingle();
-      data = retryResult.data;
-      error = retryResult.error;
-    }
-
-    if (error) {
-      console.error("Error inserting remote admin account in signup:", error);
-      return {
-        success: false,
-        error: error.message || "Database insert failed.",
-        code: error.code,
-      };
-    }
-
-    return { success: true, data };
-  } catch (err: any) {
-    console.error("Exception in handleAdminSignup:", err);
-    return {
-      success: false,
-      error: err.message || "An unexpected registration error occurred.",
-    };
-  }
-}
-
-/**
- * Handle administrative login credentials verification.
- * Supports checking against both hashed password (preferred) for security,
- * and handles plaintext password checks (as a fallback for older database records) cleanly.
- */
-export async function handleAdminLogin(
-  email: string,
-  password: string
-): Promise<{ success: boolean; data?: any; error?: string; code?: string }> {
-  updateSupabaseClient();
-  if (!supabase || !isSupabaseConfigured) {
-    // Local offline simulation fallback
-    try {
-      const cleanEmail = email.trim().toLowerCase();
-      const localAdmins = localStorage.getItem("academy_admins");
-      if (!localAdmins) {
-        return { success: false, error: "No administrator accounts registered locally. Please sign up first." };
-      }
-      const parsedAdmins = JSON.parse(localAdmins);
-      if (!Array.isArray(parsedAdmins)) {
-        return { success: false, error: "Corrupted local storage admin registry." };
-      }
-      const user = parsedAdmins.find(admin => admin.email === cleanEmail);
-      if (!user) {
-        return { success: false, error: "Invalid email address or unauthorized credentials." };
-      }
-      const isMatched = await verifyPassword(password, user.password);
-      if (isMatched) {
-        return { success: true, data: user };
-      }
-      return { success: false, error: "Invalid password. Access unauthorized." };
-    } catch (err: any) {
-      return {
-        success: false,
-        error: err.message || "An unexpected offline authentication error occurred during login."
-      };
-    }
-  }
-
-  try {
-    const cleanEmail = email.trim().toLowerCase();
-    
-    // Fetch user details by email
-    const { data: user, error } = await supabase
-      .from("admin_accounts")
-      .select("*")
-      .eq("email", cleanEmail)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Error querying email during login:", error);
-      return {
-        success: false,
-        error: error.message || "Database query failed.",
-        code: error.code,
-      };
-    }
-
-    if (!user) {
-      return { success: false, error: "Invalid email address or unauthorized credentials." };
-    }
-
-    // Verify password securely using bcrypt (with legacy SHA-256 and plaintext fallbacks)
-    const isMatched = await verifyPassword(password, user.password);
-    if (isMatched) {
-      return { success: true, data: user };
-    }
-
-    return { success: false, error: "Invalid password. Access unauthorized." };
-  } catch (err: any) {
-    console.error("Exception in handleAdminLogin:", err);
-    return {
-      success: false,
-      error: err.message || "An unexpected visual database error occurred during login.",
-    };
-  }
-}
-
-/**
- * Diagnostic utility to test Supabase connection integrity, verify credentials,
- * and fetch/log the current count of records in the `admin_accounts` table.
+ * Diagnostic utility to test Supabase connection integrity and check the admin table records count.
  */
 export async function runSupabaseDiagnostics(): Promise<{
   configured: boolean;
@@ -447,10 +184,9 @@ export async function runSupabaseDiagnostics(): Promise<{
   }
 
   try {
-    console.log("[DIAGNOSTICS] Dispatching test query to table `admin_accounts`...");
-    // Check connection and obtain exact count of admin records
+    console.log("[DIAGNOSTICS] Dispatching test query to table `admin`...");
     const { data, count, error } = await supabase
-      .from("admin_accounts")
+      .from("admin")
       .select("id", { count: "exact" });
 
     if (error) {
@@ -465,7 +201,7 @@ export async function runSupabaseDiagnostics(): Promise<{
     }
 
     const currentCount = count !== null ? count : (data ? data.length : 0);
-    console.log(`[DIAGNOSTICS] Connection assertion successful! Retrieved ${currentCount} admin_accounts from live dataset.`);
+    console.log(`[DIAGNOSTICS] Connection assertion successful! Retrieved ${currentCount} admin records from live dataset.`);
     return {
       configured: true,
       connected: true,
@@ -484,4 +220,3 @@ export async function runSupabaseDiagnostics(): Promise<{
     };
   }
 }
-

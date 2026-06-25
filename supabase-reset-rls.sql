@@ -20,7 +20,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_lessons ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin ENABLE ROW LEVEL SECURITY;
 
 -- 2. Clean out previous policies to prevent overlapping conflicts
 DROP POLICY IF EXISTS "Allow public insert to leads" ON public.leads;
@@ -44,23 +44,23 @@ CREATE POLICY "Allow public read/write to enrollments" ON public.enrollments FOR
 CREATE POLICY "Allow public read/write to student_progress" ON public.student_progress FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write to user_lessons" ON public.user_lessons FOR ALL USING (true) WITH CHECK (true);
 
--- 4. Clean out admin_accounts policies
-DROP POLICY IF EXISTS "Allow public select on admin_accounts" ON public.admin_accounts;
-DROP POLICY IF EXISTS "Allow public insert on admin_accounts" ON public.admin_accounts;
-DROP POLICY IF EXISTS "Allow public update on admin_accounts" ON public.admin_accounts;
-DROP POLICY IF EXISTS "Allow public delete on admin_accounts" ON public.admin_accounts;
-DROP POLICY IF EXISTS "Allow individual read" ON public.admin_accounts;
-DROP POLICY IF EXISTS "Allow self update" ON public.admin_accounts;
-DROP POLICY IF EXISTS "admin_accounts_permissive_select" ON public.admin_accounts;
-DROP POLICY IF EXISTS "admin_accounts_permissive_insert" ON public.admin_accounts;
-DROP POLICY IF EXISTS "admin_accounts_permissive_update" ON public.admin_accounts;
-DROP POLICY IF EXISTS "admin_accounts_permissive_delete" ON public.admin_accounts;
+-- 4. Clean out admin policies
+DROP POLICY IF EXISTS "Allow public select on admin" ON public.admin;
+DROP POLICY IF EXISTS "Allow public insert on admin" ON public.admin;
+DROP POLICY IF EXISTS "Allow public update on admin" ON public.admin;
+DROP POLICY IF EXISTS "Allow public delete on admin" ON public.admin;
+DROP POLICY IF EXISTS "Allow individual read" ON public.admin;
+DROP POLICY IF EXISTS "Allow self update" ON public.admin;
+DROP POLICY IF EXISTS "admin_permissive_select" ON public.admin;
+DROP POLICY IF EXISTS "admin_permissive_insert" ON public.admin;
+DROP POLICY IF EXISTS "admin_permissive_update" ON public.admin;
+DROP POLICY IF EXISTS "admin_permissive_delete" ON public.admin;
 
--- 5. Set admin_accounts permissive policies
-CREATE POLICY "admin_accounts_permissive_select" ON public.admin_accounts FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "admin_accounts_permissive_insert" ON public.admin_accounts FOR INSERT TO PUBLIC WITH CHECK (true);
-CREATE POLICY "admin_accounts_permissive_update" ON public.admin_accounts FOR UPDATE TO PUBLIC USING (true) WITH CHECK (true);
-CREATE POLICY "admin_accounts_permissive_delete" ON public.admin_accounts FOR DELETE TO PUBLIC USING (true);
+-- 5. Set admin permissive policies
+CREATE POLICY "admin_permissive_select" ON public.admin FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "admin_permissive_insert" ON public.admin FOR INSERT TO PUBLIC WITH CHECK (true);
+CREATE POLICY "admin_permissive_update" ON public.admin FOR UPDATE TO PUBLIC USING (true) WITH CHECK (true);
+CREATE POLICY "admin_permissive_delete" ON public.admin FOR DELETE TO PUBLIC USING (true);
 
 -- 6. Log success notice
 SELECT 'Permissive Row-Level Security policies successfully configured for all active dashboards.' AS status_report;
