@@ -2241,47 +2241,49 @@ export default function AdminDashboard() {
               </div>
 
               {/* Dual authentication tabs */}
-              <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl relative z-10 border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode("signin");
-                    setAdminAuthErr("");
-                  }}
-                  className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                    authMode === "signin"
-                      ? "bg-white text-slate-900 shadow-xs border border-slate-200/50"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  Sign In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!ownerExists) {
-                      setAuthMode("signup");
+              {!ownerExists && (
+                <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl relative z-10 border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode("signin");
                       setAdminAuthErr("");
-                    }
-                  }}
-                  disabled={ownerExists}
-                  className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                    ownerExists
-                      ? "bg-slate-50 border border-slate-200/50 text-slate-400 opacity-50 cursor-not-allowed"
-                      : authMode === "signup"
-                      ? "bg-white text-slate-900 shadow-xs border border-slate-200/50 cursor-pointer"
-                      : "text-slate-500 hover:text-slate-800 cursor-pointer"
-                  }`}
-                  title={ownerExists ? "Only one owner account is allowed. Signup is closed." : "Register owner admin account"}
-                >
-                  <span>{ownerExists ? "🔒" : ""} Sign Up</span>
-                  {ownerExists && (
-                    <span className="text-[8px] bg-slate-200 px-1 py-0.5 rounded font-mono text-slate-650">
-                      Closed
-                    </span>
-                  )}
-                </button>
-              </div>
+                    }}
+                    className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                      authMode === "signin"
+                        ? "bg-white text-slate-900 shadow-xs border border-slate-200/50"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!ownerExists) {
+                        setAuthMode("signup");
+                        setAdminAuthErr("");
+                      }
+                    }}
+                    disabled={ownerExists}
+                    className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                      ownerExists
+                        ? "bg-slate-50 border border-slate-200/50 text-slate-400 opacity-50 cursor-not-allowed"
+                        : authMode === "signup"
+                        ? "bg-white text-slate-900 shadow-xs border border-slate-200/50 cursor-pointer"
+                        : "text-slate-500 hover:text-slate-800 cursor-pointer"
+                    }`}
+                    title={ownerExists ? "Only one owner account is allowed. Signup is closed." : "Register owner admin account"}
+                  >
+                    <span>{ownerExists ? "🔒" : ""} Sign Up</span>
+                    {ownerExists && (
+                      <span className="text-[8px] bg-slate-200 px-1 py-0.5 rounded font-mono text-slate-650">
+                        Closed
+                      </span>
+                    )}
+                  </button>
+                </div>
+              )}
 
               {adminAuthErr && (
                 <div className="bg-rose-50 border border-rose-250 text-rose-800 p-3.5 rounded-2xl text-xs font-semibold flex items-start gap-2.5">
@@ -2341,8 +2343,8 @@ export default function AdminDashboard() {
 
                   <button
                     type="submit"
-                    disabled={isSigningUp}
-                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer font-sans"
+                    disabled={isSigningUp || ownerExists}
+                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-99 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer font-sans disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSigningUp ? (
                       <>
