@@ -28,6 +28,7 @@ export interface Course {
   outcomes: string[];
   overview: string;
   price?: string;
+  isPublished?: boolean;
 }
 
 export interface CourseModule {

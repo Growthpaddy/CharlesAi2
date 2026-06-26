@@ -217,23 +217,26 @@ export default function StudentDashboard() {
         }
 
         if (!cRes.error && cRes.data && cRes.data.length > 0) {
-          const mappedCourses = cRes.data.map((row: any) => ({
-            id: row.id,
-            title: row.title || "",
-            description: row.description || "",
-            overview: row.overview || row.description || "",
-            thumbnail: row.thumbnail_url || row.thumbnail || "",
-            categoryId: row.category || row.category_id || "",
-            level: row.level || "Beginner",
-            duration: row.duration || "",
-            studentCount: row.student_count || "0",
-            rating: row.rating || "4.9",
-            instructorName: row.instructor_name || "Sandra Cole",
-            instructorAvatar: row.instructor_avatar || "",
-            skills: Array.isArray(row.skills) ? row.skills : [],
-            outcomes: Array.isArray(row.outcomes) ? row.outcomes : [],
-            price: row.price || "₦45,000"
-          }));
+          const mappedCourses = cRes.data
+            .filter((row: any) => row.is_published === true)
+            .map((row: any) => ({
+              id: row.id,
+              title: row.title || "",
+              description: row.description || "",
+              overview: row.overview || row.description || "",
+              thumbnail: row.thumbnail_url || row.thumbnail || "",
+              categoryId: row.category || row.category_id || "",
+              level: row.level || "Beginner",
+              duration: row.duration || "",
+              studentCount: row.student_count || "0",
+              rating: row.rating || "4.9",
+              instructorName: row.instructor_name || "Sandra Cole",
+              instructorAvatar: row.instructor_avatar || "",
+              skills: Array.isArray(row.skills) ? row.skills : [],
+              outcomes: Array.isArray(row.outcomes) ? row.outcomes : [],
+              price: row.price || "₦45,000",
+              isPublished: row.is_published === true
+            }));
           setCourses(mappedCourses);
           localStorage.setItem("courses", JSON.stringify(mappedCourses));
         }

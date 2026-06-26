@@ -10,7 +10,8 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Eye, EyeOff, Trash2, Edit2, Check, X, 
   Search, Calendar, Mail, Phone, DollarSign, Clock, FileText, 
   Download, ArrowUpRight, CheckCircle2, AlertCircle, Heart, FolderPlus,
-  Tv, Award, RefreshCw, Layers, UserPlus, LogOut, ShieldCheck, Key, QrCode, Lock, Shield, ShieldAlert
+  Tv, Award, RefreshCw, Layers, UserPlus, LogOut, ShieldCheck, Key, QrCode, Lock, Shield, ShieldAlert,
+  ArrowUp, ArrowDown, GripVertical
 } from "lucide-react";
 import * as OTPAuth from "otpauth";
 import { db, Course, CourseModule, Lesson, Category } from "../lib/db";
@@ -794,6 +795,8 @@ export default function AdminDashboard() {
   const [showAddModule, setShowAddModule] = useState(false);
   const [moduleCourseId, setModuleCourseId] = useState("");
   const [moduleTitle, setModuleTitle] = useState("");
+  const [draggedModuleId, setDraggedModuleId] = useState<string | null>(null);
+  const [dragOverModuleId, setDragOverModuleId] = useState<string | null>(null);
 
   // Lessons form state
   const [showAddLesson, setShowAddLesson] = useState(false);
@@ -1051,14 +1054,15 @@ export default function AdminDashboard() {
     instructorAvatar: row.instructor_avatar || row.instructorAvatar || "",
     skills: Array.isArray(row.skills) ? row.skills : (row.skills ? JSON.parse(row.skills) : []),
     outcomes: Array.isArray(row.outcomes) ? row.outcomes : (row.outcomes ? JSON.parse(row.outcomes) : []),
-    price: row.price || "₦45,000"
+    price: row.price || "₦45,000",
+    isPublished: row.is_published === true
   });
 
   const mapSupabaseModule = (row: any): CourseModule => ({
     id: row.id,
     courseId: row.course_id || row.courseId || "",
     title: row.title || "",
-    sortOrder: Number(row.sort_order || row.order_index || row.sortOrder || 0)
+    sortOrder: Number(row.module_order || row.sort_order || row.order_index || row.sortOrder || 0)
   });
 
   const mapSupabaseLesson = (row: any): Lesson => ({
@@ -1395,6 +1399,40 @@ export default function AdminDashboard() {
     }
   };
 
+  // REFRESH LMS DATA FROM SUPABASE
+  const refreshLMSData = async () => {
+    if (!supabase || !isSupabaseConfigured) return;
+    try {
+      const { data: cData, error: cErr } = await supabase.from("courses").select("*");
+      if (!cErr && cData) {
+        const mappedCourses = cData.map(mapSupabaseCourse);
+        setCourses(mappedCourses);
+        localStorage.setItem("courses", JSON.stringify(mappedCourses));
+        if (mappedCourses.length > 0) {
+          setModuleCourseId(prev => prev || mappedCourses[0].id);
+          setLessonCourseId(prev => prev || mappedCourses[0].id);
+          setInvFormCourse(prev => prev || mappedCourses[0].title);
+        }
+      }
+
+      const { data: mData, error: mErr } = await supabase.from("modules").select("*");
+      if (!mErr && mData) {
+        const mappedModules = mData.map(mapSupabaseModule);
+        setModules(mappedModules);
+        localStorage.setItem("course_modules", JSON.stringify(mappedModules));
+      }
+
+      const { data: lData, error: lErr } = await supabase.from("lessons").select("*");
+      if (!lErr && lData) {
+        const mappedLessons = lData.map(mapSupabaseLesson);
+        setLessons(mappedLessons);
+        localStorage.setItem("lessons", JSON.stringify(mappedLessons));
+      }
+    } catch (err) {
+      console.warn("LMS data refresh failed:", err);
+    }
+  };
+
   // Sync to Supabase helper
   const syncTableToSupabaseSafely = async (tableName: string, data: any) => {
     if (!supabase || !isSupabaseConfigured) return;
@@ -1406,6 +1444,83 @@ export default function AdminDashboard() {
     } catch (e) {
       console.warn("Table broadcast to Supabase failed silently:", e);
     }
+  };
+
+  // SECURED ADMIN AUTHORIZATION VERIFICATION
+  const verifyAdminAction = async (): Promise<boolean> => {
+    if (!supabase || !isSupabaseConfigured) {
+      return true; // Fallback for offline mode if Supabase is not ready
+    }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        triggerToast("Unauthorized access. No authenticated user found.");
+        return false;
+      }
+      const { data: admin, error } = await supabase
+        .from("admin")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error || !admin) {
+        triggerToast("Unauthorized access. Administrator metadata could not be fetched.");
+        return false;
+      }
+
+      if (admin.is_owner !== true || admin.is_active !== true) {
+        triggerToast("Access blocked. You do not have active owner permissions.");
+        return false;
+      }
+      return true;
+    } catch (err) {
+      triggerToast("Access blocked. Authorization verification failed.");
+      return false;
+    }
+  };
+
+  // COURSE PUBLISHING TOGGLE CONTROL
+  const handleTogglePublishCourse = async (courseId: string) => {
+    const authorized = await verifyAdminAction();
+    if (!authorized) return;
+
+    const course = courses.find(c => c.id === courseId);
+    if (!course) return;
+
+    const nextPublishState = !course.isPublished;
+
+    const updatedC = courses.map(c => {
+      if (c.id === courseId) {
+        return { ...c, isPublished: nextPublishState };
+      }
+      return c;
+    });
+
+    localStorage.setItem("courses", JSON.stringify(updatedC));
+    setCourses(updatedC);
+
+    if (supabase && isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from("courses")
+          .update({ is_published: nextPublishState })
+          .eq("id", courseId);
+
+        if (error) {
+          triggerToast(`Failed to update publish state in Supabase: ${error.message}`);
+          return;
+        }
+      } catch (err) {
+        triggerToast("Failed to sync publish state to cloud database.");
+        return;
+      }
+    }
+
+    triggerToast(
+      nextPublishState
+        ? `"${course.title}" has been successfully published!`
+        : `"${course.title}" has been unpublished.`
+    );
   };
 
   // START COURSE EDITING MODE
@@ -1436,6 +1551,9 @@ export default function AdminDashboard() {
       return;
     }
 
+    const authorized = await verifyAdminAction();
+    if (!authorized) return;
+
     if (editingCourseId) {
       // EDIT MODE
       const updatedC = courses.map(c => {
@@ -1464,20 +1582,18 @@ export default function AdminDashboard() {
       // Supabase synchronization
       if (supabase && isSupabaseConfigured) {
         try {
-          await supabase.from("courses").upsert({
-            id: editingCourseId,
+          await supabase.from("courses").update({
             title: courseFormTitle,
-            description: courseFormDesc,
-            overview: courseFormOverview || courseFormDesc,
             category: courseFormCategory,
-            level: courseFormLevel,
-            duration: courseFormDuration,
-            instructor_name: courseFormInstructor,
+            tagline: courseFormDesc,
             thumbnail_url: courseFormThumbnail,
+            difficulty: courseFormLevel,
+            duration: courseFormDuration,
+            price: courseFormPrice,
+            overview: courseFormOverview || courseFormDesc,
             skills: courseFormSkills ? courseFormSkills.split(",").map(s => s.trim()) : [],
-            outcomes: courseFormOutcomes ? courseFormOutcomes.split(",").map(o => o.trim()) : [],
-            price: courseFormPrice
-          });
+            outcomes: courseFormOutcomes ? courseFormOutcomes.split(",").map(o => o.trim()) : []
+          }).eq("id", editingCourseId);
         } catch (err) {
           console.warn("Could not sync updated course to Supabase:", err);
         }
@@ -1494,6 +1610,7 @@ export default function AdminDashboard() {
       setShowAddCourse(false);
 
       triggerToast(`"${courseFormTitle}" updated successfully!`);
+      await refreshLMSData();
     } else {
       // ADD MODE
       const nextId = `course-${courses.length + 1}`;
@@ -1513,6 +1630,7 @@ export default function AdminDashboard() {
         skills: courseFormSkills ? courseFormSkills.split(",").map(s => s.trim()) : ["Applied AI", "LMS Tools Mastery"],
         outcomes: courseFormOutcomes ? courseFormOutcomes.split(",").map(o => o.trim()) : ["Scale digital solutions", "Achieve high-fidelity automation"],
         price: courseFormPrice,
+        isPublished: false
       };
 
       const updatedC = [...courses, newC];
@@ -1551,19 +1669,43 @@ export default function AdminDashboard() {
       // Supabase synchronization
       if (supabase && isSupabaseConfigured) {
         try {
+          const { data: { user } } = await supabase.auth.getUser();
           await supabase.from("courses").insert({
             id: nextId,
             title: courseFormTitle,
-            description: courseFormDesc,
-            overview: courseFormOverview || courseFormDesc,
             category: courseFormCategory,
-            level: courseFormLevel,
-            duration: courseFormDuration,
-            instructor_name: courseFormInstructor,
+            tagline: courseFormDesc,
             thumbnail_url: courseFormThumbnail,
+            difficulty: courseFormLevel,
+            duration: courseFormDuration,
+            price: courseFormPrice,
+            overview: courseFormOverview || courseFormDesc,
             skills: courseFormSkills ? courseFormSkills.split(",").map(s => s.trim()) : ["Applied AI", "LMS Tools Mastery"],
             outcomes: courseFormOutcomes ? courseFormOutcomes.split(",").map(o => o.trim()) : ["Scale digital solutions", "Achieve high-fidelity automation"],
-            price: courseFormPrice
+            created_by: user?.id || null,
+            created_at: new Date().toISOString(),
+            is_published: false
+          });
+
+          // Also insert default module and default lesson into Supabase
+          await supabase.from("modules").insert({
+            id: modId,
+            course_id: nextId,
+            title: defaultMod.title,
+            module_order: 1,
+            created_at: new Date().toISOString()
+          });
+
+          await supabase.from("lessons").insert({
+            id: `les-${courses.length + 1}-1`,
+            course_id: nextId,
+            module_id: modId,
+            title: "Introduction video & Syllabus overview",
+            duration: "08:30",
+            content: "Download course toolkits and set up developer environment keys.",
+            video_url: "https://www.w3schools.com/html/mov_bbb.mp4",
+            lesson_order: 1,
+            created_at: new Date().toISOString()
           });
         } catch (err) {
           console.warn("Could not insert course onto Supabase:", err);
@@ -1584,6 +1726,7 @@ export default function AdminDashboard() {
       setLessonCourseId(nextId);
 
       triggerToast(`"${newC.title}" created successfully with default introductory Module & Lesson!`);
+      await refreshLMSData();
     }
   };
 
@@ -1604,6 +1747,9 @@ export default function AdminDashboard() {
       return;
     }
 
+    const authorized = await verifyAdminAction();
+    if (!authorized) return;
+
     if (editingModuleId) {
       // EDIT MODE
       const updatedM = modules.map(m => {
@@ -1623,12 +1769,12 @@ export default function AdminDashboard() {
       if (supabase && isSupabaseConfigured) {
         try {
           const modIndex = modules.find(m => m.id === editingModuleId)?.sortOrder || 1;
-          await supabase.from("modules").upsert({
-            id: editingModuleId,
+          await supabase.from("modules").update({
             course_id: moduleCourseId,
             title: moduleTitle,
-            order_index: modIndex
-          });
+            description: "",
+            module_order: modIndex
+          }).eq("id", editingModuleId);
         } catch (err) {
           console.warn("Could not sync updated module to Supabase:", err);
         }
@@ -1638,6 +1784,7 @@ export default function AdminDashboard() {
       setEditingModuleId(null);
       setShowAddModule(false);
       triggerToast(`Module successfully updated!`);
+      await refreshLMSData();
     } else {
       // ADD MODE
       const moduleCountForCourse = modules.filter(m => m.courseId === moduleCourseId).length;
@@ -1661,7 +1808,9 @@ export default function AdminDashboard() {
             id: nextModId,
             course_id: moduleCourseId,
             title: moduleTitle,
-            order_index: moduleCountForCourse + 1
+            description: "",
+            module_order: moduleCountForCourse + 1,
+            created_at: new Date().toISOString()
           });
         } catch (err) {
           console.warn("Could not insert module onto Supabase:", err);
@@ -1671,7 +1820,126 @@ export default function AdminDashboard() {
       setModuleTitle("");
       setShowAddModule(false);
       triggerToast(`New module "${newMod.title}" successfully added!`);
+      await refreshLMSData();
     }
+  };
+
+  // HANDLE REORDER MODULES (LOCAL & SUPABASE SYNC)
+  const handleReorderModules = async (courseId: string, moduleList: CourseModule[]) => {
+    const authorized = await verifyAdminAction();
+    if (!authorized) return;
+
+    // Update locally
+    const updatedModulesList = modules.map(m => {
+      const match = moduleList.find(ml => ml.id === m.id);
+      if (match) {
+        return { ...m, sortOrder: match.sortOrder };
+      }
+      return m;
+    });
+
+    setModules(updatedModulesList);
+    localStorage.setItem("course_modules", JSON.stringify(updatedModulesList));
+
+    // Update in Supabase
+    if (supabase && isSupabaseConfigured) {
+      try {
+        const updatePromises = moduleList.map(m => 
+          supabase
+            .from("modules")
+            .update({
+              module_order: m.sortOrder,
+              order_index: m.sortOrder
+            })
+            .eq("id", m.id)
+        );
+        await Promise.all(updatePromises);
+      } catch (err) {
+        console.warn("Could not sync module order to Supabase:", err);
+      }
+    }
+
+    triggerToast("Modules order successfully updated!");
+    await refreshLMSData();
+  };
+
+  // MANUAL REORDER HELPERS
+  const moveModuleUp = async (courseId: string, index: number) => {
+    const courseMods = modules.filter(m => m.courseId === courseId).sort((a, b) => a.sortOrder - b.sortOrder);
+    if (index === 0) return;
+    
+    const newMods = [...courseMods];
+    const temp = newMods[index];
+    newMods[index] = newMods[index - 1];
+    newMods[index - 1] = temp;
+
+    const reordered = newMods.map((m, idx) => ({
+      ...m,
+      sortOrder: idx + 1
+    }));
+
+    await handleReorderModules(courseId, reordered);
+  };
+
+  const moveModuleDown = async (courseId: string, index: number) => {
+    const courseMods = modules.filter(m => m.courseId === courseId).sort((a, b) => a.sortOrder - b.sortOrder);
+    if (index === courseMods.length - 1) return;
+    
+    const newMods = [...courseMods];
+    const temp = newMods[index];
+    newMods[index] = newMods[index + 1];
+    newMods[index + 1] = temp;
+
+    const reordered = newMods.map((m, idx) => ({
+      ...m,
+      sortOrder: idx + 1
+    }));
+
+    await handleReorderModules(courseId, reordered);
+  };
+
+  // DRAG & DROP HANDLERS
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedModuleId(id);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    setDragOverModuleId(id);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetId: string, courseId: string) => {
+    e.preventDefault();
+    if (!draggedModuleId || draggedModuleId === targetId) {
+      setDraggedModuleId(null);
+      setDragOverModuleId(null);
+      return;
+    }
+
+    const courseMods = modules.filter(m => m.courseId === courseId).sort((a, b) => a.sortOrder - b.sortOrder);
+    const draggedIdx = courseMods.findIndex(m => m.id === draggedModuleId);
+    const targetIdx = courseMods.findIndex(m => m.id === targetId);
+
+    if (draggedIdx === -1 || targetIdx === -1) {
+      setDraggedModuleId(null);
+      setDragOverModuleId(null);
+      return;
+    }
+
+    const newMods = [...courseMods];
+    const [draggedItem] = newMods.splice(draggedIdx, 1);
+    newMods.splice(targetIdx, 0, draggedItem);
+
+    const reordered = newMods.map((m, idx) => ({
+      ...m,
+      sortOrder: idx + 1
+    }));
+
+    setDraggedModuleId(null);
+    setDragOverModuleId(null);
+
+    await handleReorderModules(courseId, reordered);
   };
 
   // START LESSON EDITING MODE
@@ -1694,6 +1962,9 @@ export default function AdminDashboard() {
       alert("Lesson Title and Module selection are required.");
       return;
     }
+
+    const authorized = await verifyAdminAction();
+    if (!authorized) return;
 
     if (editingLessonId) {
       // EDIT MODE
@@ -1718,15 +1989,15 @@ export default function AdminDashboard() {
       if (supabase && isSupabaseConfigured) {
         try {
           const lIndex = lessons.find(l => l.id === editingLessonId)?.sortOrder || 1;
-          await supabase.from("lessons").upsert({
-            id: editingLessonId,
+          await supabase.from("lessons").update({
+            course_id: lessonCourseId,
             module_id: lessonModuleId,
             title: lessonTitle,
             video_url: lessonVideoUrl || "https://www.w3schools.com/html/mov_bbb.mp4",
             content: lessonContent || "",
             duration: lessonDuration || "12:00",
-            order_index: lIndex
-          });
+            lesson_order: lIndex
+          }).eq("id", editingLessonId);
         } catch (err) {
           console.warn("Could not sync updated lesson to Supabase:", err);
         }
@@ -1738,6 +2009,7 @@ export default function AdminDashboard() {
       setEditingLessonId(null);
       setShowAddLesson(false);
       triggerToast(`Lesson "${lessonTitle}" successfully updated!`);
+      await refreshLMSData();
     } else {
       // ADD MODE
       const lessonCountForModule = lessons.filter(l => l.moduleId === lessonModuleId).length;
@@ -1763,12 +2035,14 @@ export default function AdminDashboard() {
         try {
           await supabase.from("lessons").insert({
             id: nextLesId,
+            course_id: lessonCourseId,
             module_id: lessonModuleId,
             title: lessonTitle,
             video_url: lessonVideoUrl || "https://www.w3schools.com/html/mov_bbb.mp4",
             content: lessonContent || "Course resource blueprint guidelines in this lesson step.",
             duration: lessonDuration || "10:00",
-            order_index: lessonCountForModule + 1
+            lesson_order: lessonCountForModule + 1,
+            created_at: new Date().toISOString()
           });
         } catch (err) {
           console.warn("Could not insert lesson onto Supabase:", err);
@@ -1780,6 +2054,7 @@ export default function AdminDashboard() {
       setLessonDuration("12:00");
       setShowAddLesson(false);
       triggerToast(`Lesson "${newLesson.title}" linked to curriculum module!`);
+      await refreshLMSData();
     }
   };
 
@@ -2170,22 +2445,42 @@ export default function AdminDashboard() {
   };
 
   // DELETE OPERATIONS
-  const deleteItem = (tableName: string, id: string) => {
+  const deleteItem = async (tableName: string, id: string) => {
     if (!confirm("Are you sure you want to delete this record?")) return;
+
+    if (["courses", "modules", "lessons"].includes(tableName)) {
+      const authorized = await verifyAdminAction();
+      if (!authorized) return;
+    }
 
     if (tableName === "courses") {
       const filtered = courses.filter(c => c.id !== id);
       localStorage.setItem("courses", JSON.stringify(filtered));
       setCourses(filtered);
 
-      // Delete from Supabase if connected
+      // Cascading local cleanup
+      const filteredModules = modules.filter(m => m.courseId !== id);
+      localStorage.setItem("course_modules", JSON.stringify(filteredModules));
+      setModules(filteredModules);
+
+      const filteredLessons = lessons.filter(l => l.courseId !== id);
+      localStorage.setItem("lessons", JSON.stringify(filteredLessons));
+      setLessons(filteredLessons);
+
+      // Delete from Supabase if connected with cascading steps
       if (supabase && isSupabaseConfigured) {
-        supabase.from("courses").delete().eq("id", id).then(({ error }) => {
-          if (error) console.error("Could not delete course from Supabase:", error);
-        });
+        try {
+          // Cascade order: first lessons, then modules, then courses to avoid constraint issues
+          await supabase.from("lessons").delete().eq("course_id", id);
+          await supabase.from("modules").delete().eq("course_id", id);
+          await supabase.from("courses").delete().eq("id", id);
+        } catch (err) {
+          console.error("Could not cascade delete course from Supabase:", err);
+        }
       }
 
-      triggerToast(`Course successfully removed.`);
+      triggerToast(`Course successfully removed and its modules and lessons deleted.`);
+      await refreshLMSData();
     } else if (tableName === "modules") {
       const filtered = modules.filter(m => m.id !== id);
       localStorage.setItem("course_modules", JSON.stringify(filtered));
@@ -2197,22 +2492,29 @@ export default function AdminDashboard() {
       setLessons(filteredLessons);
 
       if (supabase && isSupabaseConfigured) {
-        supabase.from("modules").delete().eq("id", id).then(({ error }) => {
-          if (error) console.error("Could not delete module from Supabase:", error);
-        });
+        try {
+          await supabase.from("lessons").delete().eq("module_id", id);
+          await supabase.from("modules").delete().eq("id", id);
+        } catch (err) {
+          console.error("Could not cascade delete module from Supabase:", err);
+        }
       }
-      triggerToast(`Module successfully removed.`);
+      triggerToast(`Module successfully removed and its lessons deleted.`);
+      await refreshLMSData();
     } else if (tableName === "lessons") {
       const filtered = lessons.filter(l => l.id !== id);
       localStorage.setItem("lessons", JSON.stringify(filtered));
       setLessons(filtered);
 
       if (supabase && isSupabaseConfigured) {
-        supabase.from("lessons").delete().eq("id", id).then(({ error }) => {
-          if (error) console.error("Could not delete lesson from Supabase:", error);
-        });
+        try {
+          await supabase.from("lessons").delete().eq("id", id);
+        } catch (err) {
+          console.error("Could not delete lesson from Supabase:", err);
+        }
       }
       triggerToast(`Lesson successfully removed.`);
+      await refreshLMSData();
     } else if (tableName === "invoices") {
       const filtered = invoices.filter(inv => inv.id !== id);
       localStorage.setItem("admin_invoices", JSON.stringify(filtered));
@@ -3055,6 +3357,42 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
               </div>
             </div>
 
+            {/* LMS Curriculum Overview Cards Deck */}
+            <div className="space-y-2">
+              <h2 className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-wider">LMS Curriculum Overview</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white border border-gray-200 p-6 rounded-3xl shadow-sm flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wider block">Total Courses</span>
+                    <p className="text-2xl font-black text-slate-900 font-display">{courses.length}</p>
+                  </div>
+                  <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                </div>
+
+                <div className="bg-white border border-gray-200 p-6 rounded-3xl shadow-sm flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wider block">Total Modules</span>
+                    <p className="text-2xl font-black text-slate-900 font-display">{modules.length}</p>
+                  </div>
+                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                    <Layers className="w-6 h-6" />
+                  </div>
+                </div>
+
+                <div className="bg-white border border-gray-200 p-6 rounded-3xl shadow-sm flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wider block">Total Lessons</span>
+                    <p className="text-2xl font-black text-slate-900 font-display">{lessons.length}</p>
+                  </div>
+                  <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+                    <Video className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Sub-tier Bento layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
@@ -3498,6 +3836,7 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                         <option value="">-- Choose Module --</option>
                         {modules
                           .filter(m => m.courseId === lessonCourseId)
+                          .sort((a, b) => a.sortOrder - b.sortOrder)
                           .map(m => (
                             <option key={m.id} value={m.id}>{m.title}</option>
                           ))}
@@ -3598,7 +3937,7 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                   <tbody className="divide-y divide-slate-100">
                     {filteredCourses.map((c) => {
                       const catName = categories.find(cat => cat.id === c.categoryId)?.name || "General";
-                      const courseMods = modules.filter(m => m.courseId === c.id);
+                      const courseMods = modules.filter(m => m.courseId === c.id).sort((a, b) => a.sortOrder - b.sortOrder);
                       const courseLes = lessons.filter(l => l.courseId === c.id);
                       const isExpanded = expandedCourseId === c.id;
                       return (
@@ -3640,6 +3979,17 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                               </button>
                             </td>
                             <td className="px-4 py-3.5 text-right whitespace-nowrap space-x-1">
+                              <button
+                                onClick={() => handleTogglePublishCourse(c.id)}
+                                className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                                  c.isPublished
+                                    ? "hover:bg-emerald-50 text-emerald-600"
+                                    : "hover:bg-slate-100 text-slate-400"
+                                }`}
+                                title={c.isPublished ? "Published (Click to unpublish)" : "Draft (Click to publish)"}
+                              >
+                                {c.isPublished ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                              </button>
                               <button
                                 onClick={() => startEditCourse(c)}
                                 className="p-1.5 hover:bg-amber-50 text-amber-500 rounded-lg cursor-pointer transition-colors"
@@ -3714,16 +4064,64 @@ FOR EACH ROW EXECUTE FUNCTION check_admin_limits();`}
                                     <div className="space-y-3">
                                       {courseMods.map((mod, modIdx) => {
                                         const modLessons = courseLes.filter(l => l.moduleId === mod.id);
+                                        const isDragged = draggedModuleId === mod.id;
+                                        const isDragOver = dragOverModuleId === mod.id;
                                         return (
-                                          <div key={mod.id} className="bg-white border border-gray-150 rounded-2xl p-4 shadow-xs">
+                                          <div 
+                                            key={mod.id} 
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, mod.id)}
+                                            onDragOver={(e) => handleDragOver(e, mod.id)}
+                                            onDrop={(e) => handleDrop(e, mod.id, c.id)}
+                                            onDragEnd={() => {
+                                              setDraggedModuleId(null);
+                                              setDragOverModuleId(null);
+                                            }}
+                                            className={`bg-white border transition-all duration-200 rounded-2xl p-4 shadow-xs relative ${
+                                              isDragged ? "opacity-30 border-dashed border-purple-400 bg-purple-50/20" : 
+                                              isDragOver ? "border-purple-500 scale-[1.01] bg-purple-50/10 shadow-md" : "border-gray-150 hover:border-purple-300"
+                                            }`}
+                                          >
                                             <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
                                               <div className="flex items-center gap-2">
+                                                {/* Drag handle */}
+                                                <div className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing p-1 shrink-0" title="Drag to reorder">
+                                                  <GripVertical className="w-3.5 h-3.5" />
+                                                </div>
                                                 <span className="font-mono text-[9px] text-purple-600 font-extrabold bg-purple-50 px-2 py-0.5 rounded">
                                                   Module {modIdx + 1}
                                                 </span>
                                                 <h4 className="font-extrabold text-slate-900 text-xs">{mod.title}</h4>
                                               </div>
                                               <div className="flex items-center gap-1.5">
+                                                {/* Reordering manual arrows */}
+                                                <button
+                                                  type="button"
+                                                  disabled={modIdx === 0}
+                                                  onClick={() => moveModuleUp(c.id, modIdx)}
+                                                  className={`p-1 rounded-lg cursor-pointer transition-colors ${
+                                                    modIdx === 0 
+                                                      ? "text-gray-300 cursor-not-allowed" 
+                                                      : "hover:bg-purple-50 text-purple-600"
+                                                  }`}
+                                                  title="Move Module Up"
+                                                >
+                                                  <ArrowUp className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  disabled={modIdx === courseMods.length - 1}
+                                                  onClick={() => moveModuleDown(c.id, modIdx)}
+                                                  className={`p-1 rounded-lg cursor-pointer transition-colors ${
+                                                    modIdx === courseMods.length - 1 
+                                                      ? "text-gray-300 cursor-not-allowed" 
+                                                      : "hover:bg-purple-50 text-purple-600"
+                                                  }`}
+                                                  title="Move Module Down"
+                                                >
+                                                  <ArrowDown className="w-3.5 h-3.5" />
+                                                </button>
+
                                                 <button
                                                   onClick={() => startEditModule(mod)}
                                                   className="p-1 hover:bg-purple-50 text-purple-600 rounded-lg cursor-pointer transition-colors"

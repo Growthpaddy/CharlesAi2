@@ -33,30 +33,57 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
         try {
           // Verify with Supabase Auth session first
           const { data: { user: authUser } } = await supabase.auth.getUser();
-          const targetEmail = authUser?.email || loggedInEmail;
-
-          if (authUser && targetEmail && authUser.email?.trim().toLowerCase() === targetEmail.trim().toLowerCase()) {
+          
+          if (!authUser) {
             if (active) {
-              setAuthorized(true);
+              setAuthorized(false);
               setChecking(false);
-              if (onVerificationComplete) onVerificationComplete(true);
+              if (onVerificationComplete) onVerificationComplete(false);
             }
             return;
           }
 
-          // Check metadata in Supabase users table
-          const isOwnerFromMetadata = authUser?.user_metadata?.is_owner === true || authUser?.user_metadata?.role === "admin";
+          let admin = null;
+          let dbError = null;
 
-          // Attempt query on the active admin table 'admin'
-          const { data, error } = await supabase
+          // Attempt 'admin' query by id
+          const res1 = await supabase
             .from("admin")
-            .select("email, is_owner")
-            .eq("email", targetEmail.trim().toLowerCase())
-            .maybeSingle();
+            .select("*")
+            .eq("id", authUser.id)
+            .single();
+          
+          if (!res1.error && res1.data) {
+            admin = res1.data;
+          } else {
+            // Fallback to public.admin by id
+            const res2 = await supabase
+              .from("public.admin")
+              .select("*")
+              .eq("id", authUser.id)
+              .single();
+            if (!res2.error && res2.data) {
+              admin = res2.data;
+            } else {
+              dbError = res1.error || res2.error;
+            }
+          }
 
-          if (error) {
-            console.warn("AdminGuard: Supabase verification query notice:", error);
+          if (admin) {
+            const isAuthorized = admin.is_owner === true && admin.is_active === true;
+            if (active) {
+              setAuthorized(isAuthorized);
+              setChecking(false);
+              if (onVerificationComplete) onVerificationComplete(isAuthorized);
+            }
+            return;
+          }
+
+          if (dbError) {
+            console.warn("AdminGuard: Supabase verification query notice:", dbError);
             
+            // Check metadata in Supabase users table
+            const isOwnerFromMetadata = authUser?.user_metadata?.is_owner === true || authUser?.user_metadata?.role === "admin";
             if (isOwnerFromMetadata && active) {
               console.log("AdminGuard: Authorized via user_metadata in Supabase users table.");
               setAuthorized(true);
@@ -67,7 +94,7 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
 
             // If the table 'admin' does not exist yet (error code 42P01), 
             // allow access as a fallback so they can run the database setup!
-            const isTableMissing = error.code === "42P01" || error.message?.includes("does not exist");
+            const isTableMissing = dbError.code === "42P01" || dbError.message?.includes("does not exist");
             if (isTableMissing && active) {
               console.warn("AdminGuard: Table 'admin' does not exist yet. Allowing fallback access to allow database setup.");
               setAuthorized(true);
@@ -85,44 +112,36 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
             return;
           }
 
-          if ((data && data.is_owner) || isOwnerFromMetadata) {
-            if (active) {
-              setAuthorized(true);
-              setChecking(false);
-              if (onVerificationComplete) onVerificationComplete(true);
-            }
-          } else {
-            // Fallback: check if they are the signed up admin in local storage
-            const signedUp = localStorage.getItem("signed_up_admin");
-            if (signedUp) {
-              try {
-                const parsed = JSON.parse(signedUp);
-                if (parsed && parsed.email?.toLowerCase() === targetEmail.trim().toLowerCase()) {
-                  if (active) {
-                    setAuthorized(true);
-                    setChecking(false);
-                    if (onVerificationComplete) onVerificationComplete(true);
-                  }
-                  return;
-                }
-              } catch (_) {}
-            }
-
-            console.warn("AdminGuard: No matching active Owner Admin account found for email:", targetEmail);
-            // Session is unauthorized or was deleted from backend. Evict local credentials.
-            localStorage.removeItem("is_admin_authenticated");
-            localStorage.removeItem("admin_logged_in_name");
-            localStorage.removeItem("admin_logged_in_email");
-            localStorage.removeItem("admin_session_token");
+          // Fallback: check if they are the signed up admin in local storage
+          const signedUp = localStorage.getItem("signed_up_admin");
+          if (signedUp) {
             try {
-              await supabase.auth.signOut();
+              const parsed = JSON.parse(signedUp);
+              if (parsed && parsed.email?.toLowerCase() === authUser.email?.trim().toLowerCase()) {
+                if (active) {
+                  setAuthorized(true);
+                  setChecking(false);
+                  if (onVerificationComplete) onVerificationComplete(true);
+                }
+                return;
+              }
             } catch (_) {}
-            
-            if (active) {
-              setAuthorized(false);
-              setChecking(false);
-              if (onVerificationComplete) onVerificationComplete(false);
-            }
+          }
+
+          console.warn("AdminGuard: No matching active Owner Admin account found for user ID:", authUser.id);
+          // Session is unauthorized or was deleted from backend. Evict local credentials.
+          localStorage.removeItem("is_admin_authenticated");
+          localStorage.removeItem("admin_logged_in_name");
+          localStorage.removeItem("admin_logged_in_email");
+          localStorage.removeItem("admin_session_token");
+          try {
+            await supabase.auth.signOut();
+          } catch (_) {}
+          
+          if (active) {
+            setAuthorized(false);
+            setChecking(false);
+            if (onVerificationComplete) onVerificationComplete(false);
           }
         } catch (err) {
           console.error("AdminGuard: Exception during role verification:", err);
