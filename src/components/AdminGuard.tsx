@@ -112,11 +112,32 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
               return;
             }
 
-            // If the table 'admin' does not exist yet (error code 42P01), 
+            // Check if they are the signed up admin in local storage BEFORE giving up
+            const signedUp = localStorage.getItem("signed_up_admin");
+            if (signedUp) {
+              try {
+                const parsed = JSON.parse(signedUp);
+                if (parsed && parsed.email?.toLowerCase() === authUser.email?.trim().toLowerCase()) {
+                  if (active) {
+                    console.log("AdminGuard: Authorized via signed_up_admin in localStorage during dbError.");
+                    setAuthorized(parsed.is_active !== false);
+                    setChecking(false);
+                    if (onVerificationComplete) onVerificationComplete(parsed.is_active !== false);
+                  }
+                  return;
+                }
+              } catch (_) {}
+            }
+
+            // If the table 'admin' does not exist yet or there is a schema cache error,
             // allow access as a fallback so they can run the database setup!
-            const isTableMissing = dbError.code === "42P01" || dbError.message?.includes("does not exist");
+            const isTableMissing = dbError.code === "42P01" || 
+                                   dbError.message?.toLowerCase().includes("does not exist") ||
+                                   dbError.message?.toLowerCase().includes("schema cache") ||
+                                   dbError.message?.toLowerCase().includes("not find the table") ||
+                                   dbError.message?.toLowerCase().includes("not found");
             if (isTableMissing && active) {
-              console.warn("AdminGuard: Table 'admin' does not exist yet. Allowing fallback access to allow database setup.");
+              console.warn("AdminGuard: Table 'admin' does not exist yet or schema cache error. Allowing fallback access to allow database setup.");
               setAuthorized(true);
               setChecking(false);
               if (onVerificationComplete) onVerificationComplete(true);
