@@ -1468,7 +1468,7 @@ export default function AdminDashboard() {
         return false;
       }
 
-      if (admin.is_owner !== true || admin.is_active !== true) {
+      if (admin.is_owner !== true || admin.is_active === false) {
         triggerToast("Access blocked. You do not have active owner permissions.");
         return false;
       }
@@ -2960,6 +2960,7 @@ CREATE TABLE public.admin (
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     is_owner BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -5986,6 +5987,7 @@ CREATE TABLE public.admin (
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     is_owner BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

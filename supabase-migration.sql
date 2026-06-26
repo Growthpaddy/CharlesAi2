@@ -83,6 +83,7 @@ CREATE TABLE public.admin (
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     is_owner BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

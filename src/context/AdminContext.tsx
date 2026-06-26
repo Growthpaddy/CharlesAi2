@@ -43,14 +43,16 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (supabase && isSupabaseConfigured) {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser && authUser.email?.trim().toLowerCase() === email.trim().toLowerCase()) {
-          return true;
+        if (!authUser || authUser.email?.trim().toLowerCase() !== email.trim().toLowerCase()) {
+          console.warn("[AdminContext] Session validation failed. User is not signed in or email does not match.");
+          return false;
         }
+
         const isOwnerFromMetadata = authUser?.user_metadata?.is_owner === true || authUser?.user_metadata?.role === "admin";
 
         const { data, error } = await supabase
           .from("admin")
-          .select("email, is_owner")
+          .select("email, is_owner, is_active")
           .eq("email", email.trim().toLowerCase())
           .maybeSingle();
 
@@ -67,7 +69,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
             if (signedUp) {
               const parsed = JSON.parse(signedUp);
               if (parsed && parsed.email?.toLowerCase() === email.trim().toLowerCase()) {
-                return true;
+                return parsed.is_active !== false;
               }
             }
             // Also allow the default admin email as fallback
@@ -78,8 +80,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           return false;
         }
 
-        if (data && data.is_owner === true) {
-          return true;
+        if (data) {
+          // Verify both is_owner and is_active flags from the database record
+          return data.is_owner === true && data.is_active !== false;
         }
 
         if (isOwnerFromMetadata) {
@@ -92,7 +95,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           try {
             const parsed = JSON.parse(signedUp);
             if (parsed && parsed.email?.toLowerCase() === email.trim().toLowerCase()) {
-              return true;
+              return parsed.is_owner === true && parsed.is_active !== false;
             }
           } catch (_) {}
         }
@@ -109,7 +112,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         try {
           const parsed = JSON.parse(localAdmins);
           if (Array.isArray(parsed)) {
-            return parsed.some(admin => admin.email?.toLowerCase() === email.trim().toLowerCase());
+            return parsed.some(admin => admin.email?.toLowerCase() === email.trim().toLowerCase() && admin.is_active !== false);
           }
         } catch (_) {}
       }
@@ -119,7 +122,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         try {
           const parsed = JSON.parse(signedUp);
           if (parsed && parsed.email?.toLowerCase() === email.trim().toLowerCase()) {
-            return true;
+            return parsed.is_active !== false;
           }
         } catch (_) {}
       }
@@ -216,15 +219,16 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         const targetEmail = authUser?.email || adminUser?.email || localStorage.getItem("admin_logged_in_email");
         if (!targetEmail) return false;
 
-        if (authUser && authUser.email?.trim().toLowerCase() === targetEmail.trim().toLowerCase()) {
-          return true;
+        // Ensure there is an active session matching the checked email
+        if (!authUser || authUser.email?.trim().toLowerCase() !== targetEmail.trim().toLowerCase()) {
+          return false;
         }
 
         const isOwnerFromMetadata = authUser?.user_metadata?.is_owner === true || authUser?.user_metadata?.role === "admin";
 
         const { data, error } = await supabase
           .from("admin")
-          .select("email, is_owner")
+          .select("email, is_owner, is_active")
           .eq("email", targetEmail.trim().toLowerCase())
           .maybeSingle();
 
@@ -238,7 +242,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
             if (signedUp) {
               const parsed = JSON.parse(signedUp);
               if (parsed && parsed.email?.toLowerCase() === targetEmail.trim().toLowerCase()) {
-                return true;
+                return parsed.is_active !== false;
               }
             }
             if (targetEmail.toLowerCase() === "admin@aionlinebusiness.org") {
@@ -248,8 +252,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           return false;
         }
 
-        if (data && data.is_owner === true) {
-          return true;
+        if (data) {
+          // Verify both is_owner and is_active flags
+          return data.is_owner === true && data.is_active !== false;
         }
 
         if (isOwnerFromMetadata) {
@@ -262,7 +267,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           try {
             const parsed = JSON.parse(signedUp);
             if (parsed && parsed.email?.toLowerCase() === targetEmail.trim().toLowerCase()) {
-              return true;
+              return parsed.is_owner === true && parsed.is_active !== false;
             }
           } catch (_) {}
         }
@@ -283,7 +288,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           const parsed = JSON.parse(localAdmins);
           if (Array.isArray(parsed)) {
             const match = parsed.find(admin => admin.email?.toLowerCase() === targetEmail.trim().toLowerCase());
-            return !!match && (match.is_owner === true || match.is_owner === undefined || match.is_owner === null);
+            return !!match && (match.is_owner === true || match.is_owner === undefined || match.is_owner === null) && match.is_active !== false;
           }
         } catch (_) {}
       }
@@ -293,7 +298,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         try {
           const parsed = JSON.parse(signedUp);
           if (parsed && parsed.email?.toLowerCase() === targetEmail.trim().toLowerCase()) {
-            return parsed.is_owner === true || parsed.is_owner === undefined || parsed.is_owner === null;
+            return (parsed.is_owner === true || parsed.is_owner === undefined || parsed.is_owner === null) && parsed.is_active !== false;
           }
         } catch (_) {}
       }

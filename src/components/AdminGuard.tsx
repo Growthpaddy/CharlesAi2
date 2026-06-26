@@ -65,12 +65,32 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
             if (!res2.error && res2.data) {
               admin = res2.data;
             } else {
-              dbError = res1.error || res2.error;
+              // Try email query fallback
+              const resEmail = await supabase
+                .from("admin")
+                .select("*")
+                .eq("email", authUser.email?.trim().toLowerCase())
+                .maybeSingle();
+
+              if (!resEmail.error && resEmail.data) {
+                admin = resEmail.data;
+                // Heal ID mismatch if possible
+                try {
+                  await supabase
+                    .from("admin")
+                    .update({ id: authUser.id })
+                    .eq("email", authUser.email?.trim().toLowerCase());
+                } catch (healErr) {
+                  console.warn("AdminGuard: Soft notice - Failed to heal ID mismatch in admin table:", healErr);
+                }
+              } else {
+                dbError = res1.error || res2.error || resEmail.error;
+              }
             }
           }
 
           if (admin) {
-            const isAuthorized = admin.is_owner === true && admin.is_active === true;
+            const isAuthorized = admin.is_owner === true && admin.is_active !== false;
             if (active) {
               setAuthorized(isAuthorized);
               setChecking(false);
