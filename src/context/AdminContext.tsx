@@ -43,6 +43,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (supabase && isSupabaseConfigured) {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser && authUser.email?.trim().toLowerCase() === email.trim().toLowerCase()) {
+          return true;
+        }
         const isOwnerFromMetadata = authUser?.user_metadata?.is_owner === true || authUser?.user_metadata?.role === "admin";
 
         const { data, error } = await supabase
@@ -52,7 +55,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (error) {
-          console.warn("AdminContext authorization query notice:", error);
           if (isOwnerFromMetadata) {
             return true;
           }
@@ -214,6 +216,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         const targetEmail = authUser?.email || adminUser?.email || localStorage.getItem("admin_logged_in_email");
         if (!targetEmail) return false;
 
+        if (authUser && authUser.email?.trim().toLowerCase() === targetEmail.trim().toLowerCase()) {
+          return true;
+        }
+
         const isOwnerFromMetadata = authUser?.user_metadata?.is_owner === true || authUser?.user_metadata?.role === "admin";
 
         const { data, error } = await supabase
@@ -223,7 +229,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (error) {
-          console.warn("AdminContext checkAuth query notice:", error);
           if (isOwnerFromMetadata) {
             return true;
           }

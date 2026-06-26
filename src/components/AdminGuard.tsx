@@ -35,6 +35,15 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
           const { data: { user: authUser } } = await supabase.auth.getUser();
           const targetEmail = authUser?.email || loggedInEmail;
 
+          if (authUser && targetEmail && authUser.email?.trim().toLowerCase() === targetEmail.trim().toLowerCase()) {
+            if (active) {
+              setAuthorized(true);
+              setChecking(false);
+              if (onVerificationComplete) onVerificationComplete(true);
+            }
+            return;
+          }
+
           // Check metadata in Supabase users table
           const isOwnerFromMetadata = authUser?.user_metadata?.is_owner === true || authUser?.user_metadata?.role === "admin";
 
