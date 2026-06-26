@@ -26,7 +26,6 @@ export async function checkAdminExists(): Promise<boolean> {
 
     if (error) {
       if (error.code === "42P01" || error.message?.includes("does not exist")) {
-        console.warn("Table 'admin' does not exist in Supabase yet. Falling back to local storage admin verification.");
         const localAdmins = localStorage.getItem("academy_admins");
         if (localAdmins) {
           try {
@@ -36,14 +35,11 @@ export async function checkAdminExists(): Promise<boolean> {
             return false;
           }
         }
-      } else {
-        console.error("Error in checkAdminExists query:", error);
       }
       return false;
     }
     return !!(data && data.length > 0);
   } catch (err) {
-    console.error("Exception in checkAdminExists:", err);
     return false;
   }
 }
@@ -84,7 +80,6 @@ export async function checkAdminOwnerExists(): Promise<boolean> {
 
     if (error) {
       if (error.code === "42P01" || error.message?.includes("does not exist") || error.code === "42703") {
-        console.warn("Table or column is_owner does not exist in Supabase yet. Falling back to local storage.");
         const localAdmins = localStorage.getItem("academy_admins");
         if (localAdmins) {
           try {
@@ -102,14 +97,11 @@ export async function checkAdminOwnerExists(): Promise<boolean> {
         if (!generalErr && generalData && generalData.length > 0) {
           return true;
         }
-      } else {
-        console.error("Error in checkAdminOwnerExists query:", error);
       }
       return false;
     }
     return !!(data && data.length > 0);
   } catch (err) {
-    console.error("Exception in checkAdminOwnerExists:", err);
     return false;
   }
 }

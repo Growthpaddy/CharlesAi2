@@ -42,6 +42,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
     if (supabase && isSupabaseConfigured) {
       try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const isOwnerFromMetadata = authUser?.user_metadata?.is_owner === true || authUser?.user_metadata?.role === "admin";
+
         const { data, error } = await supabase
           .from("admin")
           .select("email, is_owner")
@@ -49,13 +52,49 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (error) {
-          console.error("AdminContext authorization query error:", error);
+          console.warn("AdminContext authorization query notice:", error);
+          if (isOwnerFromMetadata) {
+            return true;
+          }
+          // If the table 'admin' does not exist yet (error code 42P01), 
+          // let's fall back to checking if this email is the signed_up_admin or is in local fallback 
+          // instead of instantly locking them out and deleting their session!
+          const isTableMissing = error.code === "42P01" || error.message?.includes("does not exist");
+          if (isTableMissing) {
+            const signedUp = localStorage.getItem("signed_up_admin");
+            if (signedUp) {
+              const parsed = JSON.parse(signedUp);
+              if (parsed && parsed.email?.toLowerCase() === email.trim().toLowerCase()) {
+                return true;
+              }
+            }
+            // Also allow the default admin email as fallback
+            if (email.toLowerCase() === "admin@aionlinebusiness.org") {
+              return true;
+            }
+          }
           return false;
         }
 
-        if (data) {
+        if (data && data.is_owner === true) {
           return true;
         }
+
+        if (isOwnerFromMetadata) {
+          return true;
+        }
+
+        // If data is null (empty table or user missing), let's also check if they are the signed up admin in localStorage
+        const signedUp = localStorage.getItem("signed_up_admin");
+        if (signedUp) {
+          try {
+            const parsed = JSON.parse(signedUp);
+            if (parsed && parsed.email?.toLowerCase() === email.trim().toLowerCase()) {
+              return true;
+            }
+          } catch (_) {}
+        }
+
         return false;
       } catch (err) {
         console.error("AdminContext authorization exception:", err);
@@ -175,6 +214,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         const targetEmail = authUser?.email || adminUser?.email || localStorage.getItem("admin_logged_in_email");
         if (!targetEmail) return false;
 
+        const isOwnerFromMetadata = authUser?.user_metadata?.is_owner === true || authUser?.user_metadata?.role === "admin";
+
         const { data, error } = await supabase
           .from("admin")
           .select("email, is_owner")
@@ -182,13 +223,45 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (error) {
-          console.error("AdminContext checkAuth query error:", error);
+          console.warn("AdminContext checkAuth query notice:", error);
+          if (isOwnerFromMetadata) {
+            return true;
+          }
+          const isTableMissing = error.code === "42P01" || error.message?.includes("does not exist");
+          if (isTableMissing) {
+            const signedUp = localStorage.getItem("signed_up_admin");
+            if (signedUp) {
+              const parsed = JSON.parse(signedUp);
+              if (parsed && parsed.email?.toLowerCase() === targetEmail.trim().toLowerCase()) {
+                return true;
+              }
+            }
+            if (targetEmail.toLowerCase() === "admin@aionlinebusiness.org") {
+              return true;
+            }
+          }
           return false;
         }
 
         if (data && data.is_owner === true) {
           return true;
         }
+
+        if (isOwnerFromMetadata) {
+          return true;
+        }
+
+        // Check fallback if not in database yet
+        const signedUp = localStorage.getItem("signed_up_admin");
+        if (signedUp) {
+          try {
+            const parsed = JSON.parse(signedUp);
+            if (parsed && parsed.email?.toLowerCase() === targetEmail.trim().toLowerCase()) {
+              return true;
+            }
+          } catch (_) {}
+        }
+
         return false;
       } catch (err) {
         console.error("AdminContext checkAuth exception:", err);

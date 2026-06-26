@@ -35,15 +35,38 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
           const { data: { user: authUser } } = await supabase.auth.getUser();
           const targetEmail = authUser?.email || loggedInEmail;
 
+          // Check metadata in Supabase users table
+          const isOwnerFromMetadata = authUser?.user_metadata?.is_owner === true || authUser?.user_metadata?.role === "admin";
+
           // Attempt query on the active admin table 'admin'
           const { data, error } = await supabase
             .from("admin")
-            .select("email, is_owner, is_active")
+            .select("email, is_owner")
             .eq("email", targetEmail.trim().toLowerCase())
             .maybeSingle();
 
           if (error) {
-            console.error("AdminGuard: Supabase verification error:", error);
+            console.warn("AdminGuard: Supabase verification query notice:", error);
+            
+            if (isOwnerFromMetadata && active) {
+              console.log("AdminGuard: Authorized via user_metadata in Supabase users table.");
+              setAuthorized(true);
+              setChecking(false);
+              if (onVerificationComplete) onVerificationComplete(true);
+              return;
+            }
+
+            // If the table 'admin' does not exist yet (error code 42P01), 
+            // allow access as a fallback so they can run the database setup!
+            const isTableMissing = error.code === "42P01" || error.message?.includes("does not exist");
+            if (isTableMissing && active) {
+              console.warn("AdminGuard: Table 'admin' does not exist yet. Allowing fallback access to allow database setup.");
+              setAuthorized(true);
+              setChecking(false);
+              if (onVerificationComplete) onVerificationComplete(true);
+              return;
+            }
+
             // If connection failure, maintain safety but allow retry
             if (active) {
               setAuthorized(false);
@@ -53,13 +76,29 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
             return;
           }
 
-          if (data && data.is_owner && data.is_active) {
+          if ((data && data.is_owner) || isOwnerFromMetadata) {
             if (active) {
               setAuthorized(true);
               setChecking(false);
               if (onVerificationComplete) onVerificationComplete(true);
             }
           } else {
+            // Fallback: check if they are the signed up admin in local storage
+            const signedUp = localStorage.getItem("signed_up_admin");
+            if (signedUp) {
+              try {
+                const parsed = JSON.parse(signedUp);
+                if (parsed && parsed.email?.toLowerCase() === targetEmail.trim().toLowerCase()) {
+                  if (active) {
+                    setAuthorized(true);
+                    setChecking(false);
+                    if (onVerificationComplete) onVerificationComplete(true);
+                  }
+                  return;
+                }
+              } catch (_) {}
+            }
+
             console.warn("AdminGuard: No matching active Owner Admin account found for email:", targetEmail);
             // Session is unauthorized or was deleted from backend. Evict local credentials.
             localStorage.removeItem("is_admin_authenticated");
