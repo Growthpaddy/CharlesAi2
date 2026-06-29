@@ -191,7 +191,8 @@ export default function AdminDashboard() {
       const safeCourses = (cData || []).map(c => ({
         ...c,
         price_naira: c.price_naira || parseFloat(c.price) || 0,
-        cover_url: c.cover_url || c.thumbnail_url || "",
+        cover_url: c.thumbnail_url || c.cover_url || "",
+        thumbnail_url: c.thumbnail_url || c.cover_url || "",
         duration_text: c.duration_text || c.duration || ""
       }));
       setCourses(safeCourses);
@@ -341,7 +342,7 @@ export default function AdminDashboard() {
       instructor_bio: course.instructor_bio || "",
       price_naira: course.price_naira || parseFloat(course.price) || 0,
       price: course.price || String(course.price_naira),
-      cover_url: course.cover_url || course.thumbnail_url || "",
+      cover_url: course.thumbnail_url || course.cover_url || "",
       thumbnail_url: course.thumbnail_url || course.cover_url || "",
       video_url: course.video_url || "",
       duration_text: course.duration_text || course.duration || "",
@@ -354,7 +355,7 @@ export default function AdminDashboard() {
     e.preventDefault();
     setIsSavingCourse(true);
     try {
-      // Symmetrical layout mapping payload targets snake_case columns
+      // Swapped out exclusively to 'thumbnail_url' to align with schema image
       const dbPayload = {
         title: courseForm.title,
         tagline: courseForm.tagline,
@@ -364,8 +365,7 @@ export default function AdminDashboard() {
         instructor_bio: courseForm.instructor_bio,
         price_naira: Number(courseForm.price_naira),
         price: String(courseForm.price_naira),
-        cover_url: courseForm.cover_url,
-        thumbnail_url: courseForm.cover_url,
+        thumbnail_url: courseForm.cover_url || courseForm.thumbnail_url,
         video_url: courseForm.video_url,
         duration_text: courseForm.duration_text,
         duration: courseForm.duration_text
@@ -541,7 +541,7 @@ export default function AdminDashboard() {
       await fetchCoreLmsMatrix();
     } catch (err: any) {
       alert(`Lesson deployment error: ${err.message}`);
-    } {
+    } finally {
       setIsSavingLesson(false);
     }
   };
