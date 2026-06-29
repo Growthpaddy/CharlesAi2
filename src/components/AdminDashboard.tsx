@@ -124,12 +124,25 @@ export default function AdminDashboard() {
     setIsLoggingIn(true);
     
     try {
+      // Whitelist override validation check
+      const currentInputEmail = email.trim().toLowerCase();
+      const isExplicitlyWhitelisted = ["admin@aionlinebusiness.org"].includes(currentInputEmail);
+
       if (loginAdmin) {
+        // Authenticate via global context pipeline
         await loginAdmin(email, password);
+        
+        if (isExplicitlyWhitelisted) {
+          localStorage.setItem("is_admin_authenticated", "true");
+          localStorage.setItem("admin_logged_in_email", currentInputEmail);
+          localStorage.setItem("admin_logged_in_name", "Administrator");
+        }
+
         triggerToast("Administrative identity authenticated.");
         window.location.hash = "admin-dashboard";
       } 
       else if (supabase && isSupabaseConfigured) {
+        // Direct core engine fallthrough execution route
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password
@@ -138,6 +151,21 @@ export default function AdminDashboard() {
         if (error) throw error;
 
         if (data?.user) {
+          // If whitelisted, force property confirmation inside the execution block
+          if (!isExplicitlyWhitelisted) {
+            // Check if profile properties are valid via database validation check
+            const { data: adminProfile, error: profileErr } = await supabase
+              .from("admin")
+              .select("is_owner")
+              .eq("id", data.user.id)
+              .single();
+
+            if (profileErr || !adminProfile || adminProfile.is_owner !== true) {
+              await supabase.auth.signOut();
+              throw new Error("Access Denied: You do not carry authorized administrator properties.");
+            }
+          }
+
           localStorage.setItem("is_admin_authenticated", "true");
           localStorage.setItem("admin_logged_in_email", data.user.email || email);
           localStorage.setItem("admin_logged_in_name", "Administrator");
