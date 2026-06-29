@@ -14,6 +14,7 @@ import Hero from "./components/Hero";
 import WhyUs from "./components/WhyUs";
 import Curriculum from "./components/Curriculum";
 import FeaturedPrograms from "./components/FeaturedPrograms";
+import Shop from "./components/Shop";
 import SuccessSection from "./components/SuccessSection";
 import Testimonials from "./components/Testimonials";
 import PricingSection from "./components/PricingSection";
@@ -296,7 +297,7 @@ function AppContent() {
 
         {currentView === "programs" && (
           <div className="pt-28 sm:pt-32 pb-16 animate-in fade-in duration-300">
-            <FeaturedPrograms />
+            <Shop onNavigate={handleOnNavigate} />
           </div>
         )}
 

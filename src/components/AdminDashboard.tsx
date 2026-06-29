@@ -310,7 +310,13 @@ export default function AdminDashboard() {
     setIsRunningDiagnostics(true);
     setDiagnosticsLog(["Initializing backend live validation diagnostics...", `Timestamp: ${new Date().toISOString()}`]);
     try {
-      const logs = await runSupabaseDiagnostics();
+      const diag = await runSupabaseDiagnostics();
+      const logs = [
+        `Supabase URL Configured: ${diag.configured ? "Yes" : "No"}`,
+        `Database Connected: ${diag.connected ? "Yes" : "No"}`,
+        `Admins Table Records: ${diag.count !== null ? diag.count : "N/A"}`,
+        diag.error ? `Operational Alert: ${diag.error}` : "All system connections verified."
+      ];
       setDiagnosticsLog(prev => [...prev, ...logs, "System diagnostics matrix validation: Success."]);
     } catch (err: any) {
       setDiagnosticsLog(prev => [...prev, `Error during diagnostics execution pipeline: ${err.message}`]);
