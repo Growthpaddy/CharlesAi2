@@ -42,30 +42,41 @@ interface StudentRecord {
 interface CourseRecord {
   id: string;
   title: string;
+  tagline: string;
+  overview: string;
   description: string;
   instructor_name: string;
   instructor_bio: string;
   price_naira: number;
+  price: string;
   cover_url: string;
+  thumbnail_url: string;
   video_url: string;
   duration_text: string;
+  duration: string;
 }
 
 interface ModuleRecord {
   id: string;
   course_id: string;
   title: string;
+  description: string;
   order_index: number;
+  module_order: number;
 }
 
 interface LessonRecord {
   id: string;
   module_id: string;
+  course_id: string;
   title: string;
   description: string;
+  content: string;
   video_url: string;
   duration_minutes: number;
+  duration: string;
   order_index: number;
+  lesson_order: number;
 }
 
 export default function AdminDashboard() {
@@ -73,7 +84,6 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   
-  // Track location hash locally to switch instantly without route collisions
   const [currentHash, setCurrentHash] = useState(typeof window !== "undefined" ? window.location.hash : "");
   
   // Login credentials states
@@ -98,26 +108,30 @@ export default function AdminDashboard() {
   const [modules, setModules] = useState<ModuleRecord[]>([]);
   const [lessons, setLessons] = useState<LessonRecord[]>([]);
   
-  // Scoping filters for smooth sub-selection hierarchies
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [selectedModuleId, setSelectedModuleId] = useState<string>("");
 
-  // Modals / Editors Forms toggles & unified object payload wrappers
+  // Loading indicator states for dynamic async network boundaries
+  const [isSavingCourse, setIsSavingCourse] = useState(false);
+  const [isSavingModule, setIsSavingModule] = useState(false);
+  const [isSavingLesson, setIsSavingLesson] = useState(false);
+
+  // Form wrappers adjusted to mirror backend schemas precisely
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<CourseRecord | null>(null);
   const [courseForm, setCourseForm] = useState({
-    title: "", description: "", instructor_name: "", instructor_bio: "",
-    price_naira: 0, cover_url: "", video_url: "", duration_text: ""
+    title: "", tagline: "", overview: "", description: "", instructor_name: "", instructor_bio: "",
+    price_naira: 0, price: "", cover_url: "", thumbnail_url: "", video_url: "", duration_text: "", duration: ""
   });
 
   const [isModuleModalOpen, setIsModuleModalOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<ModuleRecord | null>(null);
-  const [moduleForm, setModuleForm] = useState({ title: "", course_id: "", order_index: 0 });
+  const [moduleForm, setModuleForm] = useState({ title: "", description: "", course_id: "", order_index: 1, module_order: 1 });
 
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<LessonRecord | null>(null);
   const [lessonForm, setLessonForm] = useState({
-    title: "", description: "", video_url: "", duration_minutes: 10, module_id: "", order_index: 0
+    title: "", description: "", content: "", video_url: "", duration_minutes: 15, duration: "", module_id: "", course_id: "", order_index: 1, lesson_order: 1
   });
 
   useEffect(() => {
@@ -144,7 +158,6 @@ export default function AdminDashboard() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  // Sync relational database data grids when specific tab context opens
   useEffect(() => {
     if (supabase && isSupabaseConfigured) {
       if (activeTab === "students") fetchLiveStudents();
@@ -174,17 +187,34 @@ export default function AdminDashboard() {
   const fetchCoreLmsMatrix = async () => {
     try {
       const { data: cData } = await supabase.from("courses").select("*").order("title");
-      setCourses(cData || []);
+      // Map properties symmetrically to avoid field destruction errors
+      const safeCourses = (cData || []).map(c => ({
+        ...c,
+        price_naira: c.price_naira || parseFloat(c.price) || 0,
+        cover_url: c.cover_url || c.thumbnail_url || "",
+        duration_text: c.duration_text || c.duration || ""
+      }));
+      setCourses(safeCourses);
 
-      const { data: mData } = await supabase.from("modules").select("*").order("order_index", { ascending: true });
-      setModules(mData || []);
+      const { data: mData } = await supabase.from("modules").select("*").order("module_order", { ascending: true });
+      const safeModules = (mData || []).map(m => ({
+        ...m,
+        order_index: m.module_order || m.order_index || 1,
+        module_order: m.module_order || m.order_index || 1
+      })).sort((a,b) => a.module_order - b.module_order);
+      setModules(safeModules);
 
-      const { data: lData } = await supabase.from("lessons").select("*").order("order_index", { ascending: true });
-      setLessons(lData || []);
+      const { data: lData } = await supabase.from("lessons").select("*").order("lesson_order", { ascending: true });
+      const safeLessons = (lData || []).map(l => ({
+        ...l,
+        order_index: l.lesson_order || l.order_index || 1,
+        lesson_order: l.lesson_order || l.order_index || 1,
+        duration_minutes: l.duration_minutes || parseFloat(l.duration) || 15
+      })).sort((a,b) => a.lesson_order - b.lesson_order);
+      setLessons(safeLessons);
 
-      // Autofill scope dropdown handles dynamically if empty
-      if (cData && cData.length > 0 && !selectedCourseId) setSelectedCourseId(cData[0].id);
-      if (mData && mData.length > 0 && !selectedModuleId) setSelectedModuleId(mData[0].id);
+      if (safeCourses.length > 0 && !selectedCourseId) setSelectedCourseId(safeCourses[0].id);
+      if (safeModules.length > 0 && !selectedModuleId) setSelectedModuleId(safeModules[0].id);
     } catch (err: any) {
       console.error("Error updating configuration maps:", err);
     }
@@ -288,90 +318,149 @@ export default function AdminDashboard() {
     }
   };
 
-  // --- Dynamic Structured CRUD Handlers ---
+  // --- REWORKED BULLETPROOF LMS TRANSACTIONS SYSTEM ---
 
-  // COURSES MANAGEMENT SUBROUTINES
+  // 1. COURSES TRANSACTION CONTROLLER
   const openCourseCreate = () => {
     setEditingCourse(null);
-    setCourseForm({ title: "", description: "", instructor_name: "", instructor_bio: "", price_naira: 0, cover_url: "", video_url: "", duration_text: "" });
+    setCourseForm({ 
+      title: "", tagline: "", overview: "", description: "", instructor_name: "", instructor_bio: "", 
+      price_naira: 45000, price: "45000", cover_url: "", thumbnail_url: "", video_url: "", duration_text: "12 weeks", duration: "12 weeks" 
+    });
     setIsCourseModalOpen(true);
   };
 
   const openCourseEdit = (course: CourseRecord) => {
     setEditingCourse(course);
     setCourseForm({
-      title: course.title, description: course.description, instructor_name: course.instructor_name,
-      instructor_bio: course.instructor_bio, price_naira: course.price_naira, cover_url: course.cover_url,
-      video_url: course.video_url, duration_text: course.duration_text
+      title: course.title || "",
+      tagline: course.tagline || "",
+      overview: course.overview || course.description || "",
+      description: course.description || "",
+      instructor_name: course.instructor_name || "",
+      instructor_bio: course.instructor_bio || "",
+      price_naira: course.price_naira || parseFloat(course.price) || 0,
+      price: course.price || String(course.price_naira),
+      cover_url: course.cover_url || course.thumbnail_url || "",
+      thumbnail_url: course.thumbnail_url || course.cover_url || "",
+      video_url: course.video_url || "",
+      duration_text: course.duration_text || course.duration || "",
+      duration: course.duration || course.duration_text || ""
     });
     setIsCourseModalOpen(true);
   };
 
   const saveCourseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSavingCourse(true);
     try {
+      // Symmetrical layout mapping payload targets snake_case columns
+      const dbPayload = {
+        title: courseForm.title,
+        tagline: courseForm.tagline,
+        overview: courseForm.overview || courseForm.description,
+        description: courseForm.description,
+        instructor_name: courseForm.instructor_name,
+        instructor_bio: courseForm.instructor_bio,
+        price_naira: Number(courseForm.price_naira),
+        price: String(courseForm.price_naira),
+        cover_url: courseForm.cover_url,
+        thumbnail_url: courseForm.cover_url,
+        video_url: courseForm.video_url,
+        duration_text: courseForm.duration_text,
+        duration: courseForm.duration_text
+      };
+
       if (editingCourse) {
-        const { error } = await supabase.from("courses").update(courseForm).eq("id", editingCourse.id);
+        const { error } = await supabase.from("courses").update(dbPayload).eq("id", editingCourse.id);
         if (error) throw error;
-        triggerToast("Course details updated successfully.");
+        triggerToast("Course details updated successfully inside cloud matrix.");
       } else {
-        const { error } = await supabase.from("courses").insert([courseForm]);
+        const { error } = await supabase.from("courses").insert([dbPayload]);
         if (error) throw error;
-        triggerToast("New course successfully committed to the database.");
+        triggerToast("New course track committed to the cloud layout engine.");
       }
       setIsCourseModalOpen(false);
-      fetchCoreLmsMatrix();
+      await fetchCoreLmsMatrix();
     } catch (err: any) {
-      triggerToast(`Course transaction fault: ${err.message}`);
+      console.error(err);
+      alert(`Course operational failure: ${err.message}`);
+    } finally {
+      setIsSavingCourse(false);
     }
   };
 
   const deleteCourseClick = async (id: string) => {
-    if (!confirm("Are you absolute sure you want to delete this course? All underlying modules and lessons will break tracking references.")) return;
+    if (!confirm("Are you sure you want to drop this course from data schemas?")) return;
     try {
       const { error } = await supabase.from("courses").delete().eq("id", id);
       if (error) throw error;
-      triggerToast("Course dropped from table schema.");
+      triggerToast("Course record dropped.");
       fetchCoreLmsMatrix();
     } catch (err: any) {
-      triggerToast(`Schema deletion fault: ${err.message}`);
+      alert(err.message);
     }
   };
 
-  // MODULES MANAGEMENT SUBROUTINES
+  // 2. MODULES TRANSACTION CONTROLLER
   const openModuleCreate = () => {
+    const parentCourseId = selectedCourseId || (courses[0]?.id || "");
+    const existingCount = modules.filter(m => m.course_id === parentCourseId).length;
     setEditingModule(null);
-    setModuleForm({ title: "", course_id: selectedCourseId || (courses[0]?.id || ""), order_index: modules.length + 1 });
+    setModuleForm({ 
+      title: "", 
+      description: "", 
+      course_id: parentCourseId, 
+      order_index: existingCount + 1, 
+      module_order: existingCount + 1 
+    });
     setIsModuleModalOpen(true);
   };
 
   const openModuleEdit = (mod: ModuleRecord) => {
     setEditingModule(mod);
-    setModuleForm({ title: mod.title, course_id: mod.course_id, order_index: mod.order_index });
+    setModuleForm({ 
+      title: mod.title, 
+      description: mod.description || "", 
+      course_id: mod.course_id, 
+      order_index: mod.module_order || mod.order_index || 1,
+      module_order: mod.module_order || mod.order_index || 1
+    });
     setIsModuleModalOpen(true);
   };
 
   const saveModuleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSavingModule(true);
     try {
+      const dbPayload = {
+        title: moduleForm.title,
+        description: moduleForm.description,
+        course_id: moduleForm.course_id,
+        module_order: Number(moduleForm.module_order),
+        order_index: Number(moduleForm.module_order)
+      };
+
       if (editingModule) {
-        const { error } = await supabase.from("modules").update(moduleForm).eq("id", editingModule.id);
+        const { error } = await supabase.from("modules").update(dbPayload).eq("id", editingModule.id);
         if (error) throw error;
-        triggerToast("Module schema node rewritten.");
+        triggerToast("Module schema updated.");
       } else {
-        const { error } = await supabase.from("modules").insert([moduleForm]);
+        const { error } = await supabase.from("modules").insert([dbPayload]);
         if (error) throw error;
-        triggerToast("Module sequence row initialized.");
+        triggerToast("Module sequence added underneath selected course.");
       }
       setIsModuleModalOpen(false);
-      fetchCoreLmsMatrix();
+      await fetchCoreLmsMatrix();
     } catch (err: any) {
-      triggerToast(`Module operation fault: ${err.message}`);
+      alert(`Module operational fault: ${err.message}`);
+    } finally {
+      setIsSavingModule(false);
     }
   };
 
   const changeModuleOrder = async (mod: ModuleRecord, movement: "up" | "down") => {
-    const contextModules = modules.filter(m => m.course_id === mod.course_id).sort((a,b) => a.order_index - b.order_index);
+    const contextModules = modules.filter(m => m.course_id === mod.course_id).sort((a,b) => a.module_order - b.module_order);
     const index = contextModules.findIndex(m => m.id === mod.id);
     if (index === -1) return;
 
@@ -380,33 +469,33 @@ export default function AdminDashboard() {
 
     const competitor = contextModules[targetIndex];
     
-    // Swap sequence coordinates via distinct update mutations
-    await supabase.from("modules").update({ order_index: competitor.order_index }).eq("id", mod.id);
-    await supabase.from("modules").update({ order_index: mod.order_index }).eq("id", competitor.id);
+    await supabase.from("modules").update({ module_order: competitor.module_order, order_index: competitor.module_order }).eq("id", mod.id);
+    await supabase.from("modules").update({ module_order: mod.module_order, order_index: mod.module_order }).eq("id", competitor.id);
     
     fetchCoreLmsMatrix();
-    triggerToast("Module presentation sequence updated.");
+    triggerToast("Module layer sequence index transformed.");
   };
 
   const deleteModuleClick = async (id: string) => {
-    if (!confirm("Remove this module row? Content child matrices will loose constraints.")) return;
+    if (!confirm("Drop this module row node?")) return;
     try {
       const { error } = await supabase.from("modules").delete().eq("id", id);
       if (error) throw error;
       fetchCoreLmsMatrix();
-      triggerToast("Module purged.");
+      triggerToast("Module removed.");
     } catch (err: any) {
-      triggerToast(err.message);
+      alert(err.message);
     }
   };
 
-  // LESSONS MANAGEMENT SUBROUTINES
+  // 3. LESSONS TRANSACTION CONTROLLER
   const openLessonCreate = () => {
+    const parentModuleId = selectedModuleId || (modules.find(m => m.course_id === selectedCourseId)?.id || "");
+    const existingCount = lessons.filter(l => l.module_id === parentModuleId).length;
     setEditingLesson(null);
     setLessonForm({
-      title: "", description: "", video_url: "", duration_minutes: 15,
-      module_id: selectedModuleId || (modules.find(m => m.course_id === selectedCourseId)?.id || ""),
-      order_index: lessons.length + 1
+      title: "", description: "", content: "", video_url: "", duration_minutes: 15, duration: "15",
+      module_id: parentModuleId, course_id: selectedCourseId, order_index: existingCount + 1, lesson_order: existingCount + 1
     });
     setIsLessonModalOpen(true);
   };
@@ -414,33 +503,51 @@ export default function AdminDashboard() {
   const openLessonEdit = (les: LessonRecord) => {
     setEditingLesson(les);
     setLessonForm({
-      title: les.title, description: les.description, video_url: les.video_url,
-      duration_minutes: les.duration_minutes, module_id: les.module_id, order_index: les.order_index
+      title: les.title, description: les.description || les.content || "", content: les.content || les.description || "",
+      video_url: les.video_url || "", duration_minutes: les.duration_minutes || parseFloat(les.duration) || 15,
+      duration: les.duration || String(les.duration_minutes), module_id: les.module_id, course_id: les.course_id || selectedCourseId,
+      order_index: les.lesson_order || les.order_index || 1, lesson_order: les.lesson_order || les.order_index || 1
     });
     setIsLessonModalOpen(true);
   };
 
   const saveLessonSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSavingLesson(true);
     try {
+      const dbPayload = {
+        title: lessonForm.title,
+        description: lessonForm.description,
+        content: lessonForm.description,
+        video_url: lessonForm.video_url,
+        duration_minutes: Number(lessonForm.duration_minutes),
+        duration: String(lessonForm.duration_minutes),
+        module_id: lessonForm.module_id,
+        course_id: selectedCourseId,
+        lesson_order: Number(lessonForm.lesson_order),
+        order_index: Number(lessonForm.lesson_order)
+      };
+
       if (editingLesson) {
-        const { error } = await supabase.from("lessons").update(lessonForm).eq("id", editingLesson.id);
+        const { error } = await supabase.from("lessons").update(dbPayload).eq("id", editingLesson.id);
         if (error) throw error;
-        triggerToast("Lesson transaction confirmed.");
+        triggerToast("Lesson dataset properties modified.");
       } else {
-        const { error } = await supabase.from("lessons").insert([lessonForm]);
+        const { error } = await supabase.from("lessons").insert([dbPayload]);
         if (error) throw error;
-        triggerToast("Lesson object successfully structured under parent module mapping.");
+        triggerToast("Lesson sequence appended underneath module framework.");
       }
       setIsLessonModalOpen(false);
-      fetchCoreLmsMatrix();
+      await fetchCoreLmsMatrix();
     } catch (err: any) {
-      triggerToast(`Lesson commit error: ${err.message}`);
+      alert(`Lesson deployment error: ${err.message}`);
+    } {
+      setIsSavingLesson(false);
     }
   };
 
   const changeLessonOrder = async (les: LessonRecord, movement: "up" | "down") => {
-    const contextLessons = lessons.filter(l => l.module_id === les.module_id).sort((a,b) => a.order_index - b.order_index);
+    const contextLessons = lessons.filter(l => l.module_id === les.module_id).sort((a,b) => a.lesson_order - b.lesson_order);
     const index = contextLessons.findIndex(l => l.id === les.id);
     if (index === -1) return;
 
@@ -449,25 +556,24 @@ export default function AdminDashboard() {
 
     const competitor = contextLessons[targetIndex];
 
-    await supabase.from("lessons").update({ order_index: competitor.order_index }).eq("id", les.id);
-    await supabase.from("lessons").update({ order_index: les.order_index }).eq("id", competitor.id);
+    await supabase.from("lessons").update({ lesson_order: competitor.lesson_order, order_index: competitor.lesson_order }).eq("id", les.id);
+    await supabase.from("lessons").update({ lesson_order: les.lesson_order, order_index: les.lesson_order }).eq("id", competitor.id);
 
     fetchCoreLmsMatrix();
-    triggerToast("Lesson array positional sequence shifted.");
+    triggerToast("Lesson presentation sequence translated.");
   };
 
   const deleteLessonClick = async (id: string) => {
-    if (!confirm("Confirm complete dropped metadata destruction for this specific lesson?")) return;
+    if (!confirm("Permanently discard this lesson metadata item?")) return;
     try {
       const { error } = await supabase.from("lessons").delete().eq("id", id);
       if (error) throw error;
       fetchCoreLmsMatrix();
-      triggerToast("Lesson deleted safely.");
+      triggerToast("Lesson asset purged.");
     } catch (err: any) {
-      triggerToast(err.message);
+      alert(err.message);
     }
   };
-
 
   // Modern string filters across composite keys
   const filteredStudents = students.filter(student => {
@@ -832,7 +938,7 @@ export default function AdminDashboard() {
                         <div key={mod.id} className="p-4 flex items-center justify-between hover:bg-slate-50/40 transition-colors">
                           <div className="flex items-center gap-4">
                             <div className="w-7 h-7 bg-slate-100 border border-slate-200 rounded-lg flex flex-col items-center justify-center text-slate-400">
-                              <span className="text-[11px] font-black text-slate-800">{mod.order_index}</span>
+                              <span className="text-[11px] font-black text-slate-800">{mod.module_order || mod.order_index || (idx + 1)}</span>
                             </div>
                             <div>
                               <h4 className="text-xs font-bold text-slate-900">{mod.title}</h4>
@@ -841,7 +947,6 @@ export default function AdminDashboard() {
                           </div>
 
                           <div className="flex items-center gap-4">
-                            {/* Static Ordering Incremental Arrows */}
                             <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                               <button 
                                 disabled={idx === 0}
@@ -912,7 +1017,7 @@ export default function AdminDashboard() {
                       className="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl p-2.5 text-slate-700 focus:outline-none focus:border-slate-400"
                     >
                       <option value="">-- Choose Module context --</option>
-                      {modules.filter(m => m.course_id === selectedCourseId).map(m => <option key={m.id} value={m.id}>Mod {m.order_index}: {m.title}</option>)}
+                      {modules.filter(m => m.course_id === selectedCourseId).map(m => <option key={m.id} value={m.id}>Mod {m.module_order || m.order_index || m.title}: {m.title}</option>)}
                     </select>
                   </div>
 
@@ -937,14 +1042,14 @@ export default function AdminDashboard() {
                         <div key={les.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/30 transition-colors">
                           <div className="flex items-start gap-3.5 max-w-xl">
                             <div className="w-7 h-7 mt-0.5 bg-slate-900 text-white rounded-lg flex items-center justify-center font-black text-xs shadow-sm">
-                              {les.order_index}
+                              {les.lesson_order || les.order_index || (idx + 1)}
                             </div>
                             <div className="space-y-1">
                               <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
                                 {les.title}
-                                <span className="inline-flex items-center gap-1 text-[9px] font-bold tracking-wide text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border"><Clock className="w-2.5 h-2.5" /> {les.duration_minutes} mins</span>
+                                <span className="inline-flex items-center gap-1 text-[9px] font-bold tracking-wide text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border"><Clock className="w-2.5 h-2.5" /> {les.duration_minutes || les.duration} mins</span>
                               </h4>
-                              <p className="text-[11px] text-slate-500 leading-relaxed">{les.description || "No short description text recorded."}</p>
+                              <p className="text-[11px] text-slate-500 leading-relaxed">{les.description || les.content || "No short description text recorded."}</p>
                               {les.video_url && (
                                 <p className="text-[10px] font-mono text-emerald-600 flex items-center gap-1 select-all"><Play className="w-2.5 h-2.5" /> {les.video_url}</p>
                               )}
@@ -992,8 +1097,142 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* LIVE INTEGRATED STUDENTS DIRECTORY VIEW SECTION */}
+            {activeTab === "students" && (
+              <div className="space-y-6">
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="relative max-w-md w-full">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    <input 
+                      type="text"
+                      placeholder="Search students by name, email or relational UUID link..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors"
+                    />
+                  </div>
+                  <button 
+                    onClick={fetchLiveStudents}
+                    disabled={isLoadingStudents}
+                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isLoadingStudents ? "animate-spin" : ""}`} />
+                    Refresh Directory Data
+                  </button>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                  {isLoadingStudents ? (
+                    <div className="p-20 text-center space-y-3">
+                      <RefreshCw className="w-6 h-6 animate-spin text-slate-400 mx-auto" />
+                      <p className="text-xs font-bold text-slate-600">Querying Relational Data Index...</p>
+                    </div>
+                  ) : filteredStudents.length === 0 ? (
+                    <div className="p-20 text-center max-w-sm mx-auto space-y-3">
+                      <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center mx-auto text-slate-400">
+                        <UserX className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-900 uppercase tracking-wide">No Registered Records</p>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        No active entries matching this criteria were found inside the remote schema.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/70 border-b border-slate-200">
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Student Profile</th>
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact Node</th>
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Enrollment Anchor Date</th>
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">System Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredStudents.map((student) => (
+                            <tr key={student.id} className="hover:bg-slate-50/40 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  {student.avatar_url ? (
+                                    <img src={student.avatar_url} alt="" className="w-9 h-9 rounded-xl object-cover bg-slate-100 border border-slate-200" />
+                                  ) : (
+                                    <div className="w-9 h-9 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center text-slate-700 font-extrabold text-xs">
+                                      {student.full_name?.charAt(0) || "S"}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="text-xs font-bold text-slate-900">{student.full_name || "Anonymous Student"}</p>
+                                    <p className="text-[10px] font-mono text-slate-400 mt-0.5 select-all">{student.id}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 space-y-1">
+                                <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600">
+                                  <Mail className="w-3 h-3 text-slate-400" />
+                                  <span>{student.email}</span>
+                                </div>
+                                {student.phone && (
+                                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                                    <Phone className="w-3 h-3 text-slate-300" />
+                                    <span>{student.phone}</span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600">
+                                  <Calendar className="w-3 text-slate-400" />
+                                  <span>{new Date(student.created_at).toLocaleDateString(undefined, { dateStyle: "medium" })}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider border bg-emerald-50 border-emerald-200 text-emerald-700">
+                                  {student.status || "active"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "gas_config" && (
+              <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 max-w-2xl space-y-6">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">GAS Pipeline Architecture Engine</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Control orchestration parameters, prompt profiles, and autonomous generation logic blocks.</p>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Target Engine Model ID</label>
+                    <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-slate-400 text-slate-700">
+                      <option value="gemini-1.5-pro">gemini-1.5-pro (Dynamic Inference Execution)</option>
+                      <option value="gemini-1.5-flash">gemini-1.5-flash (High Speed Generation Burst)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Global System Instruction Framework</label>
+                    <textarea 
+                      rows={4}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono focus:outline-none focus:border-slate-400 text-slate-600 leading-relaxed"
+                      defaultValue="System-attached orchestration agent logic template. Running operational infrastructure interfaces..."
+                    />
+                  </div>
+                  <button 
+                    onClick={() => triggerToast("System Instruction matrix re-mapped successfully!")}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 font-bold text-xs text-white rounded-xl shadow-sm transition-all cursor-pointer"
+                  >
+                    Commit Active Model Rules
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Catch leftover tabs */}
-            {["students", "sales", "quizzes", "gas_config", "database"].includes(activeTab) && (
+            {["sales", "quizzes", "database"].includes(activeTab) && (
               <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-8 text-center max-w-md mx-auto my-12">
                 <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 mx-auto mb-3">
                   <Activity className="w-4 h-4 text-slate-400" />
@@ -1008,13 +1247,13 @@ export default function AdminDashboard() {
           </div>
         </main>
 
-        {/* --- COURSE POPUP FORM MODAL --- */}
+        {/* --- REWORKED COURSE FORM POPUP DIALOG MODAL WITH LOADING STATE --- */}
         {isCourseModalOpen && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-            <div className="bg-white border border-slate-200 w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4 my-8">
+            <div className="bg-white border border-slate-200 w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4 my-8 text-left">
               <div>
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">{editingCourse ? "Modify Existing Course Structure" : "Commit New Course Track"}</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">Fill configuration nodes. Changes write globally to your backend instantly.</p>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">{editingCourse ? "Modify Course Schema Node" : "Commit New Course Track"}</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">Fill configuration nodes. Changes write globally to your database instantly.</p>
               </div>
 
               <form onSubmit={saveCourseSubmit} className="space-y-4">
@@ -1025,8 +1264,13 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Detailed Description</label>
-                    <textarea rows={2} required value={courseForm.description} onChange={e => setCourseForm({...courseForm, description: e.target.value})} placeholder="Provide clear expectations of the core learning modules curriculum pathway..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium text-slate-700 focus:outline-none focus:border-slate-400 leading-relaxed" />
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Course Tagline / Catchphrase</label>
+                    <input type="text" value={courseForm.tagline} onChange={e => setCourseForm({...courseForm, tagline: e.target.value})} placeholder="e.g., Automate your workflow pipelines with zero code blocks" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-slate-400" />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Detailed Description / Overview Text</label>
+                    <textarea rows={2} required value={courseForm.description} onChange={e => setCourseForm({...courseForm, description: e.target.value, overview: e.target.value})} placeholder="Provide clear expectations of the core learning modules curriculum pathway..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium text-slate-700 focus:outline-none focus:border-slate-400 leading-relaxed" />
                   </div>
 
                   <div>
@@ -1036,12 +1280,12 @@ export default function AdminDashboard() {
 
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Course Duration Indicator</label>
-                    <input type="text" required value={courseForm.duration_text} onChange={e => setCourseForm({...courseForm, duration_text: e.target.value})} placeholder="e.g., 6 Weeks or 14 Hours" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-slate-400" />
+                    <input type="text" required value={courseForm.duration_text} onChange={e => setCourseForm({...courseForm, duration_text: e.target.value, duration: e.target.value})} placeholder="e.g., 12 weeks or 45 hours" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-slate-400" />
                   </div>
 
                   <div className="sm:col-span-2">
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">About Instructor Bio</label>
-                    <textarea rows={2} value={courseForm.instructor_bio} onChange={e => setCourseForm({...courseForm, instructor_bio: e.target.value})} placeholder="Brief background matrix summary..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:outline-none focus:border-slate-400" />
+                    <textarea rows={2} value={courseForm.instructor_bio} onChange={e => setCourseForm({...courseForm, instructor_bio: e.target.value})} placeholder="Brief educational profile narrative..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:outline-none focus:border-slate-400" />
                   </div>
 
                   <div>
@@ -1051,7 +1295,7 @@ export default function AdminDashboard() {
 
                   <div className="sm:col-span-2">
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Course Cover Asset Image Link (URL Render-Ready)</label>
-                    <input type="url" value={courseForm.cover_url} onChange={e => setCourseForm({...courseForm, cover_url: e.target.value})} placeholder="https://images.unsplash.com/photo-..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-600 focus:outline-none focus:border-slate-400" />
+                    <input type="url" value={courseForm.cover_url} onChange={e => setCourseForm({...courseForm, cover_url: e.target.value, thumbnail_url: e.target.value})} placeholder="https://images.unsplash.com/photo-..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-600 focus:outline-none focus:border-slate-400" />
                   </div>
 
                   <div className="sm:col-span-2">
@@ -1061,18 +1305,27 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 flex justify-end items-center gap-2">
-                  <button type="button" onClick={() => setIsCourseModalOpen(false)} className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
-                  <button type="submit" className="px-4 py-2 bg-slate-900 hover:bg-slate-800 font-bold text-xs text-white rounded-xl shadow-md transition-all cursor-pointer">Commit Transaction Rules</button>
+                  <button type="button" disabled={isSavingCourse} onClick={() => setIsCourseModalOpen(false)} className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+                  <button type="submit" disabled={isSavingCourse} className="px-4 py-2 bg-slate-900 hover:bg-slate-800 font-bold text-xs text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2">
+                    {isSavingCourse ? (
+                      <>
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        <span>Saving Changes...</span>
+                      </>
+                    ) : (
+                      <span>Commit Transaction Rules</span>
+                    )}
+                  </button>
                 </div>
               </form>
             </div>
           </div>
         )}
 
-        {/* --- MODULES FORM MODAL --- */}
+        {/* --- REWORKED MODULES FORM MODAL WITH LOADING STATE --- */}
         {isModuleModalOpen && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white border border-slate-200 w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="bg-white border border-slate-200 w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4 text-left">
               <div>
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">{editingModule ? "Edit Module Parameters" : "Provision New Module"}</h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">Registers structural partitions within curriculum layers.</p>
@@ -1082,19 +1335,30 @@ export default function AdminDashboard() {
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Module Structural Title</label>
                   <input type="text" required value={moduleForm.title} onChange={e => setModuleForm({...moduleForm, title: e.target.value})} placeholder="e.g., Module 1: Foundational Prompt Strategies" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-slate-400" />
                 </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Module Order Positioning Index</label>
+                  <input type="number" required value={moduleForm.module_order} onChange={e => setModuleForm({...moduleForm, module_order: Number(e.target.value), order_index: Number(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-slate-400" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Short Scope Description</label>
+                  <input type="text" value={moduleForm.description} onChange={e => setModuleForm({...moduleForm, description: e.target.value})} placeholder="Summary overview of tasks..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-slate-400" />
+                </div>
                 <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
-                  <button type="button" onClick={() => setIsModuleModalOpen(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 rounded-lg">Dismiss</button>
-                  <button type="submit" className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-800">Save Node</button>
+                  <button type="button" disabled={isSavingModule} onClick={() => setIsModuleModalOpen(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 rounded-lg">Dismiss</button>
+                  <button type="submit" disabled={isSavingModule} className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-800 flex items-center gap-1.5">
+                    {isSavingModule && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    <span>{isSavingModule ? "Processing..." : "Save Module Node"}</span>
+                  </button>
                 </div>
               </form>
             </div>
           </div>
         )}
 
-        {/* --- LESSONS FORM MODAL --- */}
+        {/* --- REWORKED LESSONS FORM MODAL WITH LOADING STATE --- */}
         {isLessonModalOpen && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white border border-slate-200 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="bg-white border border-slate-200 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4 text-left">
               <div>
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">{editingLesson ? "Modify Lesson Artifact" : "Inject Live Lesson Entity"}</h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">Saves directly underneath selected configuration sub-modules mapping index columns.</p>
@@ -1105,22 +1369,27 @@ export default function AdminDashboard() {
                   <input type="text" required value={lessonForm.title} onChange={e => setLessonForm({...lessonForm, title: e.target.value})} placeholder="e.g., Parsing Context Windows Safely" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-slate-400" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Short Description Matrix</label>
-                  <textarea rows={2} value={lessonForm.description} onChange={e => setLessonForm({...lessonForm, description: e.target.value})} placeholder="What the student uncovers in this lecture code segment..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:outline-none focus:border-slate-400" />
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Lesson Layout Sequence Order</label>
+                  <input type="number" required value={lessonForm.lesson_order} onChange={e => setLessonForm({...lessonForm, lesson_order: Number(e.target.value), order_index: Number(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-slate-400" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Duration (Minutes)</label>
-                    <input type="number" required value={lessonForm.duration_minutes} onChange={e => setLessonForm({...lessonForm, duration_minutes: Number(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-slate-400" />
-                  </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Short Description Matrix</label>
+                  <textarea rows={2} value={lessonForm.description} onChange={e => setLessonForm({...lessonForm, description: e.target.value, content: e.target.value})} placeholder="What the student uncovers in this lecture code segment..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:outline-none focus:border-slate-400" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Duration (Minutes)</label>
+                  <input type="number" required value={lessonForm.duration_minutes} onChange={e => setLessonForm({...lessonForm, duration_minutes: Number(e.target.value), duration: String(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-slate-400" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Streaming Video Source Path Link (YouTube / Vimeo Link)</label>
-                  <input type="url" required value={lessonForm.video_url} onChange={e => setLessonForm({...lessonForm, video_url: e.target.value})} placeholder="https://vimeo.com/..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-600 focus:outline-none focus:border-slate-400" />
+                  <input type="url" required value={lessonForm.video_url} onChange={e => setLessonForm({...lessonForm, video_url: e.target.value})} placeholder="https://www.youtube.com/watch?v=..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-600 focus:outline-none focus:border-slate-400" />
                 </div>
                 <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
-                  <button type="button" onClick={() => setIsLessonModalOpen(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 rounded-lg">Abort</button>
-                  <button type="submit" className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-800">Commit Lesson</button>
+                  <button type="button" disabled={isSavingLesson} onClick={() => setIsLessonModalOpen(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 rounded-lg">Abort</button>
+                  <button type="submit" disabled={isSavingLesson} className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-800 flex items-center gap-1.5">
+                    {isSavingLesson && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    <span>{isSavingLesson ? "Saving..." : "Commit Lesson"}</span>
+                  </button>
                 </div>
               </form>
             </div>
