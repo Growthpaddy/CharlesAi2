@@ -43,54 +43,15 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
             return;
           }
 
-          let admin = null;
-          let dbError = null;
-
           // Attempt 'admin' query by id
-          const res1 = await supabase
+          const { data: admin, error: dbError } = await supabase
             .from("admin")
             .select("*")
             .eq("id", authUser.id)
             .single();
-          
-          if (!res1.error && res1.data) {
-            admin = res1.data;
-          } else {
-            // Fallback to public.admin by id
-            const res2 = await supabase
-              .from("public.admin")
-              .select("*")
-              .eq("id", authUser.id)
-              .single();
-            if (!res2.error && res2.data) {
-              admin = res2.data;
-            } else {
-              // Try email query fallback
-              const resEmail = await supabase
-                .from("admin")
-                .select("*")
-                .eq("email", authUser.email?.trim().toLowerCase())
-                .maybeSingle();
 
-              if (!resEmail.error && resEmail.data) {
-                admin = resEmail.data;
-                // Heal ID mismatch if possible
-                try {
-                  await supabase
-                    .from("admin")
-                    .update({ id: authUser.id })
-                    .eq("email", authUser.email?.trim().toLowerCase());
-                } catch (healErr) {
-                  console.warn("AdminGuard: Soft notice - Failed to heal ID mismatch in admin table:", healErr);
-                }
-              } else {
-                dbError = res1.error || res2.error || resEmail.error;
-              }
-            }
-          }
-
-          if (admin) {
-            const isAuthorized = admin.is_owner === true && admin.is_active !== false;
+          if (!dbError && admin) {
+            const isAuthorized = admin.is_owner === true && admin.is_active === true;
             if (active) {
               setAuthorized(isAuthorized);
               setChecking(false);
@@ -102,33 +63,6 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
           if (dbError) {
             console.warn("AdminGuard: Supabase verification query notice:", dbError);
             
-            // Check metadata in Supabase users table
-            const isOwnerFromMetadata = authUser?.user_metadata?.is_owner === true || authUser?.user_metadata?.role === "admin";
-            if (isOwnerFromMetadata && active) {
-              console.log("AdminGuard: Authorized via user_metadata in Supabase users table.");
-              setAuthorized(true);
-              setChecking(false);
-              if (onVerificationComplete) onVerificationComplete(true);
-              return;
-            }
-
-            // Check if they are the signed up admin in local storage BEFORE giving up
-            const signedUp = localStorage.getItem("signed_up_admin");
-            if (signedUp) {
-              try {
-                const parsed = JSON.parse(signedUp);
-                if (parsed && parsed.email?.toLowerCase() === authUser.email?.trim().toLowerCase()) {
-                  if (active) {
-                    console.log("AdminGuard: Authorized via signed_up_admin in localStorage during dbError.");
-                    setAuthorized(parsed.is_active !== false);
-                    setChecking(false);
-                    if (onVerificationComplete) onVerificationComplete(parsed.is_active !== false);
-                  }
-                  return;
-                }
-              } catch (_) {}
-            }
-
             // If the table 'admin' does not exist yet or there is a schema cache error,
             // allow access as a fallback so they can run the database setup!
             const isTableMissing = dbError.code === "42P01" || 
@@ -151,22 +85,6 @@ export function AdminGuard({ children, onVerificationComplete }: AdminGuardProps
               if (onVerificationComplete) onVerificationComplete(false);
             }
             return;
-          }
-
-          // Fallback: check if they are the signed up admin in local storage
-          const signedUp = localStorage.getItem("signed_up_admin");
-          if (signedUp) {
-            try {
-              const parsed = JSON.parse(signedUp);
-              if (parsed && parsed.email?.toLowerCase() === authUser.email?.trim().toLowerCase()) {
-                if (active) {
-                  setAuthorized(true);
-                  setChecking(false);
-                  if (onVerificationComplete) onVerificationComplete(true);
-                }
-                return;
-              }
-            } catch (_) {}
           }
 
           console.warn("AdminGuard: No matching active Owner Admin account found for user ID:", authUser.id);
