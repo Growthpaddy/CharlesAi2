@@ -7,7 +7,8 @@ import React, { useState, useEffect } from "react";
 import { 
   LayoutGrid, BookOpen, Users, Receipt, ClipboardList, Sparkles, 
   Video, Layers, LogOut, ChevronLeft, ChevronRight, CheckCircle2, RefreshCw, 
-  ShieldAlert, GraduationCap, ArrowUpRight, ShieldCheck, DollarSign, UserCheck, FileText, Activity, Lock
+  ShieldAlert, GraduationCap, ArrowUpRight, ShieldCheck, DollarSign, UserCheck, 
+  FileText, Activity, Lock, Search, Mail, Phone, Calendar, UserX
 } from "lucide-react";
 import { testConnection } from "../lib/dbTest";
 import { runSupabaseDiagnostics } from "../lib/adminAuth";
@@ -25,6 +26,18 @@ type AdminTab =
   | "quizzes" 
   | "gas_config"
   | "database";
+
+interface StudentRecord {
+  id: string;
+  created_at: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  status: string;
+  avatar_url: string | null;
+  enrolled_courses: any;
+  metadata: any;
+}
 
 export default function AdminDashboard() {
   const { logoutAdmin, currentAdmin, loginAdmin } = useAdmin();
@@ -46,8 +59,12 @@ export default function AdminDashboard() {
   const [diagnosticsLog, setDiagnosticsLog] = useState<string[]>([]);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
 
+  // Students Directory Live States
+  const [students, setStudents] = useState<StudentRecord[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+
   useEffect(() => {
-    // If no path anchor is provided, default safely to the login page
     if (!window.location.hash) {
       window.location.hash = "admin-login";
     }
@@ -71,6 +88,31 @@ export default function AdminDashboard() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
+  // Fetch live students whenever the user switches onto the Students tab
+  useEffect(() => {
+    if (activeTab === "students" && supabase && isSupabaseConfigured) {
+      fetchLiveStudents();
+    }
+  }, [activeTab]);
+
+  const fetchLiveStudents = async () => {
+    setIsLoadingStudents(true);
+    try {
+      const { data, error } = await supabase
+        .from("students")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setStudents(data || []);
+    } catch (err: any) {
+      console.error("Error reading students relational matrix:", err);
+      triggerToast(`Failed fetching student index data: ${err.message}`);
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  };
+
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
@@ -82,13 +124,11 @@ export default function AdminDashboard() {
     setIsLoggingIn(true);
     
     try {
-      // 1. Primary path: Attempt to use context provider login routine
       if (loginAdmin) {
         await loginAdmin(email, password);
         triggerToast("Administrative identity authenticated.");
         window.location.hash = "admin-dashboard";
       } 
-      // 2. Direct Core Fallback: If context wrapper is uninitialized, interact directly with Supabase
       else if (supabase && isSupabaseConfigured) {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -98,7 +138,6 @@ export default function AdminDashboard() {
         if (error) throw error;
 
         if (data?.user) {
-          // Commit required guard authority markers directly to client storage
           localStorage.setItem("is_admin_authenticated", "true");
           localStorage.setItem("admin_logged_in_email", data.user.email || email);
           localStorage.setItem("admin_logged_in_name", "Administrator");
@@ -148,6 +187,17 @@ export default function AdminDashboard() {
     }
   };
 
+  // Modern string filters across composite keys
+  const filteredStudents = students.filter(student => {
+    const term = searchQuery.toLowerCase();
+    return (
+      student.full_name?.toLowerCase().includes(term) ||
+      student.email?.toLowerCase().includes(term) ||
+      student.phone?.toLowerCase().includes(term) ||
+      student.id?.toLowerCase().includes(term)
+    );
+  });
+
   const menuItems = [
     { id: "dashboard", label: "Overview", icon: LayoutGrid },
     { id: "courses", label: "Manage Courses", icon: BookOpen },
@@ -160,10 +210,6 @@ export default function AdminDashboard() {
     { id: "database", label: "Database Matrix", icon: ShieldAlert },
   ];
 
-  // =========================================================
-  // VIEW NODE A: UNPROTECTED AUTHENTICATION SCREEN
-  // Safely renders completely outside of the AdminGuard wrapper
-  // =========================================================
   if (currentHash === "#admin-login" || currentHash === "") {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6 font-sans antialiased">
@@ -222,10 +268,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // =========================================================
-  // VIEW NODE B: PROTECTED SECURE ADMINISTRATION SYSTEM
-  // Wrapped safely inside AdminGuard to protect internal routes
-  // =========================================================
   return (
     <AdminGuard>
       <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex relative overflow-hidden antialiased">
@@ -239,7 +281,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Sidebar Left Component Navigation */}
         <aside className={`${sidebarOpen ? "w-64" : "w-20"} bg-white border-r border-slate-200 shadow-sm transition-all duration-300 flex flex-col justify-between z-20`}>
           <div>
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
@@ -296,7 +337,6 @@ export default function AdminDashboard() {
           </div>
         </aside>
 
-        {/* Main Operating Field */}
         <main className="flex-1 overflow-y-auto min-h-screen flex flex-col">
           <header className="h-20 border-b border-slate-200 bg-white px-8 flex items-center justify-between sticky top-0 z-10 shadow-sm">
             <div>
@@ -335,9 +375,9 @@ export default function AdminDashboard() {
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cohort Active Students</p>
                       <div className="p-1 bg-slate-100 text-slate-900 rounded-md"><UserCheck className="w-3.5 h-3.5" /></div>
                     </div>
-                    <h3 className="text-2xl font-black mt-2 text-slate-900">0</h3>
+                    <h3 className="text-2xl font-black mt-2 text-slate-900">{students.length || 0}</h3>
                     <div className="text-[10px] font-medium text-slate-400 mt-2 flex items-center gap-1">
-                      Waiting on curriculum deployment
+                      Live records active in database matrix
                     </div>
                   </div>
 
@@ -395,6 +435,112 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* LIVE INTEGRATED STUDENTS DIRECTORY VIEW SECTION */}
+            {activeTab === "students" && (
+              <div className="space-y-6">
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="relative max-w-md w-full">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    <input 
+                      type="text"
+                      placeholder="Search students by name, email or relational UUID link..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors"
+                    />
+                  </div>
+                  <button 
+                    onClick={fetchLiveStudents}
+                    disabled={isLoadingStudents}
+                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isLoadingStudents ? "animate-spin" : ""}`} />
+                    Refresh Directory Data
+                  </button>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                  {isLoadingStudents ? (
+                    <div className="p-20 text-center space-y-3">
+                      <RefreshCw className="w-6 h-6 animate-spin text-slate-400 mx-auto" />
+                      <p className="text-xs font-bold text-slate-600">Querying Relational Data Index...</p>
+                    </div>
+                  ) : filteredStudents.length === 0 ? (
+                    <div className="p-20 text-center max-w-sm mx-auto space-y-3">
+                      <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center mx-auto text-slate-400">
+                        <UserX className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-900 uppercase tracking-wide">No Registered Records</p>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        No active entries matching this criteria were found inside the remote schema.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/70 border-b border-slate-200">
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Student Profile</th>
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact Node</th>
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Enrollment Anchor Date</th>
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">System Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredStudents.map((student) => (
+                            <tr key={student.id} className="hover:bg-slate-50/40 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  {student.avatar_url ? (
+                                    <img src={student.avatar_url} alt="" className="w-9 h-9 rounded-xl object-cover bg-slate-100 border border-slate-200" />
+                                  ) : (
+                                    <div className="w-9 h-9 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center text-slate-700 font-extrabold text-xs">
+                                      {student.full_name?.charAt(0) || "S"}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="text-xs font-bold text-slate-900">{student.full_name || "Anonymous Student"}</p>
+                                    <p className="text-[10px] font-mono text-slate-400 mt-0.5 select-all">{student.id}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 space-y-1">
+                                <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600">
+                                  <Mail className="w-3 h-3 text-slate-400" />
+                                  <span>{student.email}</span>
+                                </div>
+                                {student.phone && (
+                                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                                    <Phone className="w-3 h-3 text-slate-300" />
+                                    <span>{student.phone}</span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600">
+                                  <Calendar className="w-3 text-slate-400" />
+                                  <span>{new Date(student.created_at).toLocaleDateString(undefined, { dateStyle: "medium" })}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider border ${
+                                  student.status?.toLowerCase() === "active" 
+                                    ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
+                                    : "bg-slate-100 border-slate-200 text-slate-600"
+                                }`}>
+                                  {student.status || "active"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {activeTab === "gas_config" && (
               <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 max-w-2xl space-y-6">
                 <div>
@@ -427,7 +573,8 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {["courses", "modules", "lessons", "students", "sales", "quizzes", "database"].includes(activeTab) && (
+            {/* Catch leftover tabs */}
+            {["courses", "modules", "lessons", "sales", "quizzes", "database"].includes(activeTab) && (
               <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-8 text-center max-w-md mx-auto my-12">
                 <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 mx-auto mb-3">
                   <Activity className="w-4 h-4 text-slate-400" />
