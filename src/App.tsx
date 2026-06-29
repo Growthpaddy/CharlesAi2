@@ -59,11 +59,19 @@ export default function App() {
 }
 
 function AppContent() {
-  const { currentView, navigateTo } = useNavigation();
+  const { currentView, navigateTo, activeCourseId, setActiveCourseId } = useNavigation();
 
   // Helper to change page instantly
   const handlePageChange = (view: ViewType) => {
     navigateTo(view);
+  };
+
+  // Structured route handler that intercepts params
+  const handleOnNavigate = (page: string, params?: any) => {
+    if (params && params.courseId) {
+      setActiveCourseId(params.courseId);
+    }
+    navigateTo(page as any);
   };
 
   return (
@@ -354,7 +362,7 @@ function AppContent() {
 
         {currentView === "course_details" && (
           <div className="animate-in fade-in duration-350">
-            <CourseDetailPage />
+            <CourseDetailPage courseId={activeCourseId || ""} onNavigate={handleOnNavigate} />
           </div>
         )}
 
@@ -366,7 +374,7 @@ function AppContent() {
 
         {currentView === "checkout" && (
           <div className="animate-in fade-in duration-350">
-            <CheckoutPage />
+            <CheckoutPage courseId={activeCourseId || ""} onNavigate={handleOnNavigate} />
           </div>
         )}
 
