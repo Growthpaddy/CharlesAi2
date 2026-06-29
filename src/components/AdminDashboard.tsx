@@ -7,7 +7,7 @@ import React, { useState, useEffect } from "react";
 import { 
   LayoutGrid, BookOpen, Users, Receipt, ClipboardList, Sparkles, 
   Video, Layers, LogOut, ChevronLeft, ChevronRight, CheckCircle2, RefreshCw, 
-  ShieldAlert, GraduationCap, ArrowUpRight, ShieldCheck, DollarSign, UserCheck, FileText, Activity
+  ShieldAlert, GraduationCap, ArrowUpRight, ShieldCheck, DollarSign, UserCheck, FileText, Activity, Lock
 } from "lucide-react";
 import { testConnection } from "../lib/dbTest";
 import { runSupabaseDiagnostics } from "../lib/adminAuth";
@@ -26,24 +26,31 @@ type AdminTab =
   | "database";
 
 export default function AdminDashboard() {
-  // Extract real admin identity and logout hooks from your context
-  const { logoutAdmin, currentAdmin } = useAdmin();
+  const { logoutAdmin, currentAdmin, loginAdmin } = useAdmin();
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   
-  // Interface alert states
+  // Track location hash locally to handle seamless portal switching
+  const [currentHash, setCurrentHash] = useState(window.location.hash);
+  
+  // Login form inputs
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // System status metrics
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [dbStatus, setDbStatus] = useState<{connected: boolean; message: string} | null>(null);
   const [diagnosticsLog, setDiagnosticsLog] = useState<string[]>([]);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
 
-  const triggerToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
-  };
-
-  // Check connection state securely on structural instantiation
   useEffect(() => {
+    const handleHashChange = () => {
+      setCurrentHash(window.location.hash);
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    
     async function checkSystem() {
       try {
         const res = await testConnection();
@@ -53,9 +60,34 @@ export default function AdminDashboard() {
       }
     }
     checkSystem();
+
+    return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  // Explicit Interactive Logout Logic Router
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+    setIsLoggingIn(true);
+    try {
+      if (loginAdmin) {
+        await loginAdmin(email, password);
+        triggerToast("Administrative session authenticated.");
+        window.location.hash = "admin-dashboard";
+      } else {
+        throw new Error("Admin login service context uninitialized.");
+      }
+    } catch (err: any) {
+      setLoginError(err.message || "Invalid master administrative keys.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   const handleExplicitLogout = async () => {
     try {
       if (logoutAdmin) {
@@ -64,7 +96,6 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error("Session clean-up intercept:", err);
     } finally {
-      // Force immediate window window-hash reset directly back to the sign-in page anchor
       window.location.hash = "admin-login";
     }
   };
@@ -94,12 +125,76 @@ export default function AdminDashboard() {
     { id: "database", label: "Database Matrix", icon: ShieldAlert },
   ];
 
+  // ==========================================
+  // VIEW RENDERER 1: VIBRANT LIGHT LOGIN PORTAL
+  // Bypasses AdminGuard so it never hits the "Role Authority Denied" page loop
+  // ==========================================
+  if (currentHash === "#admin-login") {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6 font-sans">
+        <div className="w-full max-w-md bg-white border border-slate-200 shadow-xl rounded-3xl p-8 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto shadow-md">
+              <GraduationCap className="w-6 h-6" />
+            </div>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Master Gateway</h2>
+            <p className="text-xs text-slate-400 font-medium">Verify structural credentials to unlock administration canvas nodes.</p>
+          </div>
+
+          {loginError && (
+            <div className="p-3.5 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 font-semibold text-xs flex items-start gap-2.5">
+              <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{loginError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Admin Email Node</label>
+              <input 
+                type="email" 
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="authority@lms.internal"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-medium text-slate-800 placeholder-slate-300 focus:outline-none focus:border-slate-400 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Master Gateway Cipher</label>
+              <input 
+                type="password" 
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-medium text-slate-800 placeholder-slate-300 focus:outline-none focus:border-slate-400 transition-colors"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoggingIn}
+              className="w-full py-3 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              {isLoggingIn ? "Validating Session..." : "Initialize Session Matrix"}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // VIEW RENDERER 2: SECURE WORKBENCH PANEL
+  // Wrapped inside AdminGuard to enforce strict administrative isolation
+  // ==========================================
   return (
     <AdminGuard>
-      {/* Lively Light Theme Canvas */}
       <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex relative overflow-hidden">
         
-        {/* Toast Notification Banner (Vibrant Light Mode Style) */}
         {toastMessage && (
           <div className="fixed top-6 right-6 z-50 bg-white text-slate-900 border border-emerald-200 shadow-xl rounded-xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg">
@@ -109,10 +204,8 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Sidebar Menu (Bright White Accent Design) */}
         <aside className={`${sidebarOpen ? "w-64" : "w-20"} bg-white border-r border-slate-200 shadow-sm transition-all duration-300 flex flex-col justify-between z-20`}>
           <div>
-            {/* Header branding */}
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               {sidebarOpen ? (
                 <div className="flex items-center gap-2.5">
@@ -134,7 +227,6 @@ export default function AdminDashboard() {
               </button>
             </div>
 
-            {/* Navigation Links */}
             <nav className="p-4 space-y-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
@@ -157,7 +249,6 @@ export default function AdminDashboard() {
             </nav>
           </div>
 
-          {/* Explicit Logout Interface Hook */}
           <div className="p-4 border-t border-slate-100 bg-slate-50/50">
             <button 
               onClick={handleExplicitLogout}
@@ -169,10 +260,7 @@ export default function AdminDashboard() {
           </div>
         </aside>
 
-        {/* Main Application Window Workspace */}
         <main className="flex-1 overflow-y-auto min-h-screen flex flex-col">
-          
-          {/* Main Top Header */}
           <header className="h-20 border-b border-slate-200 bg-white px-8 flex items-center justify-between sticky top-0 z-10 shadow-sm">
             <div>
               <h1 className="text-base font-extrabold text-slate-900 uppercase tracking-wider capitalize">{activeTab.replace("_", " ")} Workbench</h1>
@@ -180,7 +268,6 @@ export default function AdminDashboard() {
             </div>
             
             <div className="flex items-center gap-4">
-              {/* Vibrant Connection Status Pin */}
               <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[10px] uppercase tracking-wider font-bold ${
                 dbStatus?.connected 
                   ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
@@ -192,15 +279,11 @@ export default function AdminDashboard() {
             </div>
           </header>
 
-          {/* Content Canvas */}
           <div className="p-8 max-w-7xl w-full mx-auto flex-1">
             
-            {/* TAB: DASHBOARD / OVERVIEW */}
             {activeTab === "dashboard" && (
               <div className="space-y-6">
-                
-                {/* Lively & Bright Metrics Grid with colorful high-contrast borders */}
-                <div className="grid grid-cols-1 md grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="bg-white border-l-4 border-l-emerald-500 border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Paid Revenue</p>
@@ -246,7 +329,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Calibration Terminal Section */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                   <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-100 gap-4">
                     <div>
@@ -278,7 +360,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* TAB: GOOGLE AI STUDIO CONFIGURATION */}
             {activeTab === "gas_config" && (
               <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 max-w-2xl space-y-6">
                 <div>
@@ -311,15 +392,14 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* MANAGEMENT VIEW FALLBACK NODES */}
             {["courses", "modules", "lessons", "students", "sales", "quizzes", "database"].includes(activeTab) && (
               <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-8 text-center max-w-md mx-auto my-12">
                 <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 mx-auto mb-3">
-                  <Activity className="w-4 h-4 text-slate-400 animate-pulse" />
+                  <Activity className="w-4 h-4 text-slate-400" />
                 </div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-1">{activeTab.replace("_", " ")} Blueprint Matrix</h3>
                 <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                  Active structural canvas link established. Management interface tools will automatically initialize on this viewport as soon as relational entries populate.
+                  Active structural canvas link established. Management interface tools will automatically initialize on this viewport as soon as entries populate.
                 </p>
               </div>
             )}
