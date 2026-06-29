@@ -14,10 +14,13 @@ import {
   BookOpen,
   CheckCircle2
 } from "lucide-react";
+import { useNavigation } from "../context/NavigationContext";
 // @ts-ignore
 import leadFacultyImage from "../assets/images/regenerated_image_1781336783869.png";
 
 export default function Hero() {
+  const { navigateTo } = useNavigation();
+
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -110,7 +113,7 @@ export default function Hero() {
             {/* Direct premium Call To Actions with pristine click targets */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
               <motion.button
-                onClick={() => scrollToSection("pricing")}
+                onClick={() => navigateTo("programs")}
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 className="group px-8 py-3.5 bg-[#0056D2] hover:bg-[#003E9C] text-white font-sans font-bold text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
@@ -120,7 +123,7 @@ export default function Hero() {
               </motion.button>
               
               <motion.button
-                onClick={() => scrollToSection("featured-programs")}
+                onClick={() => navigateTo("programs")}
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 className="px-8 py-3.5 bg-white hover:bg-gray-50 text-gray-700 font-sans font-bold text-sm rounded-xl border border-gray-200 hover:border-gray-300 transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"

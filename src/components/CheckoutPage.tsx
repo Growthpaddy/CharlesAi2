@@ -12,6 +12,8 @@ export default function CheckoutPage({ courseId, onNavigate }: { courseId: strin
   const [isStudentRegistered, setIsStudentRegistered] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Accurate payload schema fields as represented inside your database structure
   const [studentForm, setStudentForm] = useState({
@@ -23,16 +25,53 @@ export default function CheckoutPage({ courseId, onNavigate }: { courseId: strin
   });
 
   useEffect(() => {
-    if (!courseId) return;
     async function getCheckoutTarget() {
-      const { data } = await supabase.from("courses").select("*").eq("id", courseId).single();
-      setCourse(data);
+      setIsLoading(true);
+      setError(null);
+      try {
+        let targetId = courseId;
+        
+        // Fallback: If no courseId is provided, fetch the first available course
+        if (!targetId) {
+          const { data: allCourses, error: listErr } = await supabase
+            .from("courses")
+            .select("id")
+            .limit(1);
+          
+          if (listErr) throw listErr;
+          
+          if (allCourses && allCourses.length > 0) {
+            targetId = allCourses[0].id;
+          }
+        }
+
+        if (!targetId) {
+          throw new Error("No active academic course tracks could be found in the database.");
+        }
+
+        const { data, error: fetchErr } = await supabase
+          .from("courses")
+          .select("id, title, tagline, overview, instructor_name, instructor_bio, price_naira, thumbnail_url, duration_text, difficulty")
+          .eq("id", targetId)
+          .single();
+
+        if (fetchErr) throw fetchErr;
+        if (!data) throw new Error("The requested course track detail could not be resolved.");
+
+        setCourse(data);
+      } catch (err: any) {
+        console.error("Checkout course loader error:", err);
+        setError(err.message || "Failed to initialize active checkout invoice.");
+      } finally {
+        setIsLoading(false);
+      }
     }
     getCheckoutTarget();
   }, [courseId]);
 
   const handleStudentRegistrationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!course) return;
     setIsSubmitting(true);
     try {
       // Direct integration transaction mapping down to table matrix rows
@@ -42,7 +81,7 @@ export default function CheckoutPage({ courseId, onNavigate }: { courseId: strin
           email: studentForm.email.trim().toLowerCase(),
           phone: studentForm.phone,
           status: studentForm.status,
-          enrolled_courses: [courseId],
+          enrolled_courses: [course.id],
           metadata: studentForm.metadata
         }
       ]);
@@ -58,15 +97,48 @@ export default function CheckoutPage({ courseId, onNavigate }: { courseId: strin
     }
   };
 
-  if (!course) return <div className="min-h-screen bg-slate-50" />;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center py-24 px-6 pt-28">
+        <div className="space-y-4 text-center">
+          <div className="w-12 h-12 border-4 border-[#0056D2] border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 animate-pulse">Assembling Secure Invoice...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center py-24 px-6 pt-28">
+        <div className="max-w-md bg-white border border-slate-200 rounded-3xl p-8 text-center space-y-6 shadow-sm">
+          <div className="w-12 h-12 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-center text-rose-500 mx-auto">
+            <Lock className="w-5 h-5 stroke-2" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Checkout Target Blocked</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              {error || "We could not resolve any academic course target for the checkout pipeline."}
+            </p>
+          </div>
+          <button 
+            onClick={() => onNavigate("programs")}
+            className="w-full py-3 bg-[#0056D2] hover:bg-[#003E9C] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+          >
+            Explore Course Programs
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans antialiased text-slate-800 py-12 px-6">
+    <div className="min-h-screen bg-[#F8FAFC] font-sans antialiased text-slate-800 py-12 px-6 pt-28">
       <div className="max-w-4xl mx-auto space-y-8">
         
         <button 
-          onClick={() => onNavigate("course-detail", { courseId })}
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
+          onClick={() => onNavigate("course_details", { courseId: course.id })}
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#0056D2] transition-colors"
         >
           <ChevronLeft className="w-4 h-4" /> Cancel Order
         </button>

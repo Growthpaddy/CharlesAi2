@@ -260,7 +260,7 @@ export default function AITechStack() {
 
               {/* Action Button replicating the original mockup */}
               <button
-                onClick={() => navigateTo("landing")}
+                onClick={() => navigateTo("programs")}
                 className="bg-white hover:bg-slate-100 text-[#0056D2] font-sans font-bold text-xs py-3 px-6 rounded-xl transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-1 w-full sm:w-auto uppercase tracking-wider"
               >
                 <span>Start 7-day free trial</span>

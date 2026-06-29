@@ -98,7 +98,7 @@ export default function HomeView() {
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
                 <button
-                  onClick={() => navigateTo("landing")}
+                  onClick={() => navigateTo("programs")}
                   className="group px-8 py-4 bg-[#0056D2] hover:bg-[#0047b3] text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
                 >
                   <span>Enroll in Course</span>
@@ -515,7 +515,7 @@ export default function HomeView() {
               </div>
 
               <button
-                onClick={() => navigateTo("landing")}
+                onClick={() => navigateTo("programs")}
                 className="w-full bg-slate-800 hover:bg-slate-750 text-white py-3 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[44px]"
               >
                 Join Cohort
@@ -675,7 +675,7 @@ export default function HomeView() {
 
           <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center items-center">
             <button 
-              onClick={() => navigateTo("landing")}
+              onClick={() => navigateTo("programs")}
               className="px-8 py-3.5 bg-[#0056D2] hover:bg-[#0047b3] text-white font-bold rounded-xl transition-all text-xs cursor-pointer min-h-[48px]"
             >
               Enroll in Course

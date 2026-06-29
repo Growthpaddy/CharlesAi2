@@ -70,10 +70,7 @@ export default function HomeCTA() {
 
               <div className="space-y-3">
                 <button
-                  onClick={() => {
-                    const el = document.getElementById("pricing");
-                    if (el) el.scrollIntoView({ behavior: "smooth" });
-                  }}
+                  onClick={() => navigateTo("programs")}
                   className="w-full py-4 bg-[#2D7FF9] hover:bg-[#2D7FF9]/90 text-white font-bold text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Secure Cohort Slot</span>

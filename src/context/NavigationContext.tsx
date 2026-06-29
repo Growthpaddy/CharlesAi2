@@ -53,7 +53,24 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [isLoginOpen, setLoginOpen] = useState(false);
-  const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  const [activeCourseId, setActiveCourseId] = useState<string | null>(() => {
+    try {
+      const stored = localStorage.getItem("activeCourseId");
+      if (stored) return stored;
+    } catch {}
+    return null;
+  });
+
+  const handleSetActiveCourseId = (id: string | null) => {
+    setActiveCourseId(id);
+    try {
+      if (id) {
+        localStorage.setItem("activeCourseId", id);
+      } else {
+        localStorage.removeItem("activeCourseId");
+      }
+    } catch {}
+  };
 
   // Handle browser back/forward buttons using hash router
   useEffect(() => {
@@ -72,7 +89,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         checkPath.startsWith("/addmin-login")
       ) {
         setCurrentView("admin");
-        setActiveCourseId(null);
+        handleSetActiveCourseId(null);
         return;
       }
 
@@ -80,8 +97,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         const slug = hash.replace("courses/", "");
         const matchedCourseId = slugToCourseIdMap[slug];
         if (matchedCourseId) {
-          setCurrentView("programs");
-          setActiveCourseId(matchedCourseId);
+          setCurrentView("course_details");
+          handleSetActiveCourseId(matchedCourseId);
           return;
         }
       }
@@ -95,13 +112,17 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         checkHash === "admin"
       ) {
         setCurrentView("admin");
-        setActiveCourseId(null);
+        handleSetActiveCourseId(null);
+      } else if (hash === "course_details") {
+        setCurrentView("course_details");
       } else if (validViews.includes(hash as ViewType)) {
         setCurrentView(hash as ViewType);
-        setActiveCourseId(null);
+        if (hash !== "checkout") {
+          handleSetActiveCourseId(null);
+        }
       } else {
         setCurrentView("home");
-        setActiveCourseId(null);
+        handleSetActiveCourseId(null);
       }
     };
 
@@ -119,7 +140,9 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   const navigateTo = (view: ViewType) => {
     setCurrentView(view);
-    setActiveCourseId(null);
+    if (view !== "course_details" && view !== "checkout") {
+      handleSetActiveCourseId(null);
+    }
     if (view === "admin") {
       window.history.pushState({}, "", "/admin-dashboard");
     } else {
@@ -134,8 +157,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   const navigateToCourse = (courseId: string) => {
     const slug = courseIdToSlugMap[courseId] || courseId;
-    setCurrentView("programs");
-    setActiveCourseId(courseId);
+    setCurrentView("course_details");
+    handleSetActiveCourseId(courseId);
     window.location.hash = `courses/${slug}`;
     window.scrollTo({ top: 0, behavior: "instant" });
   };
@@ -147,7 +170,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       isLoginOpen, 
       setLoginOpen, 
       activeCourseId, 
-      setActiveCourseId,
+      setActiveCourseId: handleSetActiveCourseId,
       navigateToCourse 
     }}>
       {children}

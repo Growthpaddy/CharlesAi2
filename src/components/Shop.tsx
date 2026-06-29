@@ -16,11 +16,9 @@ interface CourseRecord {
   title: string;
   tagline: string;
   overview: string;
-  description?: string;
   instructor_name: string;
   instructor_bio?: string;
   price_naira: number;
-  cover_url?: string;
   thumbnail_url?: string;
   duration_text?: string;
   duration?: string;
@@ -49,7 +47,7 @@ export default function Shop({ onNavigate }: ShopProps) {
       if (supabase && isSupabaseConfigured) {
         const { data, error: sbError } = await supabase
           .from("courses")
-          .select("*")
+          .select("id, title, tagline, overview, instructor_name, instructor_bio, price_naira, thumbnail_url, duration_text, difficulty")
           .order("title");
 
         if (sbError) throw sbError;
@@ -62,12 +60,11 @@ export default function Shop({ onNavigate }: ShopProps) {
           const mapped = parsed.map((c: any) => ({
             id: c.id,
             title: c.title || "",
-            tagline: c.description || "",
+            tagline: c.description || c.tagline || "",
             overview: c.overview || c.description || "",
             instructor_name: c.instructorName || "Academy Expert",
             price_naira: typeof c.price === "number" ? c.price : parseInt(String(c.price).replace(/[^0-9]/g, "")) || 45000,
             thumbnail_url: c.thumbnail || c.thumbnail_url || "",
-            cover_url: c.thumbnail || c.thumbnail_url || "",
             duration_text: c.duration || "Self-Paced Track",
             difficulty: c.level || "Beginner"
           }));
@@ -272,7 +269,7 @@ export default function Shop({ onNavigate }: ShopProps) {
           /* POLISHED RESPONSIVE PRODUCTS GRID */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredCourses.map((course) => {
-              const imageSrc = course.thumbnail_url || course.cover_url || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600&h=450";
+              const imageSrc = course.thumbnail_url || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600&h=450";
               const difficultyVal = course.difficulty || "Beginner";
               const difficultyBadgeClass = 
                 difficultyVal.toLowerCase() === "advanced" 
@@ -320,7 +317,7 @@ export default function Shop({ onNavigate }: ShopProps) {
                       )}
 
                       <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-3">
-                        {course.overview || course.description || "Learn from Nigerian and global operational frameworks."}
+                        {course.overview || "Learn from Nigerian and global operational frameworks."}
                       </p>
                     </div>
                   </div>
