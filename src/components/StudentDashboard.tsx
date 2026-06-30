@@ -186,7 +186,7 @@ export default function StudentDashboard() {
       }
     } catch (err) {
       console.warn("Sign out err:", err);
-    } finaly {
+    } finally {
       localStorage.removeItem("is_student_authenticated");
       localStorage.removeItem("student_logged_in_name");
       localStorage.removeItem("student_logged_in_email");
