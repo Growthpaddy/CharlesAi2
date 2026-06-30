@@ -140,6 +140,7 @@ export default function AdminDashboard() {
   const [selectedCourseIdForActivation, setSelectedCourseIdForActivation] = useState<string>("");
   const [selectedExpiryDate, setSelectedExpiryDate] = useState<string>("");
   const [isActivating, setIsActivating] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
 
   const openActivationModal = (student: StudentRecord) => {
     setActiveStudent(student);
@@ -155,6 +156,33 @@ export default function AdminDashboard() {
     setSelectedExpiryDate(formattedDate);
     
     setIsActivationModalOpen(true);
+  };
+
+  const handleDeactivate = async () => {
+    if (!activeStudent) return;
+    setIsDeactivating(true);
+    try {
+      const { error } = await supabase
+        .from("students")
+        .update({
+          status: "Pending"
+        })
+        .eq("id", activeStudent.id);
+
+      if (error) throw error;
+
+      triggerToast(`Account for ${activeStudent.full_name} has been deactivated.`);
+      setIsActivationModalOpen(false);
+
+      // Refresh local matrix variables immediately
+      await fetchCoreLmsMatrix();
+      await fetchLiveStudents();
+    } catch (err: any) {
+      console.error("Deactivation operational fault:", err);
+      alert(`Deactivation operational fault: ${err.message}`);
+    } finally {
+      setIsDeactivating(false);
+    }
   };
 
   const handleApproveAndActivate = async (e: React.FormEvent) => {
@@ -1532,9 +1560,20 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                  {activeStudent.status?.toLowerCase() === "active" && (
+                    <button 
+                      type="button" 
+                      disabled={isActivating || isDeactivating} 
+                      onClick={handleDeactivate} 
+                      className="mr-auto px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-sm transition-colors"
+                    >
+                      {isDeactivating && <RefreshCw className="w-3 h-3 animate-spin" />}
+                      <span>{isDeactivating ? "Deactivating..." : "Deactivate Account"}</span>
+                    </button>
+                  )}
                   <button 
                     type="button" 
-                    disabled={isActivating} 
+                    disabled={isActivating || isDeactivating} 
                     onClick={() => setIsActivationModalOpen(false)} 
                     className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 rounded-lg"
                   >
@@ -1542,7 +1581,7 @@ export default function AdminDashboard() {
                   </button>
                   <button 
                     type="submit" 
-                    disabled={isActivating} 
+                    disabled={isActivating || isDeactivating} 
                     className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-800 flex items-center gap-1.5 shadow-sm"
                   >
                     {isActivating && <RefreshCw className="w-3 h-3 animate-spin" />}
