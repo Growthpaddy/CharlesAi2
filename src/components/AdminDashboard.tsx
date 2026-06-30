@@ -246,9 +246,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (supabase && isSupabaseConfigured) {
-      if (activeTab === "students") fetchLiveStudents();
-      if (activeTab === "courses" || activeTab === "modules" || activeTab === "lessons") {
-        fetchCoreLmsMatrix();
+      // Fetch courses on mount and on tab changes to ensure selection dropdowns are populated
+      fetchCoreLmsMatrix();
+      if (activeTab === "students") {
+        fetchLiveStudents();
       }
     }
   }, [activeTab]);

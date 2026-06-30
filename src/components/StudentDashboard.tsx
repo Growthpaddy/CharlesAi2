@@ -176,7 +176,7 @@ export default function StudentDashboard() {
 
         if (activeProfile) {
           setStudentProfile(activeProfile);
-          const status = activeProfile.status === "Active" ? "active" : "pending";
+          const status = (activeProfile.status || "").trim().toLowerCase() === "active" ? "active" : "pending";
           setStudentStatus(status);
           
           localStorage.setItem("student_logged_in_name", activeProfile.full_name || "");
@@ -408,7 +408,7 @@ export default function StudentDashboard() {
     if (!studentProfile) return [];
     
     // Ensure that only courses where the student/subscription status is strictly 'Active' appear in the UI
-    const isStudentActive = studentProfile.status === "Active" && studentStatus === "active";
+    const isStudentActive = (studentProfile.status || "").trim().toLowerCase() === "active" || studentStatus === "active";
     if (!isStudentActive) {
       return [];
     }
@@ -443,7 +443,7 @@ export default function StudentDashboard() {
   };
 
   const enrolledCoursesList = getEnrolledCourses();
-  const isPendingState = studentStatus === "pending" || !studentProfile || studentProfile.status !== "Active";
+  const isPendingState = studentStatus === "pending" || !studentProfile || (studentProfile.status || "").trim().toLowerCase() !== "active";
 
   if (loading) {
     return (
