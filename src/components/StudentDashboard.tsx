@@ -56,30 +56,99 @@ export default function StudentDashboard() {
     };
   }, []);
 
-  // Load database structures
-  useEffect(() => {
-    setCourses(db.getCourses());
-    setModules(db.getModules());
-    setLessons(db.getLessons());
-  }, []);
-
-  // Fetch student status & completed lessons
-  const fetchStudentData = async () => {
+  // Fetch student status, courses, modules, lessons, and completed lessons
+  const fetchStudentData = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     try {
       if (supabase && isSupabaseConfigured) {
+        // Fetch courses, modules, and lessons dynamically from Supabase
+        const { data: coursesData } = await supabase.from("courses").select("*");
+        const { data: modulesData } = await supabase.from("modules").select("*");
+        const { data: lessonsData } = await supabase.from("lessons").select("*");
+
+        if (coursesData && coursesData.length > 0) {
+          const mappedCourses = coursesData.map((c: any) => ({
+            id: c.id,
+            title: c.title || "",
+            description: c.description || c.tagline || c.overview || "",
+            thumbnail: c.thumbnail_url || c.thumbnail || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600&h=450",
+            categoryId: c.category_id || c.categoryId || "cat-1",
+            level: c.difficulty || c.level || "Beginner",
+            duration: c.duration_text || c.duration || "Self-Paced",
+            studentCount: c.student_count || c.studentCount || "1,200",
+            rating: c.rating || "4.8",
+            instructorName: c.instructor_name || c.instructorName || "Charles Cole",
+            instructorAvatar: c.instructor_avatar || c.instructorAvatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150&h=150",
+            skills: c.skills || [],
+            outcomes: c.outcomes || [],
+            overview: c.overview || "",
+            price: c.price_naira ? `₦${c.price_naira.toLocaleString()}` : (c.price || "₦45,000")
+          }));
+          setCourses(mappedCourses);
+        } else {
+          setCourses(db.getCourses());
+        }
+
+        if (modulesData && modulesData.length > 0) {
+          const mappedModules = modulesData.map((m: any) => ({
+            id: m.id,
+            courseId: m.course_id || m.courseId,
+            title: m.title,
+            sortOrder: m.module_order || m.sort_order || m.sortOrder || 1
+          }));
+          setModules(mappedModules);
+        } else {
+          setModules(db.getModules());
+        }
+
+        if (lessonsData && lessonsData.length > 0) {
+          const mappedLessons = lessonsData.map((l: any) => ({
+            id: l.id,
+            moduleId: l.module_id || l.moduleId,
+            courseId: l.course_id || l.courseId,
+            title: l.title,
+            duration: l.duration_text || l.duration || "10:00",
+            content: l.content || "",
+            videoUrl: l.video_url || l.videoUrl || "",
+            sortOrder: l.lesson_order || l.sort_order || l.sortOrder || 1
+          }));
+          setLessons(mappedLessons);
+        } else {
+          setLessons(db.getLessons());
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        
+        let targetId = user?.id || localStorage.getItem("student_logged_in_id");
+        let targetEmail = user?.email || localStorage.getItem("student_logged_in_email");
+
+        if (!targetId && !targetEmail) {
           localStorage.clear();
           navigateTo("log-in");
           return;
         }
 
         // Fetch official profile from public.students table
-        const { data: studentRecord, error } = await supabase
-          .from("students")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle();
+        let studentRecord = null;
+        if (targetId) {
+          const { data } = await supabase
+            .from("students")
+            .select("*")
+            .eq("id", targetId)
+            .maybeSingle();
+          studentRecord = data;
+        }
+
+        if (!studentRecord && targetEmail) {
+          const { data } = await supabase
+            .from("students")
+            .select("*")
+            .eq("email", targetEmail)
+            .maybeSingle();
+          studentRecord = data;
+        }
 
         let activeProfile = null;
 
@@ -87,17 +156,27 @@ export default function StudentDashboard() {
           activeProfile = studentRecord;
         } else {
           // Fallback to checking profiles table
-          const { data: profileRecord } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", user.id)
-            .maybeSingle();
-          if (profileRecord) activeProfile = profileRecord;
+          if (targetId) {
+            const { data } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", targetId)
+              .maybeSingle();
+            activeProfile = data;
+          }
+          if (!activeProfile && targetEmail) {
+            const { data } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("email", targetEmail)
+              .maybeSingle();
+            activeProfile = data;
+          }
         }
 
         if (activeProfile) {
           setStudentProfile(activeProfile);
-          const status = (activeProfile.status || "Pending").toLowerCase() === "active" ? "active" : "pending";
+          const status = activeProfile.status === "Active" ? "active" : "pending";
           setStudentStatus(status);
           
           localStorage.setItem("student_logged_in_name", activeProfile.full_name || "");
@@ -107,9 +186,9 @@ export default function StudentDashboard() {
         } else {
           // Manual local mock profile creation if no record exists yet
           const fallbackStudent = {
-            id: user.id,
-            full_name: user.email?.split("@")[0].toUpperCase() || "Sandbox Student",
-            email: user.email || "",
+            id: targetId || "sandbox-std-id",
+            full_name: targetEmail?.split("@")[0].toUpperCase() || "Sandbox Student",
+            email: targetEmail || "student@academy.com",
             status: "Pending",
             enrolled_courses: ["course-1", "course-2"]
           };
@@ -118,10 +197,11 @@ export default function StudentDashboard() {
         }
 
         // Fetch completed student_progress for this student
+        const searchId = targetId || "sandbox-std-id";
         const { data: progressData, error: progressError } = await supabase
           .from("student_progress")
           .select("lesson_id, completed")
-          .like("id", `${user.id}_%`);
+          .like("id", `${searchId}_%`);
 
         if (!progressError && progressData && progressData.length > 0) {
           const completedIds = progressData
@@ -132,7 +212,7 @@ export default function StudentDashboard() {
           const { data: userLessonsData } = await supabase
             .from("user_lessons")
             .select("lesson_id")
-            .eq("user_id", user.id)
+            .eq("user_id", searchId)
             .eq("completed", true);
 
           if (userLessonsData) {
@@ -141,6 +221,10 @@ export default function StudentDashboard() {
         }
       } else {
         // Fallback simulation for offline testing
+        setCourses(db.getCourses());
+        setModules(db.getModules());
+        setLessons(db.getLessons());
+
         const isStudentAuth = localStorage.getItem("is_student_authenticated") === "true";
         if (!isStudentAuth) {
           navigateTo("log-in");
@@ -156,7 +240,7 @@ export default function StudentDashboard() {
           id,
           full_name: name,
           email,
-          status,
+          status: status === "active" ? "Active" : "Pending",
           enrolled_courses: ["course-1", "course-2"]
         });
         setStudentStatus(status);
@@ -176,6 +260,52 @@ export default function StudentDashboard() {
   useEffect(() => {
     fetchStudentData();
   }, [navigateTo]);
+
+  // Real-time student subscription state updates
+  useEffect(() => {
+    if (!supabase || !isSupabaseConfigured) return;
+
+    // Get current logged-in student id
+    const targetId = studentProfile?.id || localStorage.getItem("student_logged_in_id");
+    if (!targetId) return;
+
+    console.log(`Setting up Supabase Realtime channel for student record: ${targetId}`);
+    
+    const channel = supabase
+      .channel(`student-status-realtime-${targetId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "students",
+          filter: `id=eq.${targetId}`
+        },
+        (payload) => {
+          console.log("Real-time profile UPDATE received on student client:", payload);
+          fetchStudentData(true); // Silent trigger to avoid layout flicker
+        }
+      )
+      .subscribe((status) => {
+        console.log(`Supabase student subscription status: ${status}`);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, isSupabaseConfigured, studentProfile?.id]);
+
+  // Polling fallback to guarantee state sync if WebSocket is blocked or offline
+  useEffect(() => {
+    if (studentStatus !== "pending") return;
+
+    console.log("Initiating pending student status verification polling loop (4s)...");
+    const interval = setInterval(() => {
+      fetchStudentData(true); // Silent background refresh
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [studentStatus]);
 
   // Handle Logout Action
   const handleLogout = async () => {
@@ -277,6 +407,12 @@ export default function StudentDashboard() {
   const getEnrolledCourses = (): Course[] => {
     if (!studentProfile) return [];
     
+    // Ensure that only courses where the student/subscription status is strictly 'Active' appear in the UI
+    const isStudentActive = studentProfile.status === "Active" && studentStatus === "active";
+    if (!isStudentActive) {
+      return [];
+    }
+    
     // Check possible naming formats assigned by your admin portal
     const rawEnrolled = studentProfile.enrolled_courses || studentProfile.enrolled_course || studentProfile.courses;
     
@@ -301,15 +437,13 @@ export default function StudentDashboard() {
       }
     }
 
-    // Return courses that match, with a global fallback option if it matches nothing
+    // Return courses that match, mapping accurate course records
     const assignedCourses = courses.filter(c => courseIdsArray.includes(String(c.id)));
-    if (assignedCourses.length === 0 && courses.length > 0) {
-      return [courses[0]]; // Fallback sanity checkpoint to guarantee they see a classroom card
-    }
     return assignedCourses;
   };
 
   const enrolledCoursesList = getEnrolledCourses();
+  const isPendingState = studentStatus === "pending" || !studentProfile || studentProfile.status !== "Active";
 
   if (loading) {
     return (
@@ -320,7 +454,7 @@ export default function StudentDashboard() {
     );
   }
 
-  if (studentStatus === "pending") {
+  if (isPendingState) {
     return (
       <div className="fixed inset-0 bg-slate-50 z-[9999] flex flex-col items-center justify-center px-4 py-16 text-slate-800 overflow-y-auto">
         <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-blue-100/40 blur-[120px] pointer-events-none" />
@@ -340,7 +474,14 @@ export default function StudentDashboard() {
             </h4>
             <p className="text-[11px] text-slate-500 leading-relaxed">If you want to accelerate your portal profile approval timeline, please contact our student desk team below.</p>
           </div>
-          <div className="pt-2">
+          <div className="pt-2 flex flex-col gap-3">
+            <button 
+              onClick={fetchStudentData} 
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer w-full justify-center shadow-md shadow-blue-100"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh & Check Activation Status</span>
+            </button>
             <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer w-full justify-center shadow-md">
               <span>Coordinate via WhatsApp (07068300818)</span>
             </a>
@@ -382,8 +523,19 @@ export default function StudentDashboard() {
             <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2.5 py-0.5 rounded-full">{progressPercent}% Complete</span>
           </div>
           <div className="relative group flex-grow max-w-md w-full pt-4 pb-2 md:py-1">
+            {/* Completion Milestone hover tooltip */}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1 rounded-md shadow-md whitespace-nowrap z-30">
+              Completion Milestone: {completedLessonsCount} of {totalLessonsCount} Lessons Completed
+              <div className="absolute top-full left-1/2 -translate-x-1/2 border-[4px] border-transparent border-t-slate-900" />
+            </div>
+
             <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200 p-[1px]">
-              <motion.div className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full" initial={{ width: 0 }} animate={{ width: `${progressPercent}%` }} />
+              <motion.div 
+                className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full" 
+                initial={{ width: 0 }} 
+                animate={{ width: `${progressPercent}%` }} 
+                transition={{ type: "spring", stiffness: 80, damping: 15 }}
+              />
             </div>
           </div>
         </div>
