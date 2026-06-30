@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Sparkles, BookOpen, CheckCircle, PlayCircle, Trophy, 
   Hourglass, Play, CheckSquare, Square, Lock, Mail, 
-  User, Phone, LogOut, ChevronDown, ChevronUp, AlertCircle, HelpCircle, ArrowLeft, RefreshCw
+  User, Phone, LogOut, ChevronDown, ChevronUp, AlertCircle, HelpCircle, ArrowLeft, RefreshCw,
+  Menu, X, FileText, GraduationCap, MessageSquare, Award, Star
 } from "lucide-react";
 import { db, Course, CourseModule, Lesson } from "../lib/db";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
@@ -34,6 +35,26 @@ export default function StudentDashboard() {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [lockedTooltipId, setLockedTooltipId] = useState<string | null>(null);
+
+  // Floating collapsible sidebar states
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [currentTab, setCurrentTab] = useState<"classroom" | "help" | "docs">("classroom");
+
+  // Global viewport isolation: inject style rule to hide general page headers/navbars/footers
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.id = "hide-global-nav-footer";
+    style.innerHTML = `
+      header, footer, nav, .global-header, .global-footer, #global-nav, #global-footer, .site-header, .site-footer {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      const existing = document.getElementById("hide-global-nav-footer");
+      if (existing) existing.remove();
+    };
+  }, []);
 
   // Load database structures
   useEffect(() => {
@@ -229,7 +250,7 @@ export default function StudentDashboard() {
     }
   };
 
-  // Helper check to verify if a lesson is locked under linear progress constraints
+  // Helper check to verify if a lesson is locked under sequential progress constraints
   const getIsLessonLocked = (lesson: Lesson, moduleLessons: Lesson[]) => {
     const sortedModuleLessons = [...moduleLessons].sort(
       (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
@@ -262,42 +283,42 @@ export default function StudentDashboard() {
   const whatsappMessage = "Hello Support, I am experiencing a login difficulty accessing my student dashboard account. Kindly assist with my activation status.";
   const whatsappUrl = `https://wa.me/2347068300818?text=${encodeURIComponent(whatsappMessage)}`;
 
-  // Loading state visual guard
+  // Loading state visual guard (Light themed)
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-        <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mb-4" />
-        <p className="text-xs font-mono tracking-widest text-slate-400 uppercase">Synchronizing Live Student Portal...</p>
+      <div className="fixed inset-0 bg-slate-50 z-[9999] flex flex-col items-center justify-center text-slate-800">
+        <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mb-4" />
+        <p className="text-xs font-mono tracking-widest text-slate-500 uppercase">Synchronizing Live Student Portal...</p>
       </div>
     );
   }
 
-  // PENDING MICRO-STATE LAYOUT
+  // PENDING MICRO-STATE LAYOUT (LIGHT THEME)
   if (studentStatus === "pending") {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center px-4 py-16 text-white relative overflow-hidden">
-        <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-amber-950/15 blur-[120px] pointer-events-none" />
+      <div className="fixed inset-0 bg-slate-50 z-[9999] flex flex-col items-center justify-center px-4 py-16 text-slate-800 overflow-y-auto">
+        <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-blue-100/40 blur-[120px] pointer-events-none" />
         
-        <div className="w-full max-w-lg bg-slate-900 border border-slate-800/80 p-8 rounded-3xl shadow-2xl text-center space-y-6 relative z-10">
-          <div className="mx-auto w-16 h-16 bg-amber-950/40 rounded-full flex items-center justify-center border border-amber-800/50">
+        <div className="w-full max-w-lg bg-white border border-slate-200 p-8 rounded-3xl shadow-xl text-center space-y-6 relative z-10">
+          <div className="mx-auto w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center border border-amber-200">
             <Hourglass className="w-8 h-8 text-amber-500 animate-spin" />
           </div>
           
           <div className="space-y-3">
-            <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               Account Pending Activation
             </h2>
-            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed max-w-md mx-auto">
-              Welcome, <span className="text-amber-400 font-bold">{studentProfile?.full_name || "Student"}</span>. Your registration is successful. An administrator is currently verifying your course fee payment transaction. Once cleared, you will receive full active access to the study curriculum dashboard.
+            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-md mx-auto">
+              Welcome, <span className="text-amber-600 font-bold">{studentProfile?.full_name || "Student"}</span>. Your registration is successful. An administrator is currently verifying your course fee payment transaction. Once cleared, you will receive full active access to the study curriculum dashboard.
             </p>
           </div>
 
-          <div className="p-4 bg-slate-950/60 border border-slate-800/50 rounded-2xl text-left space-y-2">
-            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <AlertCircle className="w-4 h-4 text-amber-500" />
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left space-y-2">
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4 text-amber-500 animate-pulse" />
               Institutional Notice
             </h4>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
+            <p className="text-[11px] text-slate-500 leading-relaxed">
               If you have already submitted your payment proof and wish to accelerate activation, please tap below to coordinate directly with our student onboarding assistants.
             </p>
           </div>
@@ -307,7 +328,7 @@ export default function StudentDashboard() {
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer w-full justify-center shadow-lg"
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer w-full justify-center shadow-md shadow-emerald-100"
             >
               <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
                 <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.963C16.488 2.01 14.039.987 11.99.987 6.558.987 2.13 5.36 2.127 10.79c-.001 1.748.473 3.456 1.372 4.975l-.973 3.55 3.642-.955zM17.15 14.39c-.28-.14-1.65-.81-1.9-.9-.26-.1-.45-.14-.64.14-.19.28-.73.9-.9 1.1-.17.19-.34.21-.62.07-1.42-.71-2.34-1.28-3.23-2.82-.23-.4-.23-.74-.09-.88.13-.13.28-.34.42-.51.14-.17.19-.29.28-.49.09-.19.04-.37-.02-.51-.07-.14-.64-1.54-.88-2.11-.23-.56-.47-.48-.64-.49-.16-.01-.35-.01-.54-.01-.19 0-.51.07-.78.36-.27.29-1.03 1.01-1.03 2.46s1.05 2.85 1.2 3.05c.15.19 2.07 3.16 5.02 4.43.7.3 1.25.48 1.68.62.71.22 1.35.19 1.86.12.57-.08 1.65-.67 1.88-1.32.23-.65.23-1.21.16-1.32-.07-.12-.26-.19-.54-.33z" />
@@ -319,7 +340,7 @@ export default function StudentDashboard() {
           <div className="pt-2">
             <button
               onClick={handleLogout}
-              className="text-xs text-slate-500 hover:text-slate-400 font-semibold underline cursor-pointer"
+              className="text-xs text-slate-400 hover:text-slate-800 font-semibold underline cursor-pointer"
             >
               Log out and change account
             </button>
@@ -329,7 +350,7 @@ export default function StudentDashboard() {
     );
   }
 
-  // ACTIVE PLAYER FULL-SCREEN VIEWER
+  // ACTIVE PLAYER LIGHT-THEMED PANEL
   if (isPlayerOpen && activeCourse) {
     const courseModules = modules.filter(m => m.courseId === activeCourse.id);
     const sortedModules = [...courseModules].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -345,55 +366,56 @@ export default function StudentDashboard() {
     const progressPercent = totalLessonsCount > 0 ? Math.round((completedLessonsCount / totalLessonsCount) * 100) : 0;
 
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col">
-        {/* Course Player Sticky Header */}
-        <div className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+      <div className="fixed inset-0 bg-slate-50 z-[9999] text-slate-800 flex flex-col font-sans antialiased overflow-hidden">
+        
+        {/* Course Player Sticky Header (Light) */}
+        <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shrink-0 shadow-xs">
           <button
             onClick={() => {
               setIsPlayerOpen(false);
               setActiveLesson(null);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Exit Course Player</span>
           </button>
           
           <div className="text-right">
-            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Active Study Room</p>
-            <p className="text-xs font-bold text-blue-400 truncate max-w-xs">{activeCourse.title}</p>
+            <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Active Study Room</p>
+            <p className="text-xs font-black text-blue-600 truncate max-w-xs">{activeCourse.title}</p>
           </div>
         </div>
 
-        {/* Visual Course Completion Progress Bar Gauge */}
-        <div id="course-completion-progress-banner" className="bg-slate-900/60 border-b border-slate-800/80 px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 text-left">
+        {/* Visual Course Completion Progress Bar Gauge (Light Styled) */}
+        <div id="course-completion-progress-banner" className="bg-white border-b border-slate-200/80 px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 text-left shrink-0">
           <div className="flex flex-wrap items-center gap-2">
             <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
-            <span className="text-xs font-bold text-slate-300">Course Progress:</span>
-            <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-900/40 px-2.5 py-0.5 rounded-full">
+            <span className="text-xs font-bold text-slate-700">Course Progress:</span>
+            <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2.5 py-0.5 rounded-full shadow-2xs">
               {progressPercent}% Complete
             </span>
-            <span className="text-xs font-medium text-slate-400">
+            <span className="text-xs font-medium text-slate-500">
               ({completedLessonsCount} of {totalLessonsCount} lessons cleared)
             </span>
           </div>
 
           {/* Tooltip Wrapper with Hover triggers */}
           <div className="relative group flex-grow max-w-md w-full pt-4 pb-2 md:py-1">
-            {/* Completion Milestone Tooltip */}
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 border border-slate-700/80 text-white rounded-xl shadow-xl opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 ease-out whitespace-nowrap text-xs font-semibold flex items-center gap-2 z-50">
+            {/* Completion Milestone Tooltip (Light styled) */}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-800 rounded-xl shadow-md opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 ease-out whitespace-nowrap text-xs font-semibold flex items-center gap-2 z-50">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest font-black">Completion Milestone</span>
-              <span className="text-slate-400 font-normal">|</span>
-              <span className="text-emerald-400 font-mono font-bold">
+              <span className="text-slate-300 font-normal">|</span>
+              <span className="text-emerald-600 font-mono font-bold">
                 {completedLessonsCount} of {totalLessonsCount} Lessons Completed
               </span>
               {/* Tooltip bottom indicator arrow */}
-              <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-slate-700/80" />
+              <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-slate-200" />
             </div>
 
             {/* Progress Track Container */}
-            <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800/80 p-[1px] hover:border-slate-700 transition-colors cursor-help">
+            <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200 p-[1px] hover:border-slate-300 transition-colors cursor-help">
               <motion.div 
                 className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-emerald-500 rounded-full"
                 initial={{ width: 0 }}
@@ -405,10 +427,10 @@ export default function StudentDashboard() {
         </div>
 
         {/* Main Split Layout: Left Modules Map (35%), Right Video Player Canvas (65%) */}
-        <div className="flex-1 flex flex-col lg:flex-row">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           
           {/* LEFT COLUMN: MODULES & LESSONS MAP */}
-          <div className="w-full lg:w-[35%] bg-slate-900 border-r border-slate-800/80 p-6 overflow-y-auto max-h-[400px] lg:max-h-[calc(100vh-73px)] divide-y divide-slate-800/50">
+          <div className="w-full lg:w-[35%] bg-white border-r border-slate-200 p-6 overflow-y-auto max-h-[400px] lg:max-h-full divide-y divide-slate-100">
             <h3 className="text-xs font-mono text-slate-400 uppercase font-black tracking-widest mb-4">
               Curriculum Roadmap
             </h3>
@@ -420,8 +442,8 @@ export default function StudentDashboard() {
 
                 return (
                   <div key={mod.id} className="space-y-2 pt-2 first:pt-0">
-                    <p className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-md bg-blue-950 border border-blue-900 text-blue-400 text-[10px] flex items-center justify-center font-mono">
+                    <p className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-md bg-blue-50 border border-blue-200 text-blue-600 text-[10px] flex items-center justify-center font-mono">
                         {modIdx + 1}
                       </span>
                       <span>{mod.title}</span>
@@ -439,24 +461,24 @@ export default function StudentDashboard() {
                               onClick={() => handleLessonClick(les, moduleLessons)}
                               className={`w-full text-left p-3 rounded-xl flex items-center justify-between transition-all cursor-pointer border ${
                                 isSelected 
-                                  ? "bg-blue-600/10 border-blue-500 text-white" 
+                                  ? "bg-blue-50 border-blue-200 text-blue-700 font-bold shadow-2xs" 
                                   : isLocked
-                                    ? "bg-slate-950/40 border-slate-900 text-slate-600 cursor-not-allowed"
-                                    : "bg-slate-950/60 border-slate-900 text-slate-400 hover:border-slate-800"
+                                    ? "bg-slate-50/50 border-slate-100 text-slate-300 cursor-not-allowed"
+                                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50/80 hover:border-slate-300"
                               }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
                                 {isCompleted ? (
-                                  <CheckSquare className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
+                                  <CheckSquare className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
                                 ) : (
-                                  <Square className="w-4.5 h-4.5 text-slate-600 shrink-0" />
+                                  <Square className="w-4.5 h-4.5 text-slate-400 shrink-0" />
                                 )}
                                 <span className="text-[11.5px] font-semibold truncate leading-tight">
                                   {les.title}
                                 </span>
                               </div>
                               
-                              <span className="text-[9px] font-mono text-slate-500 shrink-0 ml-1">
+                              <span className="text-[9px] font-mono text-slate-400 shrink-0 ml-1">
                                 {les.duration}
                               </span>
                             </button>
@@ -468,7 +490,7 @@ export default function StudentDashboard() {
                                   initial={{ opacity: 0, y: -5 }}
                                   animate={{ opacity: 1, y: 0 }}
                                   exit={{ opacity: 0, y: -5 }}
-                                  className="text-[10px] bg-rose-950/40 border border-rose-900/40 text-rose-300 p-2 rounded-lg font-medium leading-tight text-left"
+                                  className="text-[10px] bg-rose-50 border border-rose-200 text-rose-700 p-2 rounded-lg font-medium leading-tight text-left"
                                 >
                                   ⚠️ Please complete previous lesson criteria to advance.
                                 </motion.div>
@@ -485,7 +507,7 @@ export default function StudentDashboard() {
           </div>
 
           {/* RIGHT COLUMN: VIDEO PLAYER CANVAS */}
-          <div className="w-full lg:w-[65%] bg-slate-950 p-6 flex flex-col justify-between max-h-[calc(100vh-73px)] overflow-y-auto">
+          <div className="w-full lg:w-[65%] bg-slate-50 p-6 flex flex-col justify-between max-h-full overflow-y-auto">
             
             {currentActiveLesson ? (
               <div className="space-y-6">
@@ -502,18 +524,18 @@ export default function StudentDashboard() {
                 )}
                 
                 {/* Header controls inside canvas */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-slate-200 p-4 rounded-2xl shadow-xs">
                   <div className="text-left">
-                    <span className="text-[9px] font-mono text-blue-400 uppercase tracking-widest font-black">Active Module Video</span>
-                    <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">{currentActiveLesson.title}</h2>
+                    <span className="text-[9px] font-mono text-blue-600 uppercase tracking-widest font-black">Active Module Video</span>
+                    <h2 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">{currentActiveLesson.title}</h2>
                   </div>
 
                   <button
                     onClick={() => handleMarkComplete(currentActiveLesson.id, activeCourse.id)}
                     className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-2 cursor-pointer border ${
                       completedLessonIds.includes(currentActiveLesson.id)
-                        ? "bg-emerald-600/10 border-emerald-500 text-emerald-400 hover:bg-emerald-600/20"
-                        : "bg-blue-600 hover:bg-blue-500 text-white border-transparent"
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                        : "bg-blue-600 hover:bg-blue-500 text-white border-transparent shadow-sm"
                     }`}
                   >
                     <CheckCircle className="w-4 h-4" />
@@ -522,7 +544,7 @@ export default function StudentDashboard() {
                 </div>
 
                 {/* Cinematic player frame */}
-                <div className="relative aspect-video w-full bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+                <div className="relative aspect-video w-full bg-slate-900 rounded-2xl border border-slate-200 overflow-hidden shadow-md">
                   {currentActiveLesson.videoUrl ? (
                     <iframe
                       src={currentActiveLesson.videoUrl}
@@ -532,7 +554,7 @@ export default function StudentDashboard() {
                       allowFullScreen
                     />
                   ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 space-y-2">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 space-y-2 bg-slate-950">
                       <PlayCircle className="w-12 h-12 text-slate-600" />
                       <p className="text-xs font-mono uppercase tracking-widest">No Streaming Feed Configured</p>
                     </div>
@@ -540,20 +562,20 @@ export default function StudentDashboard() {
                 </div>
 
                 {/* Video description copy */}
-                <div className="bg-slate-900/40 border border-slate-800/40 p-6 rounded-2xl space-y-3 text-left">
-                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">
+                <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-3 text-left shadow-xs">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">
                     Lesson Guidelines & Resources
                   </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-line">
+                  <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
                     {currentActiveLesson.content || "No lesson description guidelines have been customized for this section."}
                   </p>
                 </div>
 
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-slate-500 space-y-3 py-16">
-                <BookOpen className="w-12 h-12 text-slate-700" />
-                <p className="text-xs font-mono uppercase tracking-widest text-slate-600">Select a lesson from the curriculum blueprint to play video</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-slate-400 space-y-3 py-16 bg-white border border-slate-200 rounded-2xl shadow-xs">
+                <BookOpen className="w-12 h-12 text-slate-300" />
+                <p className="text-xs font-mono uppercase tracking-widest text-slate-500">Select a lesson from the curriculum roadmap to start video</p>
               </div>
             )}
             
@@ -570,288 +592,403 @@ export default function StudentDashboard() {
   const enrolledCoursesList = courses.filter(c => enrolledCourseIds.includes(c.id));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-blue-500/30">
+    <div className="fixed inset-0 bg-slate-50 z-[9999] flex flex-col text-slate-800 font-sans antialiased overflow-hidden selection:bg-blue-100">
       
-      {/* ULTRA-MINIMAL ACTIVE WORKSPACE HEADER */}
-      <div className="bg-slate-900 border-b border-slate-800/80">
-        <div className="max-w-6xl mx-auto px-6 py-6 sm:py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="text-left">
-            <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest font-black block mb-1">
-              Student Workspace
-            </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-none">
-              {studentProfile?.full_name || "Authorized Student"}
-            </h1>
+      {/* GLOBAL HIGH-CONTRAST LIGHT HEADER */}
+      <header className="bg-white border-b border-slate-200/80 px-6 py-4 flex items-center justify-between shrink-0 shadow-xs">
+        <div className="flex items-center gap-3">
+          {/* Collapsible Sidebar Toggle Trigger */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition-colors cursor-pointer"
+            title={sidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <GraduationCap className="w-6 h-6 text-blue-600" />
+            <span className="font-extrabold tracking-tight text-slate-900 text-base">DSP Academy</span>
           </div>
-
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex flex-col text-right">
+            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Authorized Student</span>
+            <span className="text-xs font-extrabold text-slate-850">{studentProfile?.full_name || "Sandbox Student"}</span>
+          </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-slate-700/50"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
           >
-            <LogOut className="w-4 h-4 text-rose-400" />
+            <LogOut className="w-3.5 h-3.5 text-rose-500" />
             <span>Sign Out</span>
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* CORE WORKSPACE TRIPLE ACCORDION CONTAINER */}
-      <div className="max-w-4xl mx-auto px-6 py-8 sm:py-12 space-y-4">
+      {/* Main Workspace Frame */}
+      <div className="flex-1 flex overflow-hidden relative">
         
-        {/* ACCORDION A: ENROLLED COURSE */}
-        <div className="bg-slate-900 border border-slate-800/80 rounded-2xl overflow-hidden transition-all shadow-md">
-          <button
-            onClick={() => setAccordionA(!accordionA)}
-            className="w-full px-6 py-4 flex items-center justify-between bg-slate-900 hover:bg-slate-850 transition-colors text-left"
-          >
-            <div className="flex items-center gap-3">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
-              <h3 className="font-display text-sm sm:text-base font-extrabold uppercase tracking-wide">
-                Enrolled Course
-              </h3>
+        {/* COLLAPSIBLE PORTAL SIDEBAR NAVIGATION */}
+        <motion.aside
+          initial={{ width: sidebarOpen ? 240 : 0, opacity: sidebarOpen ? 1 : 0 }}
+          animate={{ width: sidebarOpen ? 240 : 0, opacity: sidebarOpen ? 1 : 0 }}
+          transition={{ duration: 0.25, ease: "easeInOut" }}
+          className="bg-slate-100/60 border-r border-slate-200/80 flex flex-col justify-between shrink-0 overflow-hidden"
+        >
+          <div className="p-4 space-y-6">
+            <div className="space-y-1">
+              <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest px-3">Navigation Deck</p>
+              <div className="space-y-1 pt-2">
+                <button
+                  onClick={() => {
+                    setIsPlayerOpen(false);
+                    setAccordionA(true);
+                    setCurrentTab("classroom");
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
+                    currentTab === "classroom"
+                      ? "bg-white text-blue-600 border border-slate-200 shadow-xs"
+                      : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>My Classroom</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsPlayerOpen(false);
+                    setAccordionB(true);
+                    setCurrentTab("help");
+                    setTimeout(() => {
+                      document.getElementById("accordion-b")?.scrollIntoView({ behavior: "smooth" });
+                    }, 100);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
+                    currentTab === "help"
+                      ? "bg-white text-emerald-600 border border-slate-200 shadow-xs"
+                      : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
+                  }`}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Get Live Help</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsPlayerOpen(false);
+                    setAccordionC(true);
+                    setCurrentTab("docs");
+                    setTimeout(() => {
+                      document.getElementById("accordion-c")?.scrollIntoView({ behavior: "smooth" });
+                    }, 100);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
+                    currentTab === "docs"
+                      ? "bg-white text-amber-600 border border-slate-200 shadow-xs"
+                      : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Docs Base</span>
+                </button>
+              </div>
             </div>
-            {accordionA ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-          </button>
+          </div>
 
-          <AnimatePresence initial={false}>
-            {accordionA && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden border-t border-slate-800/40 bg-slate-950/40"
+          <div className="p-4 border-t border-slate-200/60 text-[10px] font-mono text-slate-400 text-center">
+            DSP Academy © 2026
+          </div>
+        </motion.aside>
+
+        {/* SCROLLABLE MAIN CONTENT body */}
+        <main className="flex-1 overflow-y-auto bg-slate-50/50 p-6 sm:p-8 space-y-6">
+          
+          {/* HEADER BANNER CARD (Prism Slate style) */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+            <div className="text-left space-y-1">
+              <span className="text-[10px] font-mono text-blue-600 uppercase tracking-widest font-black block">
+                Student Workspace
+              </span>
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 leading-none">
+                {studentProfile?.full_name || "Authorized Student"}
+              </h1>
+              <p className="text-slate-500 text-xs font-medium">Welcome back to your curriculum hub. Launch any course to resume learning.</p>
+            </div>
+            
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+            >
+              <LogOut className="w-4 h-4 text-rose-500" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+
+          {/* ACTIVE TRIPLE ACCORDION INTERACTIVE STACK */}
+          <div className="max-w-4xl mx-auto space-y-4">
+            
+            {/* ACCORDION A: ENROLLED COURSE */}
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden transition-all shadow-xs">
+              <button
+                onClick={() => setAccordionA(!accordionA)}
+                className="w-full px-6 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left"
               >
-                <div className="p-6">
-                  {enrolledCoursesList.length > 0 ? (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {enrolledCoursesList.map((course) => {
-                          const courseLessons = lessons.filter(l => l.courseId === course.id);
-                          const totalCount = courseLessons.length;
-                          const completedCount = courseLessons.filter(l => completedLessonIds.includes(l.id)).length;
-                          const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+                <div className="flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+                  <h3 className="font-display text-slate-900 text-sm sm:text-base font-extrabold uppercase tracking-wide">
+                    Enrolled Course
+                  </h3>
+                </div>
+                {accordionA ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+              </button>
 
-                          return (
-                            <div
-                              key={course.id}
-                              onClick={() => {
-                                setActiveCourse(course);
-                                setIsPlayerOpen(true);
-                              }}
-                              className="bg-slate-900 border border-slate-800 hover:border-blue-500/80 rounded-2xl overflow-hidden transition-all cursor-pointer group shadow-lg text-left flex flex-col justify-between"
-                            >
-                              <div>
-                                <div className="relative h-44 w-full bg-slate-800">
-                                  {course.thumbnail ? (
-                                    <img
-                                      src={course.thumbnail}
-                                      alt={course.title}
-                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full bg-slate-950 flex items-center justify-center text-slate-600 font-mono text-[10px]">No Thumbnail</div>
-                                  )}
-                                  
-                                  <div className="absolute top-3 left-3 px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded-md font-mono uppercase tracking-wider">
-                                    Enrolled
+              <AnimatePresence initial={false}>
+                {accordionA && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden border-t border-slate-100 bg-slate-50/20"
+                  >
+                    <div className="p-6">
+                      {enrolledCoursesList.length > 0 ? (
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {enrolledCoursesList.map((course) => {
+                              const courseLessons = lessons.filter(l => l.courseId === course.id);
+                              const totalCount = courseLessons.length;
+                              const completedCount = courseLessons.filter(l => completedLessonIds.includes(l.id)).length;
+                              const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+                              return (
+                                <div
+                                  key={course.id}
+                                  onClick={() => {
+                                    setActiveCourse(course);
+                                    setIsPlayerOpen(true);
+                                  }}
+                                  className="bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md rounded-2xl overflow-hidden transition-all cursor-pointer group shadow-xs text-left flex flex-col justify-between"
+                                >
+                                  <div>
+                                    <div className="relative h-44 w-full bg-slate-100">
+                                      {course.thumbnail ? (
+                                        <img
+                                          src={course.thumbnail}
+                                          alt={course.title}
+                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                          referrerPolicy="no-referrer"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 font-mono text-[10px]">No Thumbnail</div>
+                                      )}
+                                      
+                                      <div className="absolute top-3 left-3 px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded-md font-mono uppercase tracking-wider">
+                                        Enrolled
+                                      </div>
+
+                                      {percent === 100 && (
+                                        <div className="absolute top-3 right-3 px-2.5 py-0.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[9px] font-black rounded-md font-mono uppercase tracking-wider shadow-md flex items-center gap-1">
+                                          <Trophy className="w-3.5 h-3.5" />
+                                          <span>Graduated</span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="p-5 space-y-2.5">
+                                      <h4 className="font-extrabold text-sm text-slate-950 group-hover:text-blue-600 transition-colors">
+                                        {course.title}
+                                      </h4>
+                                      <p className="text-slate-600 text-[11px] leading-relaxed line-clamp-2">
+                                        {course.description}
+                                      </p>
+
+                                      {/* Progress bar inside card */}
+                                      <div className="pt-2 space-y-1">
+                                        <div className="flex items-center justify-between text-[10px] font-mono">
+                                          <span className="text-slate-400">Curriculum Progress</span>
+                                          <span className={percent === 100 ? "text-amber-500 font-bold" : "text-blue-600 font-bold"}>
+                                            {percent}%
+                                          </span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200 p-[1px]">
+                                          <div 
+                                            className={`h-full rounded-full transition-all duration-500 ${
+                                              percent === 100 ? "bg-gradient-to-r from-amber-500 to-emerald-500" : "bg-blue-600"
+                                            }`}
+                                            style={{ width: `${percent}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
 
-                                  {percent === 100 && (
-                                    <div className="absolute top-3 right-3 px-2.5 py-0.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[9px] font-black rounded-md font-mono uppercase tracking-wider shadow-md flex items-center gap-1">
-                                      <Trophy className="w-3.5 h-3.5" />
-                                      <span>Graduated</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="p-5 space-y-2.5">
-                                  <h4 className="font-bold text-sm text-white group-hover:text-blue-400 transition-colors">
-                                    {course.title}
-                                  </h4>
-                                  <p className="text-slate-400 text-[11px] leading-relaxed line-clamp-2">
-                                    {course.description}
-                                  </p>
-
-                                  {/* Progress bar inside card */}
-                                  <div className="pt-2 space-y-1">
-                                    <div className="flex items-center justify-between text-[10px] font-mono">
-                                      <span className="text-slate-500">Curriculum Progress</span>
-                                      <span className={percent === 100 ? "text-amber-400 font-bold animate-pulse" : "text-blue-400 font-bold"}>
-                                        {percent}%
+                                  <div className="p-5 pt-0">
+                                    <div className="pt-2.5 flex items-center justify-between border-t border-slate-200/60 text-[10.5px] font-mono text-slate-400">
+                                      <span>Instructor: {course.instructorName || "Sandra Cole"}</span>
+                                      <span className="text-blue-600 font-bold uppercase tracking-wider group-hover:underline flex items-center gap-1">
+                                        Launch Player <Play className="w-3.5 h-3.5 text-blue-600 fill-current" />
                                       </span>
                                     </div>
-                                    <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-850 p-[1px]">
-                                      <div 
-                                        className={`h-full rounded-full transition-all duration-500 ${
-                                          percent === 100 ? "bg-gradient-to-r from-amber-500 to-emerald-500" : "bg-blue-600"
-                                        }`}
-                                        style={{ width: `${percent}%` }}
-                                      />
-                                    </div>
                                   </div>
                                 </div>
-                              </div>
+                              );
+                            })}
+                          </div>
 
-                              <div className="p-5 pt-0">
-                                <div className="pt-2.5 flex items-center justify-between border-t border-slate-800/60 text-[10.5px] font-mono text-slate-500">
-                                  <span>Instructor: {course.instructorName || "Sandra Cole"}</span>
-                                  <span className="text-blue-400 font-bold uppercase tracking-wider group-hover:underline flex items-center gap-1">
-                                    Launch Player <Play className="w-3 h-3 text-blue-400 fill-current" />
-                                  </span>
+                          {/* Render Certificate Claim Panels for any completed courses */}
+                          {enrolledCoursesList.map((course) => {
+                            const courseLessons = lessons.filter(l => l.courseId === course.id);
+                            const totalCount = courseLessons.length;
+                            const completedCount = courseLessons.filter(l => completedLessonIds.includes(l.id)).length;
+                            const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+                            if (percent === 100) {
+                              return (
+                                <div key={`cert-claim-${course.id}`} className="mt-4 border-t border-slate-200/60 pt-6">
+                                  <CertificateService
+                                    studentName={studentProfile?.full_name || "Authorized Student"}
+                                    courseTitle={course.title}
+                                    courseId={course.id}
+                                    studentId={studentProfile?.id || "sandbox-std-id"}
+                                  />
                                 </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                              );
+                            }
+                            return null;
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-10 space-y-2 text-slate-400 bg-white rounded-2xl border border-slate-200">
+                          <BookOpen className="w-10 h-10 mx-auto text-slate-300 animate-pulse" />
+                          <p className="text-xs font-mono uppercase tracking-widest text-slate-500">No Subscribed Courses Found</p>
+                          <p className="text-[11px] text-slate-400 max-w-xs mx-auto">Please complete payments or contact coordinators to authorize modules.</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* ACCORDION B: SUPPORT & HELPDESK */}
+            <div id="accordion-b" className="bg-white border border-slate-200 rounded-2xl overflow-hidden transition-all shadow-xs">
+              <button
+                onClick={() => setAccordionB(!accordionB)}
+                className="w-full px-6 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <h3 className="font-display text-slate-900 text-sm sm:text-base font-extrabold uppercase tracking-wide">
+                    Support & Helpdesk
+                  </h3>
+                </div>
+                {accordionB ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+              </button>
+
+              <AnimatePresence initial={false}>
+                {accordionB && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden border-t border-slate-100 bg-slate-50/40 text-left"
+                  >
+                    <div className="p-6 space-y-4">
+                      <div className="space-y-2">
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          Need direct campaign reviews, practical prompt optimization diagnostics, or coordination regarding certification? Tap below to open a ticket directly with Coach Charles or our active support systems.
+                        </p>
                       </div>
 
-                      {/* Render Certificate Claim Panels for any completed courses */}
-                      {enrolledCoursesList.map((course) => {
-                        const courseLessons = lessons.filter(l => l.courseId === course.id);
-                        const totalCount = courseLessons.length;
-                        const completedCount = courseLessons.filter(l => completedLessonIds.includes(l.id)).length;
-                        const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+                      <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-2 text-slate-600 shadow-2xs">
+                        <p className="text-xs"><strong className="text-slate-800">Official Support WhatsApp Line:</strong> <span className="font-mono text-emerald-600 font-extrabold">07068300818</span></p>
+                        <p className="text-xs"><strong className="text-slate-800">Operating Hours:</strong> Monday - Saturday, 9:00 AM - 6:00 PM (West African Time)</p>
+                      </div>
 
-                        if (percent === 100) {
-                          return (
-                            <div key={`cert-claim-${course.id}`} className="mt-4 border-t border-slate-800/60 pt-6">
-                              <CertificateService
-                                studentName={studentProfile?.full_name || "Authorized Student"}
-                                courseTitle={course.title}
-                                courseId={course.id}
-                                studentId={studentProfile?.id || "sandbox-std-id"}
-                              />
-                            </div>
-                          );
-                        }
-                        return null;
-                      })}
+                      <div>
+                        <a
+                          href={whatsappUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-xs shadow-emerald-100"
+                        >
+                          <Phone className="w-4 h-4" />
+                          <span>Connect with support via WhatsApp</span>
+                        </a>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-10 space-y-2 text-slate-500">
-                      <BookOpen className="w-10 h-10 mx-auto text-slate-700" />
-                      <p className="text-xs font-mono uppercase tracking-widest text-slate-600">No Authorized Subscribed Courses Detected</p>
-                      <p className="text-[11px] text-slate-500 max-w-xs mx-auto">Please secure course fee payments or contact customer onboarding coordinators to authorize access to modules.</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* ACCORDION C: KNOWLEDGE BASE & FAQ */}
+            <div id="accordion-c" className="bg-white border border-slate-200 rounded-2xl overflow-hidden transition-all shadow-xs">
+              <button
+                onClick={() => setAccordionC(!accordionC)}
+                className="w-full px-6 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                  <h3 className="font-display text-slate-900 text-sm sm:text-base font-extrabold uppercase tracking-wide">
+                    Knowledge Base & FAQ
+                  </h3>
+                </div>
+                {accordionC ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+              </button>
+
+              <AnimatePresence initial={false}>
+                {accordionC && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden border-t border-slate-100 bg-slate-50/40 text-left"
+                  >
+                    <div className="p-6 space-y-5">
+                      <div className="space-y-1.5">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                          <HelpCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                          When will my official certificate be ready for download?
+                        </h4>
+                        <p className="text-xs text-slate-600 leading-relaxed pl-5.5">
+                          Once all modules are marked complete, and your live campaign pitches are successfully evaluated and approved by Coach Charles, your graduation certificate will generate automatically in the system.
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5 border-t border-slate-200/60 pt-4">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                          <HelpCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                          Can I study and build application campaigns on a mobile device?
+                        </h4>
+                        <p className="text-xs text-slate-600 leading-relaxed pl-5.5">
+                          Absolutely! The video lectures and resource text templates are completely responsive. However, we highly recommend utilizing a laptop or desktop computer during practical development and campaign publishing.
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5 border-t border-slate-200/60 pt-4">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                          <HelpCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                          How do I submit my practical campaigns for vetting?
+                        </h4>
+                        <p className="text-xs text-slate-600 leading-relaxed pl-5.5">
+                          Inside your Support and Helpdesk panel (Accordion B), tap the direct WhatsApp support line and submit your campaign URLs, Canva design outlines, or Selar link proofs for vetting and review.
+                        </p>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* ACCORDION B: SUPPORT */}
-        <div className="bg-slate-900 border border-slate-800/80 rounded-2xl overflow-hidden transition-all shadow-md">
-          <button
-            onClick={() => setAccordionB(!accordionB)}
-            className="w-full px-6 py-4 flex items-center justify-between bg-slate-900 hover:bg-slate-850 transition-colors text-left"
-          >
-            <div className="flex items-center gap-3">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              <h3 className="font-display text-sm sm:text-base font-extrabold uppercase tracking-wide">
-                Support & Vetting Helpdesk
-              </h3>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            {accordionB ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-          </button>
 
-          <AnimatePresence initial={false}>
-            {accordionB && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden border-t border-slate-800/40 bg-slate-950/40 text-left"
-              >
-                <div className="p-6 space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-xs text-slate-300 font-semibold leading-relaxed">
-                      Need direct campaign reviews, practical prompt optimization diagnostics, or coordination regarding certification? Tap below to open a ticket directly with Coach Charles or our active support systems.
-                    </p>
-                  </div>
+          </div>
 
-                  <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-2 text-slate-400">
-                    <p className="text-xs"><strong className="text-slate-200">Official Support WhatsApp Line:</strong> 07068300818</p>
-                    <p className="text-xs"><strong className="text-slate-200">Operating Hours:</strong> Monday - Saturday, 9:00 AM - 6:00 PM (West African Time)</p>
-                  </div>
-
-                  <div>
-                    <a
-                      href={whatsappUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                    >
-                      <span>Connect with support via WhatsApp</span>
-                    </a>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* ACCORDION C: KNOWLEDGE BASE */}
-        <div className="bg-slate-900 border border-slate-800/80 rounded-2xl overflow-hidden transition-all shadow-md">
-          <button
-            onClick={() => setAccordionC(!accordionC)}
-            className="w-full px-6 py-4 flex items-center justify-between bg-slate-900 hover:bg-slate-850 transition-colors text-left"
-          >
-            <div className="flex items-center gap-3">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-              <h3 className="font-display text-sm sm:text-base font-extrabold uppercase tracking-wide">
-                Knowledge Base & FAQ
-              </h3>
-            </div>
-            {accordionC ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-          </button>
-
-          <AnimatePresence initial={false}>
-            {accordionC && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden border-t border-slate-800/40 bg-slate-950/40 text-left"
-              >
-                <div className="p-6 space-y-5">
-                  <div className="space-y-1.5">
-                    <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                      <HelpCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                      When will my official certificate be ready for download?
-                    </h4>
-                    <p className="text-xs text-slate-400 leading-relaxed pl-5.5">
-                      Once all modules are marked complete, and your live campaign pitches are successfully evaluated and approved by Coach Charles, your graduation certificate will generate automatically in the system.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5 border-t border-slate-800/40 pt-4">
-                    <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                      <HelpCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                      Can I study and build application campaigns on a mobile device?
-                    </h4>
-                    <p className="text-xs text-slate-400 leading-relaxed pl-5.5">
-                      Absolutely! The video lectures and resource text templates are completely responsive. However, we highly recommend utilizing a laptop or desktop computer during practical development and campaign publishing.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5 border-t border-slate-800/40 pt-4">
-                    <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                      <HelpCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                      How do I submit my practical campaigns for vetting?
-                    </h4>
-                    <p className="text-xs text-slate-400 leading-relaxed pl-5.5">
-                      Inside your Support and Helpdesk panel (Accordion B), tap the direct WhatsApp support line and submit your campaign URLs, Canva design outlines, or Selar link proofs for vetting and review.
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        </main>
 
       </div>
 

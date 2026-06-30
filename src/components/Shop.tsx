@@ -215,20 +215,54 @@ export default function Shop({ onNavigate }: ShopProps) {
         {isLoading ? (
           /* High-Fidelity Skeleton Loaders */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((idx) => (
-              <div key={idx} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs p-4 flex flex-col justify-between space-y-4 animate-pulse">
-                <div className="space-y-3">
-                  <div className="aspect-video bg-slate-100 rounded-xl w-full"></div>
-                  <div className="h-4 bg-slate-100 rounded w-1/3"></div>
-                  <div className="h-5 bg-slate-100 rounded w-4/5"></div>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
+              <div 
+                key={idx} 
+                className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between animate-pulse"
+              >
+                <div className="p-4 space-y-4 text-left">
+                  {/* Aspect Ratio Video Thumbnail Skeleton */}
+                  <div className="relative aspect-video rounded-xl bg-slate-100 border border-slate-150 overflow-hidden flex items-center justify-center">
+                    {/* Badge Skeleton */}
+                    <div className="absolute top-2.5 left-2.5 h-4 w-16 bg-slate-200/80 rounded border border-slate-300/40"></div>
+                  </div>
+
+                  {/* Typography block Skeletons */}
                   <div className="space-y-2">
-                    <div className="h-3 bg-slate-100 rounded w-full"></div>
-                    <div className="h-3 bg-slate-100 rounded w-5/6"></div>
+                    {/* Duration / Clock Skeletons */}
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <div className="w-3.5 h-3.5 rounded-full bg-slate-200/60 shrink-0"></div>
+                      <div className="h-2.5 bg-slate-200/60 rounded w-1/3"></div>
+                    </div>
+                    
+                    {/* Title Skeletons */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="h-4 bg-slate-200 rounded w-11/12"></div>
+                      <div className="h-4 bg-slate-200 rounded w-2/3"></div>
+                    </div>
+                    
+                    {/* Tagline Skeleton */}
+                    <div className="h-3 bg-slate-200/50 rounded w-1/2 pt-0.5"></div>
+
+                    {/* Overview Skeletons */}
+                    <div className="space-y-1.5 pt-1.5">
+                      <div className="h-2.5 bg-slate-200/40 rounded w-full"></div>
+                      <div className="h-2.5 bg-slate-200/40 rounded w-11/12"></div>
+                      <div className="h-2.5 bg-slate-200/40 rounded w-4/5"></div>
+                    </div>
                   </div>
                 </div>
-                <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
-                  <div className="h-4 bg-slate-100 rounded w-1/4"></div>
-                  <div className="h-8 bg-slate-100 rounded w-1/3"></div>
+
+                {/* Footing pricing & Navigation Skeletons */}
+                <div className="p-4 pt-0">
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between mt-2">
+                    <div className="flex flex-col space-y-1.5">
+                      <div className="h-2 bg-slate-200/40 rounded w-14"></div>
+                      <div className="h-4 bg-slate-200/70 rounded w-20"></div>
+                    </div>
+
+                    <div className="h-8 bg-slate-200/70 rounded-xl w-24"></div>
+                  </div>
                 </div>
               </div>
             ))}
