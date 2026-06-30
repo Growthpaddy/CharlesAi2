@@ -189,9 +189,32 @@ export default function StudentDashboard() {
       setIsSyncing(true);
 
       const loggedEmail = localStorage.getItem("student_logged_in_email") || studentEmail;
-      const profilePromise = loggedEmail
-        ? supabase.from("profiles").select("status, phone, full_name").eq("email", loggedEmail.toLowerCase()).maybeSingle()
-        : Promise.resolve({ data: null, error: null });
+      const loggedId = localStorage.getItem("student_logged_in_id") || studentId;
+
+      const fetchStudentPromise = async () => {
+        if (!loggedEmail) return null;
+        try {
+          if (loggedId) {
+            const { data, error } = await supabase.from("students").select("*").eq("id", loggedId).maybeSingle();
+            if (!error && data) return { ...data, is_student_table: true };
+          }
+          const { data: studByEmail, error: errByEmail } = await supabase.from("students").select("*").eq("email", loggedEmail.toLowerCase()).maybeSingle();
+          if (!errByEmail && studByEmail) return { ...studByEmail, is_student_table: true };
+        } catch (err) {
+          console.warn("Error checking students table:", err);
+        }
+
+        try {
+          const { data: profByEmail, error: errProf } = await supabase.from("profiles").select("*").eq("email", loggedEmail.toLowerCase()).maybeSingle();
+          if (!errProf && profByEmail) return { ...profByEmail, is_student_table: false };
+        } catch (err) {
+          console.warn("Error checking profiles table:", err);
+        }
+
+        return null;
+      };
+
+      const profilePromise = fetchStudentPromise();
 
       Promise.all([
         supabase.from("courses").select("*"),
@@ -200,19 +223,29 @@ export default function StudentDashboard() {
         supabase.from("enrollments").select("*"),
         supabase.from("student_progress").select("*"),
         profilePromise
-      ]).then(([cRes, mRes, lRes, eRes, pRes, profRes]) => {
-        if (profRes && !profRes.error && profRes.data) {
-          const fetchedStatus = profRes.data.status || "active";
+      ]).then(([cRes, mRes, lRes, eRes, pRes, studentRecord]) => {
+        if (studentRecord) {
+          const fetchedStatus = (studentRecord.status || "active").toLowerCase();
           setStudentStatus(fetchedStatus);
           localStorage.setItem("student_logged_in_status", fetchedStatus);
 
-          if (profRes.data.phone) {
-            setStudentPhone(profRes.data.phone);
-            localStorage.setItem("student_logged_in_phone", profRes.data.phone);
+          if (studentRecord.phone) {
+            setStudentPhone(studentRecord.phone);
+            localStorage.setItem("student_logged_in_phone", studentRecord.phone);
           }
-          if (profRes.data.full_name) {
-            setStudentName(profRes.data.full_name);
-            localStorage.setItem("student_logged_in_name", profRes.data.full_name);
+          if (studentRecord.full_name) {
+            setStudentName(studentRecord.full_name);
+            localStorage.setItem("student_logged_in_name", studentRecord.full_name);
+          }
+          if (studentRecord.is_student_table) {
+            const enrolled = studentRecord.enrolled_courses || [];
+            if (enrolled.length > 0) {
+              localStorage.setItem("student_logged_in_course", enrolled[0]);
+            }
+          } else {
+            if (studentRecord.applied_course) {
+              localStorage.setItem("student_logged_in_course", studentRecord.applied_course);
+            }
           }
         }
 
@@ -401,42 +434,100 @@ export default function StudentDashboard() {
     try {
       // 1. Check Supabase first (Live connection)
       if (supabase && isSupabaseConfigured) {
-        const { data, error } = await supabase
+        // A. First try to authenticate using native Supabase Auth
+        try {
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: authEmail.trim().toLowerCase(),
+            password: authPassword
+          });
+
+          if (!authError && authData?.user) {
+            // Authentication succeeded! Now locate their profile in the "students" table
+            const { data: studentRecord, error: studentError } = await supabase
+              .from("students")
+              .select("*")
+              .eq("id", authData.user.id)
+              .maybeSingle();
+
+            if (studentRecord) {
+              const currentStatus = studentRecord.status || "Pending";
+              if (currentStatus.toLowerCase() === "suspended") {
+                setAuthError("Your student account is suspended. Please contact Admin support.");
+                setIsAuthSubmitting(false);
+                return;
+              }
+
+              setAuthSuccess(`Access verified. Welcome back, ${studentRecord.full_name}!`);
+              
+              setTimeout(() => {
+                localStorage.setItem("is_student_authenticated", "true");
+                localStorage.setItem("student_logged_in_name", studentRecord.full_name);
+                localStorage.setItem("student_logged_in_email", studentRecord.email);
+                localStorage.setItem("student_logged_in_id", studentRecord.id);
+                localStorage.setItem("student_logged_in_status", currentStatus.toLowerCase());
+                
+                // Get course title or ID
+                const enrolledCourses = studentRecord.enrolled_courses || [];
+                const courseVal = enrolledCourses.length > 0 ? enrolledCourses[0] : "";
+                localStorage.setItem("student_logged_in_course", courseVal);
+                localStorage.setItem("student_logged_in_phone", studentRecord.phone || "");
+                
+                setIsAuthenticated(true);
+                setStudentName(studentRecord.full_name);
+                setStudentEmail(studentRecord.email);
+                setStudentId(studentRecord.id);
+                setStudentPhone(studentRecord.phone || "");
+                setStudentStatus(currentStatus.toLowerCase());
+                setIsAuthSubmitting(false);
+
+                setAuthEmail("");
+                setAuthPassword("");
+              }, 1000);
+              return;
+            }
+          }
+        } catch (signInErr) {
+          console.warn("Supabase Auth signInWithPassword attempt failed, trying direct profiles query...", signInErr);
+        }
+
+        // B. Fallback to querying the "profiles" table (legacy support or custom signup)
+        const { data: dataProfile, error: profileErr } = await supabase
           .from("profiles")
           .select("*")
           .eq("email", authEmail.trim().toLowerCase())
           .maybeSingle();
 
-        if (error) {
-          console.warn("Supabase login query error:", error);
+        if (profileErr) {
+          console.warn("Supabase login query error:", profileErr);
         }
 
-        if (data) {
+        if (dataProfile) {
           // Check passcode (password field)
-          if (data.password === authPassword) {
-            if (data.status === "suspended") {
+          if (dataProfile.password === authPassword) {
+            const currentStatus = dataProfile.status || "active";
+            if (currentStatus.toLowerCase() === "suspended") {
               setAuthError("Your student account is suspended. Please contact Admin support.");
               setIsAuthSubmitting(false);
               return;
             }
 
-            setAuthSuccess(`Access verified. Welcome back, ${data.full_name}!`);
+            setAuthSuccess(`Access verified. Welcome back, ${dataProfile.full_name}!`);
             
             setTimeout(() => {
               localStorage.setItem("is_student_authenticated", "true");
-              localStorage.setItem("student_logged_in_name", data.full_name);
-              localStorage.setItem("student_logged_in_email", data.email);
-              localStorage.setItem("student_logged_in_id", data.id);
-              localStorage.setItem("student_logged_in_status", data.status || "active");
-              localStorage.setItem("student_logged_in_course", data.applied_course || "");
-              localStorage.setItem("student_logged_in_phone", data.phone || "");
+              localStorage.setItem("student_logged_in_name", dataProfile.full_name);
+              localStorage.setItem("student_logged_in_email", dataProfile.email);
+              localStorage.setItem("student_logged_in_id", dataProfile.id);
+              localStorage.setItem("student_logged_in_status", currentStatus.toLowerCase());
+              localStorage.setItem("student_logged_in_course", dataProfile.applied_course || "");
+              localStorage.setItem("student_logged_in_phone", dataProfile.phone || "");
               
               setIsAuthenticated(true);
-              setStudentName(data.full_name);
-              setStudentEmail(data.email);
-              setStudentId(data.id);
-              setStudentPhone(data.phone || "");
-              setStudentStatus(data.status || "active");
+              setStudentName(dataProfile.full_name);
+              setStudentEmail(dataProfile.email);
+              setStudentId(dataProfile.id);
+              setStudentPhone(dataProfile.phone || "");
+              setStudentStatus(currentStatus.toLowerCase());
               setIsAuthSubmitting(false);
 
               setAuthEmail("");
@@ -473,7 +564,7 @@ export default function StudentDashboard() {
           localStorage.setItem("student_logged_in_name", matched.full_name);
           localStorage.setItem("student_logged_in_email", matched.email);
           localStorage.setItem("student_logged_in_id", matched.id);
-          localStorage.setItem("student_logged_in_status", matched.status || "active");
+          localStorage.setItem("student_logged_in_status", (matched.status || "active").toLowerCase());
           localStorage.setItem("student_logged_in_course", matched.applied_course || "");
           localStorage.setItem("student_logged_in_phone", matched.phone || "");
           
@@ -482,7 +573,7 @@ export default function StudentDashboard() {
           setStudentEmail(matched.email);
           setStudentId(matched.id);
           setStudentPhone(matched.phone || "");
-          setStudentStatus(matched.status || "active");
+          setStudentStatus((matched.status || "active").toLowerCase());
           setIsAuthSubmitting(false);
 
           setAuthEmail("");
