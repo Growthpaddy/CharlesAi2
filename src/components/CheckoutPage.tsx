@@ -40,7 +40,7 @@ export default function CheckoutPage({
     email: "",
     password: "",
     phone: "",
-    status: "Active",
+    status: "Pending",
     metadata: { generated_via: "public_checkout_pipeline" }
   });
 
@@ -125,7 +125,7 @@ export default function CheckoutPage({
           full_name: studentForm.full_name,
           email: studentForm.email.trim().toLowerCase(),
           phone: studentForm.phone,
-          status: "Active",
+          status: "Pending",
           enrolled_courses: [course.id],
           metadata: { ...studentForm.metadata, auth_link_executed: true }
         }
@@ -203,7 +203,7 @@ export default function CheckoutPage({
   
   // Dynamic message construction for direct checkout verification WhatsApp pipeline
   const formattedPrice = formatNaira(course.price_naira);
-  const whatsappMsgText = `Hello DSP Academy! I have completed payment for the course "${course.title}" via direct bank transfer of ${formattedPrice}.\n\nHere are my enrollment details:\n- Name: ${studentForm.full_name || "(Provided in Slip)"}\n- Registered Email: ${studentForm.email || "(Provided in Slip)"}\n- Phone: ${studentForm.phone || "(Provided in Slip)"}\n\nI have attached my transfer payment receipt below. Kindly verify and activate my course access.`;
+  const whatsappMsgText = `Hello DEINO INTEGRATED SERVICES I have completed payment for the course "${course.title}" via direct bank transfer of ${formattedPrice}.\n\nHere are my enrollment details:\n- Name: ${studentForm.full_name || "(Provided in Slip)"}\n- Registered Email: ${studentForm.email || "(Provided in Slip)"}\n- Phone: ${studentForm.phone || "(Provided in Slip)"}\n\nI have attached my transfer payment receipt below. Kindly verify and activate my course access.`;
   const whatsappConfirmationUrl = `https://wa.me/2347068300818?text=${encodeURIComponent(whatsappMsgText)}`;
 
   return (

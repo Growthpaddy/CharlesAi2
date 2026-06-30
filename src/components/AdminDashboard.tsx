@@ -134,6 +134,64 @@ export default function AdminDashboard() {
     title: "", description: "", content: "", video_url: "", duration_minutes: 15, duration: "", module_id: "", course_id: "", order_index: 1, lesson_order: 1
   });
 
+  // Interactive Student Activation States & Handlers
+  const [isActivationModalOpen, setIsActivationModalOpen] = useState(false);
+  const [activeStudent, setActiveStudent] = useState<StudentRecord | null>(null);
+  const [selectedCourseIdForActivation, setSelectedCourseIdForActivation] = useState<string>("");
+  const [selectedExpiryDate, setSelectedExpiryDate] = useState<string>("");
+  const [isActivating, setIsActivating] = useState(false);
+
+  const openActivationModal = (student: StudentRecord) => {
+    setActiveStudent(student);
+    const firstCourseId = student.enrolled_courses && student.enrolled_courses.length > 0 
+      ? student.enrolled_courses[0] 
+      : (courses[0]?.id || "");
+    setSelectedCourseIdForActivation(firstCourseId);
+    
+    // Set default expiry date to 3 months from now in 'yyyy-MM-ddThh:mm' format for datetime-local
+    const defaultExpiry = new Date();
+    defaultExpiry.setMonth(defaultExpiry.getMonth() + 3);
+    const formattedDate = defaultExpiry.toISOString().slice(0, 16);
+    setSelectedExpiryDate(formattedDate);
+    
+    setIsActivationModalOpen(true);
+  };
+
+  const handleApproveAndActivate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeStudent) return;
+    setIsActivating(true);
+    
+    try {
+      const selectedExpiryDateIsoString = selectedExpiryDate 
+        ? new Date(selectedExpiryDate).toISOString() 
+        : null;
+
+      const { error } = await supabase
+        .from("students")
+        .update({
+          status: "Active",
+          enrolled_courses: [selectedCourseIdForActivation], // Or appending array syntax
+          access_expires_at: selectedExpiryDateIsoString // Storing the chosen deadline timestamp
+        })
+        .eq("id", activeStudent.id);
+
+      if (error) throw error;
+
+      triggerToast(`Account for ${activeStudent.full_name} has been approved and activated!`);
+      setIsActivationModalOpen(false);
+      
+      // Refresh local matrix variables immediately
+      await fetchCoreLmsMatrix();
+      await fetchLiveStudents();
+    } catch (err: any) {
+      console.error("Activation operational fault:", err);
+      alert(`Activation operational fault: ${err.message}`);
+    } finally {
+      setIsActivating(false);
+    }
+  };
+
   useEffect(() => {
     if (!window.location.hash) {
       window.location.hash = "admin-login";
@@ -1152,6 +1210,7 @@ export default function AdminDashboard() {
                             <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact Node</th>
                             <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Enrollment Anchor Date</th>
                             <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">System Status</th>
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -1191,9 +1250,23 @@ export default function AdminDashboard() {
                                 </div>
                               </td>
                               <td className="px-6 py-4">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider border bg-emerald-50 border-emerald-200 text-emerald-700">
-                                  {student.status || "active"}
-                                </span>
+                                {student.status?.toLowerCase() === "pending" ? (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] uppercase font-black tracking-wider border bg-amber-50 border-amber-200 text-amber-700 animate-pulse">
+                                    Pending Approval
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider border bg-emerald-50 border-emerald-200 text-emerald-700">
+                                    {student.status || "Active"}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <button 
+                                  onClick={() => openActivationModal(student)}
+                                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                                >
+                                  Manage Activation
+                                </button>
                               </td>
                             </tr>
                           ))}
@@ -1395,6 +1468,85 @@ export default function AdminDashboard() {
                   <button type="submit" disabled={isSavingLesson} className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-800 flex items-center gap-1.5">
                     {isSavingLesson && <RefreshCw className="w-3 h-3 animate-spin" />}
                     <span>{isSavingLesson ? "Saving..." : "Commit Lesson"}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* --- STUDENT ACTIVATION MODAL LAYOUT --- */}
+        {isActivationModalOpen && activeStudent && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white border border-slate-200 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4 text-left">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Manage Student Activation</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">Activate account and configure course credentials and duration boundaries.</p>
+              </div>
+
+              {/* Student Meta-data details section */}
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-2 text-xs">
+                <p className="text-slate-500 font-medium">Student Name: <strong className="text-slate-900 font-extrabold">{activeStudent.full_name || "N/A"}</strong></p>
+                <p className="text-slate-500 font-medium">Registered Email: <strong className="text-slate-900 font-mono font-bold">{activeStudent.email || "N/A"}</strong></p>
+                {activeStudent.phone && (
+                  <p className="text-slate-500 font-medium">WhatsApp / Phone: <strong className="text-slate-900 font-mono font-bold">{activeStudent.phone}</strong></p>
+                )}
+                <div className="flex items-center gap-2 text-slate-500 font-medium">
+                  <span>Current Status:</span>
+                  {activeStudent.status?.toLowerCase() === "pending" ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] uppercase font-bold tracking-wider border bg-amber-50 border-amber-200 text-amber-700">
+                      Pending
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] uppercase font-bold tracking-wider border bg-emerald-50 border-emerald-200 text-emerald-700">
+                      Active
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <form onSubmit={handleApproveAndActivate} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Assign Core Learning Track</label>
+                  <select 
+                    required
+                    value={selectedCourseIdForActivation}
+                    onChange={(e) => setSelectedCourseIdForActivation(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-slate-400 text-slate-700"
+                  >
+                    <option value="">-- Choose Course Target --</option>
+                    {courses.map(c => (
+                      <option key={c.id} value={c.id}>{c.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Access Expiration (Leave blank for lifetime access)</label>
+                  <input 
+                    type="datetime-local" 
+                    value={selectedExpiryDate} 
+                    onChange={e => setSelectedExpiryDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-800 focus:outline-none focus:border-slate-400" 
+                  />
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                  <button 
+                    type="button" 
+                    disabled={isActivating} 
+                    onClick={() => setIsActivationModalOpen(false)} 
+                    className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 rounded-lg"
+                  >
+                    Dismiss
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isActivating} 
+                    className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-800 flex items-center gap-1.5 shadow-sm"
+                  >
+                    {isActivating && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    <span>{isActivating ? "Activating..." : "Approve & Activate Account"}</span>
                   </button>
                 </div>
               </form>
