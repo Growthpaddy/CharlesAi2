@@ -37,6 +37,7 @@ import LoginPortalModal from "./components/LoginPortalModal";
 import ServicesPage from "./components/ServicesPage";
 import ContactPage from "./components/ContactPage";
 import StudentDashboard from "./components/StudentDashboard";
+import StudentLoginPage from "./components/StudentLoginPage";
 import LeadLandingPage from "./components/LeadLandingPage";
 import CourseDetailPage from "./components/CourseDetailPage";
 import ThankYouPage from "./components/ThankYouPage";
@@ -78,7 +79,7 @@ function AppContent() {
   return (
     <div id="app-root" className="min-h-screen bg-[#FAFBFC] text-[#0B1B3D] font-sans antialiased relative selection:bg-[#0056D2]/25 selection:text-[#0B1B3D] flex flex-col justify-between">
       {/* Sticky top-level Glass navigation */}
-      {currentView !== "admin" && <Header />}
+      {currentView !== "admin" && currentView !== "dashboard" && currentView !== "log-in" && <Header />}
 
       {/* Main visual layouts stack dynamically routed */}
       <main className="flex-grow">
@@ -355,6 +356,12 @@ function AppContent() {
           </div>
         )}
 
+        {currentView === "log-in" && (
+          <div className="animate-in fade-in duration-300">
+            <StudentLoginPage />
+          </div>
+        )}
+
         {currentView === "landing" && (
           <div className="animate-in fade-in duration-350">
             <LeadLandingPage />
@@ -387,7 +394,7 @@ function AppContent() {
       </main>
 
       {/* Global persistent premium Footer at the very bottom */}
-      {currentView !== "admin" && <Footer />}
+      {currentView !== "admin" && currentView !== "dashboard" && currentView !== "log-in" && <Footer />}
       
       {/* Interactive Secure Student Gate Overlay */}
       <LoginPortalModal />

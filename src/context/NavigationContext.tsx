@@ -5,7 +5,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-export type ViewType = "home" | "programs" | "paths" | "success" | "resources" | "about" | "pricing" | "services" | "contact" | "dashboard" | "course_details" | "landing" | "thankyou" | "checkout" | "admin";
+export type ViewType = "home" | "programs" | "paths" | "success" | "resources" | "about" | "pricing" | "services" | "contact" | "dashboard" | "course_details" | "landing" | "thankyou" | "checkout" | "admin" | "log-in";
 
 // Bidirectional mappings for SEO/LMS standard course routing
 export const slugToCourseIdMap: Record<string, string> = {
@@ -103,7 +103,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         }
       }
 
-      const validViews: ViewType[] = ["home", "programs", "paths", "success", "resources", "about", "pricing", "services", "contact", "dashboard", "landing", "thankyou", "checkout", "admin"];
+      const validViews: ViewType[] = ["home", "programs", "paths", "success", "resources", "about", "pricing", "services", "contact", "dashboard", "landing", "thankyou", "checkout", "admin", "log-in"];
       const checkHash = hash.toLowerCase();
       if (
         checkHash === "admin-dashboard" || 

@@ -553,7 +553,7 @@ export default function Header() {
                 </button>
               ) : (
                 <button
-                  onClick={() => setLoginOpen(true)}
+                  onClick={() => navigateTo("log-in")}
                   className="block text-xs font-sans font-bold text-[#0056D2] hover:text-[#003E9C] hover:bg-blue-50/50 py-2.5 px-3 rounded-lg transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider"
                 >
                   Log In
@@ -738,7 +738,7 @@ export default function Header() {
                   </button>
                 ) : (
                   <button
-                    onClick={() => { setLoginOpen(true); setMobileMenuOpen(false); }}
+                    onClick={() => { navigateTo("log-in"); setMobileMenuOpen(false); }}
                     className="w-full py-3 text-center text-xs font-sans font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl min-h-[44px] uppercase tracking-wider mt-2.5"
                   >
                     Log In Account
