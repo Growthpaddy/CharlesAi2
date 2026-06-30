@@ -26,6 +26,7 @@ export default function CheckoutPage({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   // Custom interactive notifications state
   const [notification, setNotification] = useState<{
@@ -33,10 +34,11 @@ export default function CheckoutPage({
     message: string;
   }>({ type: null, message: "" });
 
-  // Accurate payload schema fields as represented inside your database structure
+  // Accurate payload schema fields as represented inside your database structure (now with password support)
   const [studentForm, setStudentForm] = useState({
     full_name: "",
     email: "",
+    password: "",
     phone: "",
     status: "Active",
     metadata: { generated_via: "public_checkout_pipeline" }
@@ -94,24 +96,47 @@ export default function CheckoutPage({
     setNotification({ type: null, message: "" });
     
     try {
-      // Direct integration transaction mapping down to table matrix rows
-      const { error } = await supabase.from("students").insert([
+      if (!studentForm.password || studentForm.password.length < 6) {
+        throw new Error("Password must be at least 6 characters long.");
+      }
+
+      // Execute native Supabase signup call
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: studentForm.email.trim().toLowerCase(),
+        password: studentForm.password,
+        options: {
+          data: {
+            full_name: studentForm.full_name,
+            phone: studentForm.phone
+          }
+        }
+      });
+
+      if (authError) throw authError;
+
+      if (!authData?.user) {
+        throw new Error("Account registration did not return a valid student user record.");
+      }
+
+      // Profile correlation row insertion inside public.students
+      const { error: insertError } = await supabase.from("students").insert([
         {
+          id: authData.user.id, // Explicitly anchor the student record to the Auth User ID
           full_name: studentForm.full_name,
           email: studentForm.email.trim().toLowerCase(),
           phone: studentForm.phone,
-          status: studentForm.status,
+          status: "Active",
           enrolled_courses: [course.id],
-          metadata: studentForm.metadata
+          metadata: { ...studentForm.metadata, auth_link_executed: true }
         }
       ]);
 
-      if (error) throw error;
+      if (insertError) throw insertError;
       
       setIsStudentRegistered(true);
       setNotification({
         type: "success",
-        message: "Student profile registered successfully! Payment methods have been unlocked."
+        message: "Student account created successfully! Payment gateways have been unlocked."
       });
     } catch (err: any) {
       setNotification({
@@ -278,7 +303,7 @@ export default function CheckoutPage({
           {/* LEFT / CENTER CONTROLS COLUMN (Steps) */}
           <div className="lg:col-span-3 space-y-6">
             
-            {/* Step 1: Ledger Registration Wrapper */}
+            {/* Step 1: Secure Student Account Signup Wrapper */}
             <div className="bg-white/70 backdrop-blur-lg border border-white/60 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 text-left relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
               
@@ -287,8 +312,8 @@ export default function CheckoutPage({
                   <UserPlus className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">Step 1: Profile Key Registration</h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Verify your email and contact references before choosing a payment gateway.</p>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">Step 1: Create Secure Student Account</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Register your profile and choose an access password before unlocking the payment gateway.</p>
                 </div>
               </div>
 
@@ -296,10 +321,10 @@ export default function CheckoutPage({
                 <div className="p-4 bg-emerald-50/70 border border-emerald-100 rounded-2xl space-y-1 text-xs">
                   <p className="font-extrabold text-emerald-800 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-emerald-600" />
-                    Ledger Profile Authenticated
+                    Student Account Created
                   </p>
                   <p className="text-[11px] text-emerald-600 font-medium leading-relaxed">
-                    Student ID mappings verified. You can now select payment methods from the card below to finalize course access.
+                    Student account is registered and authenticated. You can now select payment methods from the card below to finalize course access.
                   </p>
                 </div>
               ) : (
@@ -330,6 +355,27 @@ export default function CheckoutPage({
                     </div>
 
                     <div>
+                      <label className="block text-[9px] font-mono font-bold uppercase tracking-widest text-slate-400 mb-1.5">Access Password (Minimum 6 characters)</label>
+                      <div className="relative">
+                        <input 
+                          type={showPassword ? "text" : "password"} 
+                          required 
+                          value={studentForm.password} 
+                          onChange={e => setStudentForm({...studentForm, password: e.target.value})} 
+                          placeholder="••••••••" 
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-[#0056D2] rounded-xl px-3.5 py-3 text-xs font-bold text-slate-800 focus:outline-none transition-colors pr-12" 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-[10px] font-mono uppercase tracking-wider font-extrabold focus:outline-none cursor-pointer"
+                        >
+                          {showPassword ? "Hide" : "Show"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
                       <label className="block text-[9px] font-mono font-bold uppercase tracking-widest text-slate-400 mb-1.5">WhatsApp / Phone Number</label>
                       <input 
                         type="tel" 
@@ -350,11 +396,11 @@ export default function CheckoutPage({
                     {isSubmitting ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Authenticating Profile Key...</span>
+                        <span>Creating Student Account...</span>
                       </>
                     ) : (
                       <>
-                        <span>Validate and Save Profile Credentials</span>
+                        <span>Create Account & Unlock Gateway</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
