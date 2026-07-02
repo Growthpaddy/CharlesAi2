@@ -18,13 +18,13 @@ const getEmbedUrl = (url: string) => {
   // YouTube match
   const ytMatch = cleanUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/i);
   if (ytMatch && ytMatch[1]) {
-    return `https://www.youtube.com/embed/${ytMatch[1]}`;
+    return `https://www.youtube.com/embed/${ytMatch[1]}?modestbranding=1&rel=0&fs=0&showinfo=0&iv_load_policy=3&cc_load_policy=0`;
   }
 
   // Vimeo match
   const vimeoMatch = cleanUrl.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)([0-9]+)/i);
   if (vimeoMatch && vimeoMatch[1]) {
-    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}?badge=0&byline=0&portrait=0&title=0`;
   }
 
   return cleanUrl;
@@ -637,12 +637,21 @@ export default function StudentDashboard() {
                   </button>
                 </div>
 
-                <div className="relative aspect-video w-full bg-slate-900 rounded-2xl border border-slate-200 overflow-hidden shadow-md">
+                <div 
+                  className="relative aspect-video w-full bg-slate-900 rounded-2xl border border-slate-200 overflow-hidden shadow-md select-none"
+                  onContextMenu={(e) => e.preventDefault()}
+                >
                   {(() => {
                     const activeVideoUrl = (currentActiveLesson.video_url || currentActiveLesson.videoUrl || "").trim() || (activeCourse?.video_url || activeCourse?.videoUrl || "").trim();
                     
                     return activeVideoUrl ? (
-                      <iframe src={getEmbedUrl(activeVideoUrl)} title={currentActiveLesson.title} className="absolute inset-0 w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                      <iframe 
+                        src={getEmbedUrl(activeVideoUrl)} 
+                        title={currentActiveLesson.title} 
+                        className="absolute inset-0 w-full h-full border-0 pointer-events-auto" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950">
                         <PlayCircle className="w-12 h-12 text-slate-600" />
