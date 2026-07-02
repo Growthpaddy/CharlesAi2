@@ -29,6 +29,8 @@ export interface Course {
   overview: string;
   price?: string;
   isPublished?: boolean;
+  videoUrl?: string;
+  video_url?: string;
 }
 
 export interface CourseModule {

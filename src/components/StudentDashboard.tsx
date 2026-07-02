@@ -104,7 +104,9 @@ export default function StudentDashboard() {
             skills: c.skills || [],
             outcomes: c.outcomes || [],
             overview: c.overview || "",
-            price: c.price_naira ? `₦${c.price_naira.toLocaleString()}` : (c.price || "₦45,000")
+            price: c.price_naira ? `₦${c.price_naira.toLocaleString()}` : (c.price || "₦45,000"),
+            videoUrl: c.video_url || c.videoUrl || "",
+            video_url: c.video_url || c.videoUrl || ""
           }));
           setCourses(mappedCourses);
         } else {
@@ -630,14 +632,20 @@ export default function StudentDashboard() {
                 </div>
 
                 <div className="relative aspect-video w-full bg-slate-900 rounded-2xl border border-slate-200 overflow-hidden shadow-md">
-                  {currentActiveLesson.videoUrl ? (
-                    <iframe src={getEmbedUrl(currentActiveLesson.videoUrl)} title={currentActiveLesson.title} className="absolute inset-0 w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950">
-                      <PlayCircle className="w-12 h-12 text-slate-600" />
-                      <p className="text-xs font-mono uppercase tracking-widest">No Streaming Feed Configured</p>
-                    </div>
-                  )}
+                  {(() => {
+                    const activeVideoUrl = (currentActiveLesson.videoUrl && currentActiveLesson.videoUrl.trim() !== "" && !currentActiveLesson.videoUrl.includes("mov_bbb.mp4"))
+                      ? currentActiveLesson.videoUrl
+                      : (activeCourse?.videoUrl || activeCourse?.video_url || "");
+                    
+                    return activeVideoUrl ? (
+                      <iframe src={getEmbedUrl(activeVideoUrl)} title={currentActiveLesson.title} className="absolute inset-0 w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950">
+                        <PlayCircle className="w-12 h-12 text-slate-600" />
+                        <p className="text-xs font-mono uppercase tracking-widest">No Streaming Feed Configured</p>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-3 text-left">
