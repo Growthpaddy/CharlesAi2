@@ -11,6 +11,25 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { useNavigation } from "../context/NavigationContext";
 import CertificateService from "./CertificateService";
 
+const getEmbedUrl = (url: string) => {
+  if (!url) return "";
+  const cleanUrl = url.trim();
+
+  // YouTube match
+  const ytMatch = cleanUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/i);
+  if (ytMatch && ytMatch[1]) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  }
+
+  // Vimeo match
+  const vimeoMatch = cleanUrl.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)([0-9]+)/i);
+  if (vimeoMatch && vimeoMatch[1]) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+
+  return cleanUrl;
+};
+
 export default function StudentDashboard() {
   const { navigateTo } = useNavigation();
 
@@ -39,6 +58,7 @@ export default function StudentDashboard() {
   // Floating collapsible sidebar states
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentTab, setCurrentTab] = useState<"classroom" | "help" | "docs">("classroom");
+  const [trackerCourseId, setTrackerCourseId] = useState<string>("");
 
   // Global viewport isolation: inject style rule to hide general page headers/navbars/footers
   useEffect(() => {
@@ -445,6 +465,12 @@ export default function StudentDashboard() {
   const enrolledCoursesList = getEnrolledCourses();
   const isPendingState = studentStatus === "pending" || !studentProfile || (studentProfile.status || "").trim().toLowerCase() !== "active";
 
+  const currentTrackerCourse = enrolledCoursesList.find(c => String(c.id) === trackerCourseId) || enrolledCoursesList[0];
+  const trackerLessons = currentTrackerCourse ? lessons.filter(l => l.courseId === currentTrackerCourse.id) : [];
+  const trackerTotal = trackerLessons.length;
+  const trackerCompleted = trackerLessons.filter(l => completedLessonIds.includes(l.id)).length;
+  const trackerPercent = trackerTotal > 0 ? Math.round((trackerCompleted / trackerTotal) * 100) : 0;
+
   if (loading) {
     return (
       <div className="fixed inset-0 bg-slate-50 z-[9999] flex flex-col items-center justify-center text-slate-800">
@@ -605,7 +631,7 @@ export default function StudentDashboard() {
 
                 <div className="relative aspect-video w-full bg-slate-900 rounded-2xl border border-slate-200 overflow-hidden shadow-md">
                   {currentActiveLesson.videoUrl ? (
-                    <iframe src={currentActiveLesson.videoUrl} title={currentActiveLesson.title} className="absolute inset-0 w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                    <iframe src={getEmbedUrl(currentActiveLesson.videoUrl)} title={currentActiveLesson.title} className="absolute inset-0 w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950">
                       <PlayCircle className="w-12 h-12 text-slate-600" />
@@ -687,6 +713,95 @@ export default function StudentDashboard() {
               <LogOut className="w-4 h-4 text-rose-500" /><span>Sign Out</span>
             </button>
           </div>
+
+          {/* VISUAL PROGRESS TRACKING CARD */}
+          {enrolledCoursesList.length > 0 && currentTrackerCourse && (
+            <div id="visual-progress-tracker" className="max-w-4xl mx-auto bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs relative overflow-hidden text-left">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full blur-2xl pointer-events-none -mr-8 -mt-8" />
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                <div className="space-y-4 text-left flex-grow">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div className="space-y-1">
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-emerald-600 font-black uppercase tracking-widest bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">
+                        <Trophy className="w-3 h-3 text-emerald-500" /> Course Progress Tracker
+                      </span>
+                      <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                        {currentTrackerCourse.title}
+                      </h2>
+                    </div>
+
+                    {/* If student has multiple courses, let them select which one to track */}
+                    {enrolledCoursesList.length > 1 && (
+                      <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                        <span className="text-[10px] font-mono font-bold text-slate-400">Track Course:</span>
+                        <select 
+                          value={currentTrackerCourse.id} 
+                          onChange={(e) => setTrackerCourseId(e.target.value)} 
+                          className="bg-transparent text-xs font-bold text-slate-700 outline-none border-0 p-0 pr-1 cursor-pointer focus:ring-0"
+                        >
+                          {enrolledCoursesList.map(c => (
+                            <option key={c.id} value={c.id}>{c.title}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="text-slate-500 font-semibold flex items-center gap-1">
+                        <CheckSquare className="w-4 h-4 text-emerald-500" /> {trackerCompleted} of {trackerTotal} lessons completed
+                      </span>
+                      <span className="text-blue-600 font-black text-sm bg-blue-50/60 border border-blue-100/40 px-2 py-0.5 rounded-md">{trackerPercent}% Complete</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200/60 p-[1px]">
+                      <motion.div 
+                        className="h-full bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-500 rounded-full" 
+                        initial={{ width: 0 }} 
+                        animate={{ width: `${trackerPercent}%` }} 
+                        transition={{ type: "spring", stiffness: 80, damping: 15 }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-slate-400">
+                    <span className="flex items-center gap-1">
+                      <BookOpen className="w-3.5 h-3.5 text-slate-400" /> {trackerTotal} Lessons Total
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <CheckSquare className="w-3.5 h-3.5 text-emerald-500" /> {trackerCompleted} Completed
+                    </span>
+                    {trackerTotal - trackerCompleted > 0 ? (
+                      <span className="flex items-center gap-1 text-blue-600 font-semibold">
+                        <Hourglass className="w-3.5 h-3.5 text-blue-500" /> {trackerTotal - trackerCompleted} Remaining
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                        <Trophy className="w-3.5 h-3.5 text-amber-500 animate-bounce" /> Fully Completed!
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="shrink-0 flex items-center justify-start md:justify-end self-center">
+                  <button 
+                    onClick={() => {
+                      const firstUncompleted = trackerLessons.find(l => !completedLessonIds.includes(l.id)) || trackerLessons[0];
+                      setActiveCourse(currentTrackerCourse);
+                      if (firstUncompleted) {
+                        setActiveLesson(firstUncompleted);
+                      }
+                      setIsPlayerOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-5 py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-slate-100 hover:shadow-lg hover:shadow-slate-200"
+                  >
+                    <Play className="w-4 h-4 fill-current text-white" />
+                    <span>{trackerPercent === 100 ? "Review Course" : trackerPercent > 0 ? "Resume Learning" : "Start Course"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="max-w-4xl mx-auto space-y-4">
             {/* ACCORDION A: ENROLLED COURSE */}
