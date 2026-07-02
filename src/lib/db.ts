@@ -48,6 +48,7 @@ export interface Lesson {
   duration: string;
   content: string;
   videoUrl: string;
+  video_url?: string;
   sortOrder: number;
 }
 

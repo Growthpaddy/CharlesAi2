@@ -59,6 +59,7 @@ export default function StudentDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentTab, setCurrentTab] = useState<"classroom" | "help" | "docs">("classroom");
   const [trackerCourseId, setTrackerCourseId] = useState<string>("");
+  const [celebrationDismissed, setCelebrationDismissed] = useState(false);
 
   // Global viewport isolation: inject style rule to hide general page headers/navbars/footers
   useEffect(() => {
@@ -134,11 +135,16 @@ export default function StudentDashboard() {
             duration: l.duration_text || l.duration || "10:00",
             content: l.content || "",
             videoUrl: l.video_url || l.videoUrl || "",
+            video_url: l.video_url || l.videoUrl || "",
             sortOrder: l.lesson_order || l.sort_order || l.sortOrder || 1
           }));
           setLessons(mappedLessons);
         } else {
-          setLessons(db.getLessons());
+          const fallbackLessons = db.getLessons().map((l: any) => ({
+            ...l,
+            video_url: l.video_url || l.videoUrl || ""
+          }));
+          setLessons(fallbackLessons);
         }
 
         const { data: { user } } = await supabase.auth.getUser();
@@ -633,9 +639,7 @@ export default function StudentDashboard() {
 
                 <div className="relative aspect-video w-full bg-slate-900 rounded-2xl border border-slate-200 overflow-hidden shadow-md">
                   {(() => {
-                    const activeVideoUrl = (currentActiveLesson.videoUrl && currentActiveLesson.videoUrl.trim() !== "" && !currentActiveLesson.videoUrl.includes("mov_bbb.mp4"))
-                      ? currentActiveLesson.videoUrl
-                      : (activeCourse?.videoUrl || activeCourse?.video_url || "");
+                    const activeVideoUrl = (currentActiveLesson.video_url || currentActiveLesson.videoUrl || "").trim() || (activeCourse?.video_url || activeCourse?.videoUrl || "").trim();
                     
                     return activeVideoUrl ? (
                       <iframe src={getEmbedUrl(activeVideoUrl)} title={currentActiveLesson.title} className="absolute inset-0 w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
@@ -721,6 +725,137 @@ export default function StudentDashboard() {
               <LogOut className="w-4 h-4 text-rose-500" /><span>Sign Out</span>
             </button>
           </div>
+
+          {/* CELEBRATORY COURSE COMPLETION BADGE & NOTIFICATION */}
+          {enrolledCoursesList.length > 0 && currentTrackerCourse && trackerPercent === 100 && (
+            <AnimatePresence>
+              {!celebrationDismissed ? (
+                <motion.div
+                  key="celebration-card"
+                  initial={{ opacity: 0, scale: 0.95, y: -20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                  transition={{ type: "spring", duration: 0.6 }}
+                  className="max-w-4xl mx-auto bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-emerald-500/10 border-2 border-amber-400/60 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden text-left"
+                >
+                  {/* Glowing golden background accent */}
+                  <div className="absolute -top-12 -left-12 w-48 h-48 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
+
+                  {/* High fidelity floating confetti animation */}
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    {[...Array(16)].map((_, i) => {
+                      const colors = ["bg-amber-400", "bg-emerald-400", "bg-blue-400", "bg-rose-400", "bg-purple-400", "bg-yellow-400"];
+                      return (
+                        <motion.div
+                          key={i}
+                          className={`absolute w-2 h-2 rounded-full ${colors[i % colors.length]}`}
+                          style={{
+                            left: `${5 + (i * 6.2)}%`,
+                            bottom: "-10px",
+                          }}
+                          animate={{
+                            y: [-10, -280 - Math.random() * 120],
+                            x: [0, (Math.random() - 0.5) * 80],
+                            scale: [1, 1.6, 0],
+                            rotate: [0, 360 + Math.random() * 360],
+                          }}
+                          transition={{
+                            duration: 4 + Math.random() * 3,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: i * 0.18,
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 relative z-10">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
+                      {/* Big Interactive Golden Badge */}
+                      <motion.div
+                        animate={{ 
+                          scale: [1, 1.05, 1],
+                          rotate: [0, 5, -5, 0]
+                        }}
+                        transition={{ 
+                          duration: 4, 
+                          repeat: Infinity, 
+                          ease: "easeInOut" 
+                        }}
+                        className="w-18 h-18 bg-gradient-to-b from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center border-2 border-white shadow-lg relative group shrink-0"
+                      >
+                        <Trophy className="w-10 h-10 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]" />
+                        <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        </span>
+                      </motion.div>
+
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-500 text-slate-950 text-[10px] font-black uppercase tracking-wider rounded-md font-mono">
+                            <Sparkles className="w-3.5 h-3.5 animate-spin" /> Graduate Badge Unlocked
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider rounded-md font-mono">
+                            100% Curriculum Completed
+                          </span>
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none pt-1">
+                          Congratulations, {studentProfile?.full_name || "Scholar"}!
+                        </h2>
+                        <p className="text-xs text-slate-600 max-w-xl leading-relaxed">
+                          You have successfully completed every lesson, test module, and roadmap requirement inside 
+                          <strong className="text-slate-900 font-extrabold block mt-0.5">{currentTrackerCourse.title}</strong>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCelebrationDismissed(true)}
+                        className="p-2 hover:bg-slate-200/60 text-slate-400 hover:text-slate-600 rounded-full transition-all cursor-pointer"
+                        title="Dismiss notification"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Inner Certificate Service Block for seamless generation */}
+                  <div className="mt-6 pt-6 border-t border-amber-500/20">
+                    <CertificateService
+                      studentName={studentProfile?.full_name || "Authorized Student"}
+                      courseTitle={currentTrackerCourse.title}
+                      courseId={currentTrackerCourse.id}
+                      studentId={studentProfile?.id || "sandbox-std-id"}
+                    />
+                  </div>
+                </motion.div>
+              ) : (
+                /* Small floating banner if dismissed, so they can restore it or feel proud */
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="max-w-4xl mx-auto bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 p-4 rounded-2xl flex items-center justify-between shadow-md text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <Award className="w-5 h-5 text-slate-950 animate-bounce" />
+                    <span className="text-xs font-black uppercase tracking-wider font-mono">
+                      Graduated from "{currentTrackerCourse.title}"!
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setCelebrationDismissed(false)}
+                    className="px-3 py-1 bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-wider cursor-pointer"
+                  >
+                    Display Celebration Banner
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
 
           {/* VISUAL PROGRESS TRACKING CARD */}
           {enrolledCoursesList.length > 0 && currentTrackerCourse && (
